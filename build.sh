@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Simple script to create the Makefile
-# then type 'make'
+# Simple script to create the Makefile and build
 
 # export PATH="$PATH:/usr/local/cuda/bin/"
 
@@ -11,4 +10,6 @@ rm -f Makefile.in
 rm -f config.status
 ./autogen.sh || echo done
 
-CC=/usr/local/bin/colorgcc.pl CFLAGS="-O2" ./configure
+CFLAGS="-O2" ./configure --with-mpir-src=../mpir-2.6.0
+
+make

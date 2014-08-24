@@ -110,6 +110,9 @@ __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 			(((uint64_t)(x) & 0x00000000000000ffULL) << 56)))
 #endif
 
+#define cuda_swab32ll(u64) \
+	MAKE_ULONGLONG(cuda_swab32(_LOWORD(u64)), cuda_swab32(_HIWORD(u64)))
+
 /*********************************************************************/
 // Macro to catch CUDA errors in CUDA runtime calls
 #define CUDA_SAFE_CALL(call)                                          \
@@ -132,8 +135,7 @@ do {                                                                  \
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
-uint64_t xor1(uint64_t a, uint64_t b)
-{
+uint64_t xor1(uint64_t a, uint64_t b) {
 	uint64_t result;
 	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a), "l"(b));
 	return result;
@@ -145,8 +147,7 @@ uint64_t xor1(uint64_t a, uint64_t b)
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
-uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
-{
+uint64_t xor3(uint64_t a, uint64_t b, uint64_t c) {
 	uint64_t result;
 	asm("xor.b64 %0, %2, %3;\n\t"
 	    "xor.b64 %0, %0, %1;\n\t"
@@ -159,7 +160,78 @@ uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
 #endif
 
 #if USE_XOR_ASM_OPTS
-// device asm for whirpool
+// device asm 32 for m7_sha256
+__device__ __forceinline__
+uint32_t xor3b(uint32_t a, uint32_t b, uint32_t c) {
+	uint32_t result;
+	asm("xor.b32 %0, %2, %3;\n\t"
+		"xor.b32 %0, %0, %1;\n\t"
+		: "=r"(result) : "r"(a) ,"r"(b),"r"(c));
+	return result;
+}
+#else
+#define xor3b(a,b,c) (a ^ b ^ c)
+#endif
+
+#if USE_XOR_ASM_OPTS
+// device asm for m7_sha256
+__device__ __forceinline__
+uint64_t xor5(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e) {
+	uint64_t result;
+	asm("{\n\t"
+		" .reg .u64 t1,t2,t3;\n\t"
+		"xor.b64 t1, %1, %2;\n\t"
+		"xor.b64 t2, %3, %4;\n\t"
+		"xor.b64 t3, t1, t2;\n\t"
+		"xor.b64 %0, t3,%5;\n\t"
+		"}"
+		: "=l"(result) : "l"(a) ,"l"(b), "l"(c), "l"(d) ,"l"(e));
+	return result;
+}
+#else
+#define xor5(a,b,c,d,e) (a ^ b ^ c ^ d ^ e)
+#endif
+
+#if USE_XOR_ASM_OPTS
+// device asm for m7_ripemd160
+__device__ __forceinline__
+uint64_t xornot64(uint64_t a, uint64_t b, uint64_t c)
+{
+	uint64_t result;
+	asm("{\n\t"
+		".reg .u64 m,n;\n\t"
+		"not.b64 m,%2; \n\t"
+		"or.b64 n, %1,m;\n\t"
+		"xor.b64 %0, n,%3;\n\t"
+	"}"
+		: "=l"(result) : "l"(a), "l"(b), "l"(c));
+	return result;
+}
+#else
+#define xornot64(a,b,c) (c ^ (a | ~b))
+#endif
+
+#if USE_XOR_ASM_OPTS
+// device asm for m7_sha256
+__device__ __forceinline__
+uint64_t xornt64(uint64_t a, uint64_t b, uint64_t c)
+{
+	uint64_t result;
+	asm("{\n\t"
+		".reg .u64 m,n;\n\t"
+		"not.b64 m,%3; \n\t"
+		"or.b64 n, %2,m;\n\t"
+		"xor.b64 %0, %1,n;\n\t"
+	"}"
+		: "=l"(result) : "l"(a), "l"(b), "l"(c));
+	return result;
+}
+#else
+#define xornt64(a,b,c) (a ^ (b | ~c))
+#endif
+
+#if USE_XOR_ASM_OPTS
+// device asm for whirlpool
 __device__ __forceinline__
 uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t f,uint64_t g, uint64_t h)
 {
@@ -242,6 +314,39 @@ uint64_t shl_t64(uint64_t x, uint32_t n)
 	return result;
 }
 
+// device asm for m7_sha256
+__device__ __forceinline__
+uint32_t andor32(uint32_t a, uint32_t b, uint32_t c)
+{
+	uint32_t result;
+	asm("{\n\t"
+		".reg .u32 m,n;\n\t"
+		"and.b32 m,  %1, %2;\n\t"
+		" or.b32 n,  %1, %2;\n\t"
+		"and.b32 %0, n,  %3;\n\t"
+		" or.b32 %0, %0, m ;\n\t"
+		"}\n"
+		: "=r"(result) : "r"(a), "r"(b), "r"(c));
+	return result;
+}
+
+// device asm for m7_sha256
+__device__ __forceinline__
+uint32_t shr_t32(uint32_t x,uint32_t n)
+{
+	uint32_t result;
+	asm("shr.b32 %0,%1,%2;\n" : "=r"(result) : "r"(x), "r"(n));
+	return result;
+}
+
+// device asm for ?
+__device__ __forceinline__
+uint32_t shl_t32(uint32_t x,uint32_t n)
+{
+	uint32_t result;
+	asm("shl.b32 %0,%1,%2;\n" : "=r"(result) : "r"(x), "r"(n));
+	return result;
+}
 
 // 64-bit ROTATE RIGHT
 #if __CUDA_ARCH__ >= 350
@@ -313,5 +418,33 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 /* host */
 #define ROTL64(x, n)  (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
+
+__device__ __forceinline__
+void muladd128(uint64_t &u,uint64_t &v,uint64_t a, uint64_t b,uint64_t &c,uint64_t &e)
+{
+asm("{\n\t"
+	".reg .b64 abl,abh; \n\t"
+	".reg .b32 abll,ablh,abhl,abhh,x1,x2,x3,x4; \n\t"
+	".reg .b32 cl,ch,el,eh; \n\t"
+
+	"mul.lo.u64 abl,%2,%3; \n\t"
+	"mul.hi.u64 abh,%2,%3; \n\t"
+	"mov.b64 {abll,ablh},abl; \n\t"
+	"mov.b64 {abhl,abhh},abh; \n\t"
+	"mov.b64 {cl,ch},%4; \n\t"
+	"mov.b64 {el,eh},%5; \n\t"
+	"add.cc.u32 x1,cl,el; \n\t"
+	"addc.cc.u32 x2,ch,eh; \n\t"
+	"addc.u32 x3,0,0; \n\t"
+	"add.cc.u32 x1,x1,abll; \n\t"
+	"addc.cc.u32 x2,x2,ablh; \n\t"
+	"addc.cc.u32 x3,x3,abhl; \n\t"
+	"addc.u32 x4,abhh,0; \n\t"
+	"mov.b64 %1,{x1,x2}; \n\t"
+	"mov.b64 %0,{x3,x4}; \n\t"
+	"}"
+
+	: "=l"(u), "=l"(v) : "l"(a) , "l"(b) , "l"(c) , "l"(e));
+}
 
 #endif // #ifndef CUDA_HELPER_H

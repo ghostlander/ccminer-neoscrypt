@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [2014.08.12])
+AC_INIT([ccminer], [2014.08.25])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
@@ -154,10 +154,22 @@ else
    CUDA_LDFLAGS="-L/usr/local/cuda/lib$SUFFIX"
    NVCC="nvcc"
 fi
-AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(CUDA_LIBS)
-AC_SUBST(CUDA_LDFLAGS)
 AC_SUBST(NVCC)
+
+AC_ARG_WITH([mpir-src],
+   [  --with-mpir-src=PATH    prefix for mpir src [sample=../mpir-2.6.0]])
+
+if test -n "$with_mpir_src"
+then
+    MPIRLIB="-lmpir"
+    CUDA_CFLAGS="$CUDA_CFLAGS -I$with_mpir_src"
+    CUDA_LDFLAGS="$CUDA_LDFLAGS -L$with_mpir_src"
+fi
+AC_SUBST(MPIRLIB)
+
+AC_SUBST(CUDA_CFLAGS)
+AC_SUBST(CUDA_LDFLAGS)
 
 AC_SUBST(OPENMP_CFLAGS) 
 
