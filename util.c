@@ -475,15 +475,22 @@ err_out:
 	return NULL;
 }
 
+/* note: called bin2hex in cpu-miner */
+void cbin2hex(char *s, const unsigned char *p, size_t len)
+{
+	int i;
+	for (i = 0; i < len; i++)
+		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
+}
+
+/* note: called abin2hex in cpu-miner */
 char *bin2hex(const unsigned char *p, size_t len)
 {
-	unsigned int i;
 	char *s = (char*)malloc((len * 2) + 1);
 	if (!s)
 		return NULL;
 
-	for (i = 0; i < len; i++)
-		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
+	cbin2hex(s, p, len);
 
 	return s;
 }
@@ -1095,6 +1102,55 @@ out:
 	return ret;
 }
 
+static bool stratum_notify_m7(struct stratum_ctx *sctx, json_t *params)
+{
+	const char *job_id, *prevblock, *accroot, *merkleroot, *version, *ntime;
+	int height;
+	bool clean;
+
+	job_id = json_string_value(json_array_get(params, 0));
+	prevblock = json_string_value(json_array_get(params, 1));
+	accroot = json_string_value(json_array_get(params, 2));
+	merkleroot = json_string_value(json_array_get(params, 3));
+	height = json_integer_value(json_array_get(params, 4));
+	version = json_string_value(json_array_get(params, 5));
+	ntime = json_string_value(json_array_get(params, 6));
+	clean = json_is_true(json_array_get(params, 7));
+
+	if (!job_id || !prevblock || !accroot || !merkleroot || 
+		!version || !height || !ntime ||
+		strlen(prevblock) != 32*2 || 
+		strlen(accroot) != 32*2 || 
+		strlen(merkleroot) != 32*2 || 
+		strlen(ntime) != 8*2 || strlen(version) != 2*2) {
+		applog(LOG_ERR, "Stratum (M7) notify: invalid parameters");
+		return false;
+	}
+
+	pthread_mutex_lock(&sctx->work_lock);
+
+	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id)) {
+		sctx->job.xnonce2 = (unsigned char *)realloc(sctx->job.xnonce2, sctx->xnonce2_size);
+		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
+	}
+	free(sctx->job.job_id);
+	sctx->job.job_id = strdup(job_id);
+
+	hex2bin(sctx->job.m7prevblock, prevblock, 32);
+	hex2bin(sctx->job.m7accroot, accroot, 32);
+	hex2bin(sctx->job.m7merkleroot, merkleroot, 32);
+	be64enc(sctx->job.m7height, height);
+	hex2bin(sctx->job.m7version, version, 2);
+	hex2bin(sctx->job.m7ntime, ntime, 8);
+	sctx->job.clean = clean;
+
+	sctx->job.diff = sctx->next_diff;
+
+	pthread_mutex_unlock(&sctx->work_lock);
+
+	return true;
+}
+
 static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 {
 	double diff;
@@ -1206,6 +1262,53 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 
 	if (!strcasecmp(method, "mining.notify")) {
 		ret = stratum_notify(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "mining.set_difficulty")) {
+		ret = stratum_set_difficulty(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.reconnect")) {
+		ret = stratum_reconnect(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.get_version")) {
+		ret = stratum_get_version(sctx, id);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.show_message")) {
+		ret = stratum_show_message(sctx, id, params);
+		goto out;
+	}
+
+out:
+	if (val)
+		json_decref(val);
+
+	return ret;
+}
+
+bool stratum_handle_method_m7(struct stratum_ctx *sctx, const char *s)
+{
+	json_t *val, *id, *params;
+	json_error_t err;
+	const char *method;
+	bool ret = false;
+
+	val = JSON_LOADS(s, &err);
+	if (!val) {
+		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+		goto out;
+	}
+
+	method = json_string_value(json_object_get(val, "method"));
+	if (!method)
+		goto out;
+	id = json_object_get(val, "id");
+	params = json_object_get(val, "params");
+	if (!strcasecmp(method, "mining.notify")) {
+		/* modified one */
+		ret = stratum_notify_m7(sctx, params);
 		goto out;
 	}
 	if (!strcasecmp(method, "mining.set_difficulty")) {
@@ -1413,6 +1516,10 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	x17hash(&hash[0], &buf[0]);
 	printf("\nX17:     "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
+	m7_hash(&hash[0], &buf[0], 0, false);
+	printf("\nM7:      "); print_hash(hash);
 
 	printf("\n");
 }

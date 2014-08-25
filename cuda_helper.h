@@ -230,6 +230,15 @@ uint64_t xornt64(uint64_t a, uint64_t b, uint64_t c)
 #define xornt64(a,b,c) (a ^ (b | ~c))
 #endif
 
+// device asm for m7_haval
+__device__ __forceinline__
+uint32_t sph_t32(uint32_t x)
+{
+	uint32_t result;
+	asm("and.b32 %0,%1,0xFFFFFFFF;" : "=r"(result) : "r"(x));
+	return result;
+}
+
 #if USE_XOR_ASM_OPTS
 // device asm for whirlpool
 __device__ __forceinline__
