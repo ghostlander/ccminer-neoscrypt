@@ -125,7 +125,7 @@ void applog(int prio, const char *fmt, ...)
 			color = "";
 
 		len = 40 + strlen(fmt) + 2;
-		f = alloca(len);
+		f = (char*) alloca(len);
 		sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d]%s %s%s\n",
 			tm.tm_year + 1900,
 			tm.tm_mon + 1,
@@ -478,8 +478,7 @@ err_out:
 /* note: called bin2hex in cpu-miner */
 void cbin2hex(char *s, const unsigned char *p, size_t len)
 {
-	int i;
-	for (i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
 }
 
