@@ -5,6 +5,8 @@
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
+__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
+
 static __constant__ uint64_t stateo[25];
 static __constant__ uint64_t RC[24];
 static const uint64_t cpu_RC[24] = {
@@ -22,7 +24,9 @@ static const uint64_t cpu_RC[24] = {
 	0x0000000080000001ull, 0x8000000080008008ull
 };
 
-static __device__ __forceinline__ void keccak_block(uint64_t *s, const uint64_t *keccak_round_constants) {
+__device__ __forceinline__
+static void keccak_block(uint64_t *s, const uint64_t *keccak_round_constants)
+{
 	size_t i;
 	uint64_t t[5], u[5], v, w;
 
@@ -136,8 +140,9 @@ static __device__ __forceinline__ void keccak_block(uint64_t *s, const uint64_t 
 	}
 }
 
-
-static __forceinline__ void keccak_block_host(uint64_t *s, const uint64_t *keccak_round_constants) {
+__host__ __forceinline__
+static void keccak_block_host(uint64_t *s, const uint64_t *keccak_round_constants)
+{
 	size_t i;
 	uint64_t t[5], u[5], v, w;
 
@@ -204,25 +209,18 @@ static __forceinline__ void keccak_block_host(uint64_t *s, const uint64_t *kecca
 	}
 }
 
-
-
- __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
-
-
-
-__global__ void m7_keccak512_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__ /* __launch_bounds__(256, 2) */
+void m7_keccak512_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
-
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-
 		uint32_t nounce = startNounce + thread;
 
-		 uint64_t state[25];
+		uint64_t state[25];
 
 		#pragma unroll 16
-		 for (int i=9;i<25;i++) {state[i]=stateo[i];}
+		for (int i=9;i<25;i++) {state[i]=stateo[i];}
 
 		state[0] = xor1(stateo[0],c_PaddedMessage80[9]);
 		state[1] = xor1(stateo[1],c_PaddedMessage80[10]);
@@ -236,39 +234,37 @@ __global__ void m7_keccak512_gpu_hash_120(int threads, uint32_t startNounce, uin
 
 		keccak_block(state,RC);
 
-#pragma unroll 8
-for (int i=0;i<8;i++) {outputHash[i*threads+thread]=state[i];}
-
-
+		#pragma unroll 8
+		for (int i=0;i<8;i++) {
+			outputHash[i*threads+thread] = state[i];
+		}
 	} //thread
 }
 
 
 void m7_keccak512_cpu_init(int thr_id, int threads)
 {
-
 	cudaMemcpyToSymbol( RC,cpu_RC,sizeof(cpu_RC),0,cudaMemcpyHostToDevice);
 }
 
 __host__ void m7_keccak512_setBlock_120(void *pdata)
 {
-
 	unsigned char PaddedMessage[128];
 	uint8_t ending =0x01;
+
 	memcpy(PaddedMessage, pdata, 122);
 	memset(PaddedMessage+122,ending,1);
 	memset(PaddedMessage+123, 0, 5);
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 	uint64_t* alt_data = (uint64_t*) pdata;
-		 uint64_t state[25];
-		 for(int i=0;i<25;i++) {state[i]=0;}
+	uint64_t state[25];
+	for(int i=0;i<9;i++)
+		state[i] = alt_data[i];
+	for(int i=10;i<25;i++)
+		state[i] = 0;
+	keccak_block_host(state,cpu_RC);
 
-
-		for (int i=0;i<9;i++) {state[i]  ^= alt_data[i];}
-		keccak_block_host(state,cpu_RC);
-
-		cudaMemcpyToSymbol(stateo, state, 25*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-
+	cudaMemcpyToSymbol(stateo, state, 25*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
 
 

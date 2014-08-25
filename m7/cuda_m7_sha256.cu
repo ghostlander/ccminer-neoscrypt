@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "cuda_helper.h"
-
 #include "sph/sph_types.h"
+
+#include "cuda_helper.h"
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
@@ -67,28 +67,35 @@ static const uint32_t cpu_K[64] = {
 };
 
 
-static __device__ __forceinline__ uint32_t bsg2_0(uint32_t x)
+__device__ __forceinline__
+static uint32_t bsg2_0(uint32_t x)
 {
 	uint32_t r1 = SPH_ROTR32(x,2);
 	uint32_t r2 = SPH_ROTR32(x,13);
 	uint32_t r3 = SPH_ROTR32(x,22);
 	return xor3b(r1,r2,r3);
 }
-static __device__ __forceinline__ uint32_t bsg2_1(uint32_t x)
+
+__device__ __forceinline__
+static uint32_t bsg2_1(uint32_t x)
 {
 	uint32_t r1 = SPH_ROTR32(x,6);
 	uint32_t r2 = SPH_ROTR32(x,11);
 	uint32_t r3 = SPH_ROTR32(x,25);
 	return xor3b(r1,r2,r3);
 }
-static __device__ __forceinline__ uint32_t ssg2_0(uint32_t x)
+
+__device__ __forceinline__
+static uint32_t ssg2_0(uint32_t x)
 {
 	uint64_t r1 = SPH_ROTR32(x,7);
 	uint64_t r2 = SPH_ROTR32(x,18);
 	uint64_t r3 = shr_t32(x,3);
 	return xor3b(r1,r2,r3);
 }
-static __device__ __forceinline__ uint32_t ssg2_1(uint32_t x)
+
+__device__ __forceinline__
+static uint32_t ssg2_1(uint32_t x)
 {
 	uint64_t r1 = SPH_ROTR32(x,17);
 	uint64_t r2 = SPH_ROTR32(x,19);
@@ -96,133 +103,130 @@ static __device__ __forceinline__ uint32_t ssg2_1(uint32_t x)
 	return xor3b(r1,r2,r3);
 }
 
-static __device__ __forceinline__ void sha2_step1(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
-	                                              uint32_t in,const uint32_t Kshared)
+__device__ __forceinline__
+static void sha2_step1(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
+                        uint32_t in,const uint32_t Kshared)
 {
-uint32_t t1,t2;
-uint32_t vxandx = xandx(e, f, g);
-uint32_t bsg21 =bsg2_1(e);
-uint32_t bsg20 =bsg2_0(a);
-uint32_t andorv =andor32(a,b,c);
+	uint32_t t1,t2;
+	uint32_t vxandx = xandx(e, f, g);
+	uint32_t bsg21 =bsg2_1(e);
+	uint32_t bsg20 =bsg2_0(a);
+	uint32_t andorv =andor32(a,b,c);
 
-t1 = h + bsg21 + vxandx + Kshared + in;
-t2 = bsg20 + andorv;
-d = d + t1;
-h = t1 + t2;
+	t1 = h + bsg21 + vxandx + Kshared + in;
+	t2 = bsg20 + andorv;
+	d = d + t1;
+	h = t1 + t2;
 }
 
-static __forceinline__ void sha2_step1_host(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
-	                                              uint32_t in,const uint32_t Kshared)
+__host__ __forceinline__
+static void sha2_step1_host(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
+                            uint32_t in,const uint32_t Kshared)
 {
+	uint32_t t1,t2;
+	uint32_t vxandx = (((f) ^ (g)) & (e)) ^ (g); // xandx(e, f, g);
+	uint32_t bsg21 =ROTR(e, 6) ^ ROTR(e, 11) ^ ROTR(e, 25); // bsg2_1(e);
+	uint32_t bsg20 =ROTR(a, 2) ^ ROTR(a, 13) ^ ROTR(a, 22); //bsg2_0(a);
+	uint32_t andorv =((b) & (c)) | (((b) | (c)) & (a)); //andor32(a,b,c);
 
-
-
-uint32_t t1,t2;
-uint32_t vxandx = (((f) ^ (g)) & (e)) ^ (g); // xandx(e, f, g);
-uint32_t bsg21 =ROTR(e, 6) ^ ROTR(e, 11) ^ ROTR(e, 25); // bsg2_1(e);
-uint32_t bsg20 =ROTR(a, 2) ^ ROTR(a, 13) ^ ROTR(a, 22); //bsg2_0(a);
-uint32_t andorv =((b) & (c)) | (((b) | (c)) & (a)); //andor32(a,b,c);
-
-t1 = h + bsg21 + vxandx + Kshared + in;
-t2 = bsg20 + andorv;
-d = d + t1;
-h = t1 + t2;
+	t1 = h + bsg21 + vxandx + Kshared + in;
+	t2 = bsg20 + andorv;
+	d = d + t1;
+	h = t1 + t2;
 }
 
-static __device__ __forceinline__ void sha2_step2(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
-	                                              uint32_t* in,uint32_t pc,const uint32_t Kshared)
+__device__ __forceinline__
+static void sha2_step2(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
+                        uint32_t* in,uint32_t pc,const uint32_t Kshared)
 {
-uint32_t t1,t2;
+	uint32_t t1,t2;
 
-int pcidx1 = (pc-2) & 0xF;
-int pcidx2 = (pc-7) & 0xF;
-int pcidx3 = (pc-15) & 0xF;
-uint32_t inx0 = in[pc];
-uint32_t inx1 = in[pcidx1];
-uint32_t inx2 = in[pcidx2];
-uint32_t inx3 = in[pcidx3];
+	int pcidx1 = (pc-2) & 0xF;
+	int pcidx2 = (pc-7) & 0xF;
+	int pcidx3 = (pc-15) & 0xF;
+	uint32_t inx0 = in[pc];
+	uint32_t inx1 = in[pcidx1];
+	uint32_t inx2 = in[pcidx2];
+	uint32_t inx3 = in[pcidx3];
 
 
-uint32_t ssg21 = ssg2_1(inx1);
-uint32_t ssg20 = ssg2_0(inx3);
-uint32_t vxandx = xandx(e, f, g);
-uint32_t bsg21 =bsg2_1(e);
-uint32_t bsg20 =bsg2_0(a);
-uint32_t andorv =andor32(a,b,c);
+	uint32_t ssg21 = ssg2_1(inx1);
+	uint32_t ssg20 = ssg2_0(inx3);
+	uint32_t vxandx = xandx(e, f, g);
+	uint32_t bsg21 =bsg2_1(e);
+	uint32_t bsg20 =bsg2_0(a);
+	uint32_t andorv =andor32(a,b,c);
 
-in[pc] = ssg21+inx2+ssg20+inx0;
+	in[pc] = ssg21+inx2+ssg20+inx0;
 
-t1 = h + bsg21 + vxandx + Kshared + in[pc];
-t2 = bsg20 + andorv;
-d =  d + t1;
-h = t1 + t2;
-
+	t1 = h + bsg21 + vxandx + Kshared + in[pc];
+	t2 = bsg20 + andorv;
+	d =  d + t1;
+	h = t1 + t2;
 }
 
-static __forceinline__ void sha2_step2_host(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
-	                                              uint32_t* in,uint32_t pc,const uint32_t Kshared)
+__host__ __forceinline__
+static void sha2_step2_host(uint32_t a,uint32_t b,uint32_t c,uint32_t &d,uint32_t e,uint32_t f,uint32_t g,uint32_t &h,
+                            uint32_t* in,uint32_t pc,const uint32_t Kshared)
 {
-uint32_t t1,t2;
+	uint32_t t1,t2;
 
-int pcidx1 = (pc-2) & 0xF;
-int pcidx2 = (pc-7) & 0xF;
-int pcidx3 = (pc-15) & 0xF;
-uint32_t inx0 = in[pc];
-uint32_t inx1 = in[pcidx1];
-uint32_t inx2 = in[pcidx2];
-uint32_t inx3 = in[pcidx3];
+	int pcidx1 = (pc-2) & 0xF;
+	int pcidx2 = (pc-7) & 0xF;
+	int pcidx3 = (pc-15) & 0xF;
+	uint32_t inx0 = in[pc];
+	uint32_t inx1 = in[pcidx1];
+	uint32_t inx2 = in[pcidx2];
+	uint32_t inx3 = in[pcidx3];
 
+	uint32_t ssg21 = ROTR(inx1, 17) ^ ROTR(inx1, 19) ^ SPH_T32((inx1) >> 10); //ssg2_1(inx1);
+	uint32_t ssg20 = ROTR(inx3, 7) ^ ROTR(inx3, 18) ^ SPH_T32((inx3) >> 3); //ssg2_0(inx3);
+	uint32_t vxandx = (((f) ^ (g)) & (e)) ^ (g); // xandx(e, f, g);
+	uint32_t bsg21 =ROTR(e, 6) ^ ROTR(e, 11) ^ ROTR(e, 25); // bsg2_1(e);
+	uint32_t bsg20 =ROTR(a, 2) ^ ROTR(a, 13) ^ ROTR(a, 22); //bsg2_0(a);
+	uint32_t andorv =((b) & (c)) | (((b) | (c)) & (a)); //andor32(a,b,c);
 
-uint32_t ssg21 = ROTR(inx1, 17) ^ ROTR(inx1, 19) ^ SPH_T32((inx1) >> 10); //ssg2_1(inx1);
-uint32_t ssg20 = ROTR(inx3, 7) ^ ROTR(inx3, 18) ^ SPH_T32((inx3) >> 3); //ssg2_0(inx3);
-uint32_t vxandx = (((f) ^ (g)) & (e)) ^ (g); // xandx(e, f, g);
-uint32_t bsg21 =ROTR(e, 6) ^ ROTR(e, 11) ^ ROTR(e, 25); // bsg2_1(e);
-uint32_t bsg20 =ROTR(a, 2) ^ ROTR(a, 13) ^ ROTR(a, 22); //bsg2_0(a);
-uint32_t andorv =((b) & (c)) | (((b) | (c)) & (a)); //andor32(a,b,c);
+	in[pc] = ssg21+inx2+ssg20+inx0;
 
-in[pc] = ssg21+inx2+ssg20+inx0;
-
-t1 = h + bsg21 + vxandx + Kshared + in[pc];
-t2 = bsg20 + andorv;
-d =  d + t1;
-h = t1 + t2;
-
+	t1 = h + bsg21 + vxandx + Kshared + in[pc];
+	t2 = bsg20 + andorv;
+	d =  d + t1;
+	h = t1 + t2;
 }
 
 
-static __device__ __forceinline__ void sha2_round_body(uint32_t* in, uint32_t* r,const uint32_t* Kshared)
+__device__ __forceinline__
+static void sha2_round_body(uint32_t* in, uint32_t* r,const uint32_t* Kshared)
 {
+	uint32_t a=r[0];
+	uint32_t b=r[1];
+	uint32_t c=r[2];
+	uint32_t d=r[3];
+	uint32_t e=r[4];
+	uint32_t f=r[5];
+	uint32_t g=r[6];
+	uint32_t h=r[7];
 
+	sha2_step1(a,b,c,d,e,f,g,h,in[0],Kshared[0]);
+	sha2_step1(h,a,b,c,d,e,f,g,in[1],Kshared[1]);
+	sha2_step1(g,h,a,b,c,d,e,f,in[2],Kshared[2]);
+	sha2_step1(f,g,h,a,b,c,d,e,in[3],Kshared[3]);
+	sha2_step1(e,f,g,h,a,b,c,d,in[4],Kshared[4]);
+	sha2_step1(d,e,f,g,h,a,b,c,in[5],Kshared[5]);
+	sha2_step1(c,d,e,f,g,h,a,b,in[6],Kshared[6]);
+	sha2_step1(b,c,d,e,f,g,h,a,in[7],Kshared[7]);
+	sha2_step1(a,b,c,d,e,f,g,h,in[8],Kshared[8]);
+	sha2_step1(h,a,b,c,d,e,f,g,in[9],Kshared[9]);
+	sha2_step1(g,h,a,b,c,d,e,f,in[10],Kshared[10]);
+	sha2_step1(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
+	sha2_step1(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
+	sha2_step1(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
+	sha2_step1(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
+	sha2_step1(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
 
-		uint32_t a=r[0];
-        uint32_t b=r[1];
-        uint32_t c=r[2];
-        uint32_t d=r[3];
-        uint32_t e=r[4];
-        uint32_t f=r[5];
-        uint32_t g=r[6];
-        uint32_t h=r[7];
-
-		sha2_step1(a,b,c,d,e,f,g,h,in[0],Kshared[0]);
-		sha2_step1(h,a,b,c,d,e,f,g,in[1],Kshared[1]);
-		sha2_step1(g,h,a,b,c,d,e,f,in[2],Kshared[2]);
-		sha2_step1(f,g,h,a,b,c,d,e,in[3],Kshared[3]);
-		sha2_step1(e,f,g,h,a,b,c,d,in[4],Kshared[4]);
-		sha2_step1(d,e,f,g,h,a,b,c,in[5],Kshared[5]);
-		sha2_step1(c,d,e,f,g,h,a,b,in[6],Kshared[6]);
-		sha2_step1(b,c,d,e,f,g,h,a,in[7],Kshared[7]);
-		sha2_step1(a,b,c,d,e,f,g,h,in[8],Kshared[8]);
-		sha2_step1(h,a,b,c,d,e,f,g,in[9],Kshared[9]);
-		sha2_step1(g,h,a,b,c,d,e,f,in[10],Kshared[10]);
-		sha2_step1(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
-		sha2_step1(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
-		sha2_step1(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
-		sha2_step1(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
-		sha2_step1(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
-
-#pragma unroll 3
-		for (int i=0;i<3;i++) {
-
+	#pragma unroll 3
+	for (int i=0;i<3;i++)
+	{
 		sha2_step2(a,b,c,d,e,f,g,h,in,0,Kshared[16+16*i]);
 		sha2_step2(h,a,b,c,d,e,f,g,in,1,Kshared[17+16*i]);
 		sha2_step2(g,h,a,b,c,d,e,f,in,2,Kshared[18+16*i]);
@@ -239,54 +243,50 @@ static __device__ __forceinline__ void sha2_round_body(uint32_t* in, uint32_t* r
 		sha2_step2(d,e,f,g,h,a,b,c,in,13,Kshared[29+16*i]);
 		sha2_step2(c,d,e,f,g,h,a,b,in,14,Kshared[30+16*i]);
 		sha2_step2(b,c,d,e,f,g,h,a,in,15,Kshared[31+16*i]);
+	}
 
-		}
-
-
-
-		 r[0] = r[0] + a;
-		 r[1] = r[1] + b;
-		 r[2] = r[2] + c;
-		 r[3] = r[3] + d;
-		 r[4] = r[4] + e;
-		 r[5] = r[5] + f;
-		 r[6] = r[6] + g;
-		 r[7] = r[7] + h;
+	r[0] = r[0] + a;
+	r[1] = r[1] + b;
+	r[2] = r[2] + c;
+	r[3] = r[3] + d;
+	r[4] = r[4] + e;
+	r[5] = r[5] + f;
+	r[6] = r[6] + g;
+	r[7] = r[7] + h;
 }
 
-static __forceinline__ void sha2_round_body_host(uint32_t* in, uint32_t* r,const uint32_t* Kshared)
+__forceinline__
+static void sha2_round_body_host(uint32_t* in, uint32_t* r,const uint32_t* Kshared)
 {
+	uint32_t a=r[0];
+	uint32_t b=r[1];
+	uint32_t c=r[2];
+	uint32_t d=r[3];
+	uint32_t e=r[4];
+	uint32_t f=r[5];
+	uint32_t g=r[6];
+	uint32_t h=r[7];
 
+	sha2_step1_host(a,b,c,d,e,f,g,h,in[0],Kshared[0]);
+	sha2_step1_host(h,a,b,c,d,e,f,g,in[1],Kshared[1]);
+	sha2_step1_host(g,h,a,b,c,d,e,f,in[2],Kshared[2]);
+	sha2_step1_host(f,g,h,a,b,c,d,e,in[3],Kshared[3]);
+	sha2_step1_host(e,f,g,h,a,b,c,d,in[4],Kshared[4]);
+	sha2_step1_host(d,e,f,g,h,a,b,c,in[5],Kshared[5]);
+	sha2_step1_host(c,d,e,f,g,h,a,b,in[6],Kshared[6]);
+	sha2_step1_host(b,c,d,e,f,g,h,a,in[7],Kshared[7]);
+	sha2_step1_host(a,b,c,d,e,f,g,h,in[8],Kshared[8]);
+	sha2_step1_host(h,a,b,c,d,e,f,g,in[9],Kshared[9]);
+	sha2_step1_host(g,h,a,b,c,d,e,f,in[10],Kshared[10]);
+	sha2_step1_host(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
+	sha2_step1_host(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
+	sha2_step1_host(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
+	sha2_step1_host(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
+	sha2_step1_host(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
 
-		uint32_t a=r[0];
-        uint32_t b=r[1];
-        uint32_t c=r[2];
-        uint32_t d=r[3];
-        uint32_t e=r[4];
-        uint32_t f=r[5];
-        uint32_t g=r[6];
-        uint32_t h=r[7];
-
-		sha2_step1_host(a,b,c,d,e,f,g,h,in[0],Kshared[0]);
-		sha2_step1_host(h,a,b,c,d,e,f,g,in[1],Kshared[1]);
-		sha2_step1_host(g,h,a,b,c,d,e,f,in[2],Kshared[2]);
-		sha2_step1_host(f,g,h,a,b,c,d,e,in[3],Kshared[3]);
-		sha2_step1_host(e,f,g,h,a,b,c,d,in[4],Kshared[4]);
-		sha2_step1_host(d,e,f,g,h,a,b,c,in[5],Kshared[5]);
-		sha2_step1_host(c,d,e,f,g,h,a,b,in[6],Kshared[6]);
-		sha2_step1_host(b,c,d,e,f,g,h,a,in[7],Kshared[7]);
-		sha2_step1_host(a,b,c,d,e,f,g,h,in[8],Kshared[8]);
-		sha2_step1_host(h,a,b,c,d,e,f,g,in[9],Kshared[9]);
-		sha2_step1_host(g,h,a,b,c,d,e,f,in[10],Kshared[10]);
-		sha2_step1_host(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
-		sha2_step1_host(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
-		sha2_step1_host(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
-		sha2_step1_host(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
-		sha2_step1_host(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
-
-#pragma unroll 3
-		for (int i=0;i<3;i++) {
-
+	#pragma unroll 3
+	for (int i=0;i<3;i++)
+	{
 		sha2_step2_host(a,b,c,d,e,f,g,h,in,0,Kshared[16+16*i]);
 		sha2_step2_host(h,a,b,c,d,e,f,g,in,1,Kshared[17+16*i]);
 		sha2_step2_host(g,h,a,b,c,d,e,f,in,2,Kshared[18+16*i]);
@@ -303,100 +303,64 @@ static __forceinline__ void sha2_round_body_host(uint32_t* in, uint32_t* r,const
 		sha2_step2_host(d,e,f,g,h,a,b,c,in,13,Kshared[29+16*i]);
 		sha2_step2_host(c,d,e,f,g,h,a,b,in,14,Kshared[30+16*i]);
 		sha2_step2_host(b,c,d,e,f,g,h,a,in,15,Kshared[31+16*i]);
+	}
 
-		}
-
-		 r[0] = r[0] + a;
-		 r[1] = r[1] + b;
-		 r[2] = r[2] + c;
-		 r[3] = r[3] + d;
-		 r[4] = r[4] + e;
-		 r[5] = r[5] + f;
-		 r[6] = r[6] + g;
-		 r[7] = r[7] + h;
+	r[0] = r[0] + a;
+	r[1] = r[1] + b;
+	r[2] = r[2] + c;
+	r[3] = r[3] + d;
+	r[4] = r[4] + e;
+	r[5] = r[5] + f;
+	r[6] = r[6] + g;
+	r[7] = r[7] + h;
 }
 
-
-__global__ void m7_sha256_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__
+void m7_sha256_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
-/*
-	__shared__ uint32_t Kshared[64];
-	if (threadIdx.x < 64) {
-		Kshared[threadIdx.x]=K[threadIdx.x];
-	}
-	__syncthreads();
-*/
-union {
-uint8_t h1[64];
-uint32_t h4[16];
-uint64_t h8[8];
-} hash;
-//uint32_t buf[8];
-
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
 		uint32_t nounce = startNounce +  thread ; // original implementation
 
-        uint32_t buf[8];
+		uint32_t buf[8];
 		uint32_t in2[16]={0};
 		uint32_t in3[16]={0};
 
-        #pragma unroll 13
-		for (int i=0;i<13;i++) {in2[i]= cuda_swab32(c_PaddedMessage80[i+16]);}
+		#pragma unroll 13
+		for (int i=0; i<13; i++)
+			in2[i]= cuda_swab32(c_PaddedMessage80[i+16]);
+
 		in2[13]=cuda_swab32(nounce);
 		in2[14]=cuda_swab32(c_PaddedMessage80[30]);
 
-		                        in3[15]=0x3d0;
+		in3[15]=0x3d0;
 
-        #pragma unroll 8
-		for (int i=0;i<8;i++) {buf[i]= pbuf[i];}
+		#pragma unroll 8
+		for (int i=0; i<8; i++)
+			buf[i] = pbuf[i];
 
-                    sha2_round_body(in2,buf,K);
-					sha2_round_body(in3,buf,K);
-//#pragma unroll 8
-//for (int i=0;i<8;i++) {hash.h4[i]=cuda_swab32(buf[i]);}
+		sha2_round_body(in2,buf,K);
+		sha2_round_body(in3,buf,K);
 
-#pragma unroll 4
-for (int i=0;i<4;i++) {outputHash[i*threads+thread]=cuda_swab32ll(((uint64_t*)buf)[i]);}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-	} // threads
-
+		#pragma unroll 4
+		for (int i=0; i<4; i++) {
+			outputHash[i*threads+thread] = cuda_swab32ll(((uint64_t*)buf)[i]);
+		}
+	} // thread
 }
 
-
-__global__ void m7_sha256_gpu_hash_300(int threads, uint32_t startNounce, uint64_t *g_hash1, uint64_t *g_nonceVector, uint32_t *resNounce)
+__global__
+void m7_sha256_gpu_hash_300(int threads, uint32_t startNounce, uint64_t *g_hash1, uint64_t *g_nonceVector, uint32_t *resNounce)
 {
-/*
-	__shared__ uint32_t Kshared[64];
-	if (threadIdx.x < 64) {
-		Kshared[threadIdx.x]=K[threadIdx.x];
-	}
-	__syncthreads();
-*/
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-
-
-
-
-union {
-uint8_t h1[304];
-uint32_t h4[76];
-uint64_t h8[38];
-} hash;
-
-
-        uint32_t in[16],buf[8];
-
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t in[16],buf[8];
 
 		#pragma unroll 8
 		for (int i=0;i<8;i++) {((uint64_t*)in)[i]= cuda_swab32ll(g_hash1[threads*i+thread]);}
-        #pragma unroll 8
+		#pragma unroll 8
 		for (int i=0;i<8;i++) {buf[i] = H256[i];}
 
 		sha2_round_body(in,buf,K);
@@ -415,96 +379,87 @@ uint64_t h8[38];
 
 		#pragma unroll 5
 		for (int i=0;i<5;i++) {((uint64_t*)in)[i]= cuda_swab32ll(g_hash1[threads*(i+32)+thread]);}
-		((uint64_t*)in)[5]= g_hash1[threads*(5+32)+thread];
+
+		((uint64_t*)in)[5] = g_hash1[threads*(5+32)+thread];
 		in[11]=0;
 		in[12]=0;
 		in[13]=0;
 		in[14]=0;
 
+		in[15]=0x968;
 
-                   in[15]=0x968;
+		int it=0;
 
-                   int it=0;
-				   do {
-                   in[15]-=8;
-				   it++;
-				   }  while (((uint8_t*)in)[44-it]==0);
-				   ((uint8_t*)in)[44-it+1]=0x80;
+		do {
+			in[15]-=8;
+			it++;
+		}  while (((uint8_t*)in)[44-it]==0);
 
-           ((uint64_t*)in)[5]= cuda_swab32ll(((uint64_t*)in)[5]);
+		((uint8_t*)in)[44-it+1]=0x80;
 
-				   sha2_round_body(in,buf,K);
+		((uint64_t*)in)[5]= cuda_swab32ll(((uint64_t*)in)[5]);
 
-uint32_t nounce = startNounce +thread;
+		sha2_round_body(in,buf,K);
+
+		uint32_t nounce = startNounce +thread;
 		bool rc = false;
-
 
 		#pragma unroll 4
 		for (int i = 0; i < 4; i++)
 		{
 			if (cuda_swab32ll(((uint64_t*)buf)[i]) != ((uint64_t*)pTarget)[i]) {
-				if (cuda_swab32ll(((uint64_t*)buf)[i]) < ((uint64_t*)pTarget)[i]) {rc = true;} else {rc =  false;}
-//			if cuda_swab32(((uint64_t*)buf)[3]) < ((uint64_t*)pTarget)[3]) {rc = true;}
+				if (cuda_swab32ll(((uint64_t*)buf)[i]) < ((uint64_t*)pTarget)[i])
+					rc = true;
+				else
+					rc = false;
+				//if cuda_swab32(((uint64_t*)buf)[3]) < ((uint64_t*)pTarget)[3]) {rc = true;}
 			}
 		}
 
-
-		if(rc == true)
-		{
-			if(resNounce[0] > nounce)
-				resNounce[0] = nounce;
-
-		}
-
-
-////
-	} // threads
+		if (rc && resNounce[0] > nounce)
+			resNounce[0] = nounce;
+	} // thread
 }
 
-
-
-__host__ void m7_sha256_cpu_init(int thr_id, int threads)
+__host__
+void m7_sha256_cpu_init(int thr_id, int threads)
 {
-	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol(	H256,cpu_H256,sizeof(cpu_H256),0, cudaMemcpyHostToDevice );
 	cudaMemcpyToSymbol(	K,cpu_K,sizeof(cpu_K),0, cudaMemcpyHostToDevice );
 	cudaMalloc(&d_MNonce[thr_id], sizeof(uint32_t));
 	cudaMallocHost(&d_mnounce[thr_id], 1*sizeof(uint32_t));
 }
 
-
-__host__  uint32_t m7_sha256_cpu_hash_300(int thr_id, int threads, uint32_t startNounce, uint64_t *d_nonceVector,uint64_t *d_hash, int order)
+__host__
+uint32_t m7_sha256_cpu_hash_300(int thr_id, int threads, uint32_t startNounce, uint64_t *d_nonceVector,uint64_t *d_hash, int order)
 {
-
+	const int threadsperblock = 384;
 	uint32_t result = 0xffffffff;
-	cudaMemset(d_MNonce[thr_id], 0xff, sizeof(uint32_t));
-	const int threadsperblock = 384; // Alignment mit mixtob Grösse. NICHT ÄNDERN
 
+	cudaMemset(d_MNonce[thr_id], 0xff, sizeof(uint32_t));
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
 	size_t shared_size = 0;
 
-
 	m7_sha256_gpu_hash_300<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector, d_MNonce[thr_id]);
+
 	cudaMemcpy(d_mnounce[thr_id], d_MNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	MyStreamSynchronize(NULL, order, thr_id);
+
 	result = *d_mnounce[thr_id];
 	return result;
 }
 
-
-__host__ void m7_sha256_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+__host__
+void m7_sha256_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
+	const int threadsperblock = 512;
 
-	const int threadsperblock = 512; // Alignment mit mixtob Grösse. NICHT ÄNDERN
-
-	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-//	dim3 grid(1);
-//	dim3 block(1);
+
 	size_t shared_size = 0;
 
 	m7_sha256_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
@@ -512,7 +467,8 @@ __host__ void m7_sha256_cpu_hash_120(int thr_id, int threads, uint32_t startNoun
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void m7_sha256_setBlock_120(void *pdata,const void *ptarget)  //not useful
+__host__
+void m7_sha256_setBlock_120(void *pdata,const void *ptarget)  //not useful
 {
 	unsigned char PaddedMessage[128];
 	uint8_t ending =0x80;
@@ -527,6 +483,6 @@ __host__ void m7_sha256_setBlock_120(void *pdata,const void *ptarget)  //not use
 	uint32_t in[16],buf[8];
 	for (int i=0;i<16;i++) {in[i]= host_swab32(alt_data[i]);}
 	for (int i=0;i<8;i++) {buf[i]= cpu_H256[i];}
-			                sha2_round_body_host(in,buf,cpu_K);
-    cudaMemcpyToSymbol( pbuf, buf, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	sha2_round_body_host(in,buf,cpu_K);
+	cudaMemcpyToSymbol( pbuf, buf, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }

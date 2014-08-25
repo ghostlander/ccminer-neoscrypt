@@ -48,7 +48,7 @@
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 
- __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
+__constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 static __constant__ uint32_t gpu_IV[5];
 static __constant__ uint32_t bufo[5];
 static const uint32_t IV[5] = {
@@ -282,118 +282,116 @@ static const uint32_t IV[5] = {
 		(h)[0] = tmp; \
 	}
 
-
-__global__ void m7_ripemd160_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__
+void m7_ripemd160_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = startNounce + thread;
+		union {
+			uint8_t h1[64];
+			uint32_t h4[16];
+			uint64_t h8[8];
+		} hash;
 
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
+		#undef F1
+		#undef F2
+		#undef F3
+		#undef F4
+		#undef F5
 
-        uint32_t nounce = startNounce + thread ;
-union {
-uint8_t h1[64];
-uint32_t h4[16];
-uint64_t h8[8];
-} hash;
+		#define F1(x, y, z)   xor3(x,y,z)
+		#define F2(x, y, z)   xandx(x,y,z)
+		#define F3(x, y, z)   xornot64(x,y,z)
+		#define F4(x, y, z)   xandx(z,x,y)
+		#define F5(x, y, z)   xornt64(x,y,z)
 
-#undef F1
-#undef F2
-#undef F3
-#undef F4
-#undef F5
-
-#define F1(x, y, z)   xor3(x,y,z)
-#define F2(x, y, z)   xandx(x,y,z)
-#define F3(x, y, z)   xornot64(x,y,z)
-#define F4(x, y, z)   xandx(z,x,y)
-#define F5(x, y, z)   xornt64(x,y,z)
-        uint32_t in2[16],in3[16];
-        uint32_t in[16],buf[5];
-//	    #pragma unroll 16
-//		for (int i=0;i<16;i++) {in[i]= c_PaddedMessage80[i];}
-        #pragma unroll 16
-        for (int i=0;i<16;i++) {if ((i+16)<29)  {in2[i]= c_PaddedMessage80[i+16];}
-						   else if ((i+16)==29) {in2[i]= nounce;}
-						   else if ((i+16)==30) {in2[i]= c_PaddedMessage80[i+16];}
-						   else                 {in2[i]= 0;}}
+		uint32_t in2[16],in3[16];
+		uint32_t in[16],buf[5];
 		#pragma unroll 16
-		for (int i=0;i<16;i++) {in3[i]=0;}
-		                        in3[14]=0x3d0;
-//		#pragma unroll 5
-//		for (int i=0;i<5;i++) {buf[i]=gpu_IV[i];}
-         #pragma unroll 5
-		 for (int i=0;i<5;i++) {buf[i]=bufo[i];}
-//		 RIPEMD160_ROUND_BODY(in, buf); //no need to calculate it several time (need to moved)
-		 RIPEMD160_ROUND_BODY(in2, buf);
-         RIPEMD160_ROUND_BODY(in3, buf);
+		for (int i=0;i<16;i++) {
+			if ((i+16) < 29)
+				in2[i] = c_PaddedMessage80[i+16];
+			else if ((i+16)==29)
+				in2[i] = nounce;
+			else if ((i+16)==30)
+				in2[i] = c_PaddedMessage80[i+16];
+			else
+				in2[i] = 0;
+		}
 
+		#pragma unroll 16
+		for (int i=0;i<16;i++)
+			in3[i]=0;
+		in3[14]=0x3d0;
 
-hash.h4[5]=0;
-#pragma unroll 5
-for (int i=0;i<5;i++)
-{hash.h4[i]=buf[i];
+		#pragma unroll 5
+		for (int i=0;i<5;i++)
+		 	buf[i]=bufo[i];
+
+		RIPEMD160_ROUND_BODY(in2, buf);
+		RIPEMD160_ROUND_BODY(in3, buf);
+
+		hash.h4[5]=0;
+		#pragma unroll 5
+		for (int i=0; i<5; i++)
+			hash.h4[i]=buf[i];
+
+		#pragma unroll 3
+		for (int i=0;i<3;i++) {
+			outputHash[i*threads+thread] = hash.h8[i];
+		}
+	}
 }
-//uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-//#pragma unroll 3
-//for (int i=0;i<3;i++) {outHash[i]=hash.h8[i];}
-#pragma unroll 3
-for (int i=0;i<3;i++) {outputHash[i*threads+thread]=hash.h8[i];}
-//#pragma unroll 8
-//for (int i=0;i<8;i++) { if (i<3) {outputHash[i*threads+thread]=hash.h8[i];} else {outputHash[i*threads+thread]=0;}}
- }
-}
-
 
 void ripemd160_cpu_init(int thr_id, int threads)
 {
-
-    cudaMemcpyToSymbol(gpu_IV,IV,sizeof(IV),0, cudaMemcpyHostToDevice);
-
+	cudaMemcpyToSymbol(gpu_IV,IV,sizeof(IV),0, cudaMemcpyHostToDevice);
 }
 
-__host__ void ripemd160_setBlock_120(void *pdata)
+__host__
+void ripemd160_setBlock_120(void *pdata)
 {
 	unsigned char PaddedMessage[128];
 	uint8_t ending =0x80;
 	memcpy(PaddedMessage, pdata, 122);
 	memset(PaddedMessage+122,ending,1);
 	memset(PaddedMessage+123, 0, 5); //useless
-	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 32*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 32*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 
-#undef F1
-#undef F2
-#undef F3
-#undef F4
-#undef F5
-#define F1(x, y, z)   ((x) ^ (y) ^ (z))
-#define F2(x, y, z)   ((((y) ^ (z)) & (x)) ^ (z))
-#define F3(x, y, z)   (((x) | ~(y)) ^ (z))
-#define F4(x, y, z)   ((((x) ^ (y)) & (z)) ^ (y))
-#define F5(x, y, z)   ((x) ^ ((y) | ~(z)))
+	#undef F1
+	#undef F2
+	#undef F3
+	#undef F4
+	#undef F5
+	#define F1(x, y, z)   ((x) ^ (y) ^ (z))
+	#define F2(x, y, z)   ((((y) ^ (z)) & (x)) ^ (z))
+	#define F3(x, y, z)   (((x) | ~(y)) ^ (z))
+	#define F4(x, y, z)   ((((x) ^ (y)) & (z)) ^ (y))
+	#define F5(x, y, z)   ((x) ^ ((y) | ~(z)))
+
 	uint32_t* alt_data =(uint32_t*)pdata;
-        uint32_t in[16],buf[5];
+	uint32_t in[16],buf[5];
 
+	for (int i=0;i<16;i++)
+		in[i]= alt_data[i];
 
-		for (int i=0;i<16;i++) {in[i]= alt_data[i];}
+	for (int i=0;i<5;i++)
+		buf[i]=IV[i];
 
-
-		for (int i=0;i<5;i++) {buf[i]=IV[i];}
-
-		 RIPEMD160_ROUND_BODY(in, buf); //no need to calculate it several time (need to moved)
+	RIPEMD160_ROUND_BODY(in, buf); //no need to calculate it several time (need to moved)
 	cudaMemcpyToSymbol(bufo, buf, 5*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }
 
-__host__ void m7_ripemd160_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+__host__
+void m7_ripemd160_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
+	const int threadsperblock = 256;
 
-	const int threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
 
-
-dim3 grid((threads + threadsperblock-1)/threadsperblock);
-dim3 block(threadsperblock);
-//dim3 grid(1);
-//dim3 block(1);
 	size_t shared_size =0;
 	m7_ripemd160_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
 

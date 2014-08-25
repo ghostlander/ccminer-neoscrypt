@@ -50,11 +50,13 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint64_t bufo[3];
+
 static __constant__ uint64_t gpu_III[3];
 static __constant__ uint64_t T1[256];
 static __constant__ uint64_t T2[256];
 static __constant__ uint64_t T3[256];
 static __constant__ uint64_t T4[256];
+
 static const uint64_t III[3] = {
 	SPH_C64(0x0123456789ABCDEF),SPH_C64(0xFEDCBA9876543210),SPH_C64(0xF096A5B4C3B2E187)
 };
@@ -583,16 +585,16 @@ static const uint64_t cpu_T4[256] = {
 	SPH_C64(0xC83223F1720AEF96), SPH_C64(0xC3A0396F7363A51F)
 };
 
-#define PASS(a, b, c, mul)    { \
-		ROUND(a, b, c, X0, mul); \
-		ROUND(b, c, a, X1, mul); \
-		ROUND(c, a, b, X2, mul); \
-		ROUND(a, b, c, X3, mul); \
-		ROUND(b, c, a, X4, mul); \
-		ROUND(c, a, b, X5, mul); \
-		ROUND(a, b, c, X6, mul); \
-		ROUND(b, c, a, X7, mul); \
-	}
+#define PASS(a, b, c, mul) { \
+	ROUND(a, b, c, X0, mul); \
+	ROUND(b, c, a, X1, mul); \
+	ROUND(c, a, b, X2, mul); \
+	ROUND(a, b, c, X3, mul); \
+	ROUND(b, c, a, X4, mul); \
+	ROUND(c, a, b, X5, mul); \
+	ROUND(a, b, c, X6, mul); \
+	ROUND(b, c, a, X7, mul); \
+}
 
 #define MUL5(x)   SPH_T64((x) * SPH_C64(5))
 #define MUL7(x)   SPH_T64((x) * SPH_C64(7))
@@ -649,29 +651,24 @@ static const uint64_t cpu_T4[256] = {
 		(r)[2] = SPH_T64(C + (r)[2]); \
 	}
 
-
-__global__ void m7_tiger192_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__
+void m7_tiger192_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
+	__shared__ uint64_t sharedMem[1024];
 
-	 __shared__ uint64_t sharedMem[1024];
-	if(threadIdx.x < 256)
-	{
+	if(threadIdx.x < 256) {
 		sharedMem[threadIdx.x]      = T1[threadIdx.x];
 		sharedMem[threadIdx.x+256]  = T2[threadIdx.x];
 		sharedMem[threadIdx.x+512]  = T3[threadIdx.x];
 		sharedMem[threadIdx.x+768]  = T4[threadIdx.x];
 	}
+
 	__syncthreads();
+
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-
 		uint32_t nounce = startNounce + thread;
-union {
-uint8_t h1[64];
-uint32_t h4[16];
-uint64_t h8[8];
-} hash;
 /*
 #undef MUL5
 #undef MUL7
@@ -680,7 +677,7 @@ uint64_t h8[8];
 #define MUL7(x)   mul(x,7)
 #define MUL9(x)   mul(x,9)
 */
-#define PASS(a, b, c, mul)    { \
+#define PASS(a, b, c, mul) { \
 		ROUND(a, b, c, X0, mul); \
 		ROUND(b, c, a, X1, mul); \
 		ROUND(c, a, b, X2, mul); \
@@ -691,89 +688,95 @@ uint64_t h8[8];
 		ROUND(b, c, a, X7, mul); \
 	}
 
-
-
-#define ROUND(a, b, c, x, mul)    { \
+#define ROUND(a, b, c, x, mul) { \
 		c ^= x; \
 		a = SPH_T64(a - (sharedMem[c & 0xFF] ^ sharedMem[((c >> 16) & 0xFF)+256] \
-				  ^ sharedMem[((c >> 32) & 0xFF)+512] ^ sharedMem[((c >> 48) & 0xFF)+768])); \
+			^ sharedMem[((c >> 32) & 0xFF)+512] ^ sharedMem[((c >> 48) & 0xFF)+768])); \
 		b = SPH_T64(b + (sharedMem[((c >> 8) & 0xFF)+768] ^ sharedMem[((c >> 24) & 0xFF)+512] \
 			^ sharedMem[((c >> 40) & 0xFF)+256] ^ sharedMem[(c >> 56) & 0xFF])); \
 		b = mul(b); \
 	}
 
-
-		uint64_t in[8],buf[3];
-		uint64_t in2[8],in3[8];
+		uint64_t in2[8];
 		#pragma unroll 8
-		for (int i=0;i<8;i++) {in2[i]= c_PaddedMessage80[i+8];}
+		for (int i=0; i<8; i++)
+			in2[i] = c_PaddedMessage80[i+8];
+
 		uint32_t* Mess = (uint32_t*)in2;
-		Mess[13]=nounce;
+		Mess[13] = nounce;
+
+		uint64_t in3[8];
 		#pragma unroll 8
-		for (int i=0;i<8;i++) {in3[i]=0;}
+		for (int i=0; i<8; i++)
+			in3[i]=0;
+
 		in3[7]=0x3d0;
+
+		uint64_t buf[3];
 		#pragma unroll 3
+		for (int i=0; i<3; i++)
+			buf[i]=bufo[i];
 
-		for (int i=0;i<3;i++) {buf[i]=bufo[i];}
+		TIGER_ROUND_BODY(in2, buf);
+		TIGER_ROUND_BODY(in3, buf);
 
-		 TIGER_ROUND_BODY(in2, buf);
-		 TIGER_ROUND_BODY(in3, buf);
-
-#pragma unroll 8
-for (int i=0;i<8;i++) { if (i<3) {outputHash[i*threads+thread]=buf[i];} else {outputHash[i*threads+thread]=0;}}
- } //// threads
+		#pragma unroll 8
+		for (int i=0;i<8;i++) {
+			if (i<3) {
+				outputHash[i*threads+thread] = buf[i];
+			} else {
+				outputHash[i*threads+thread] = 0;
+			}
+		}
+	} // thread
 }
 
-
+__host__
 void tiger192_cpu_init(int thr_id, int threads)
 {
-
 	cudaMemcpyToSymbol(gpu_III,III,sizeof(III),0, cudaMemcpyHostToDevice);
 
 	cudaMemcpyToSymbol(T1,cpu_T1,sizeof(cpu_T1),0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(T2,cpu_T2,sizeof(cpu_T2),0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(T3,cpu_T3,sizeof(cpu_T3),0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(T4,cpu_T4,sizeof(cpu_T4),0, cudaMemcpyHostToDevice);
-
-
-
 }
 
-__host__ void m7_tiger192_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+__host__
+void m7_tiger192_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
+	const int threadsperblock = 640; // 256
 
-	const int threadsperblock = 640; // Alignment mit mixtab Grösse. NICHT ÄNDERN
-//	const int threadsperblock = 256;
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
 
-dim3 grid((threads + threadsperblock-1)/threadsperblock);
-dim3 block(threadsperblock);
-//dim3 grid(1);
-//dim3 block(1);
-	size_t shared_size =0;
+	size_t shared_size = 0;
+
 	m7_tiger192_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-
-__host__ void tiger192_setBlock_120(void *pdata)
+__host__
+void tiger192_setBlock_120(void *pdata)
 {
 	unsigned char PaddedMessage[128];
 	uint8_t ending =0x01;
+
 	memcpy(PaddedMessage, pdata, 122);
 	memset(PaddedMessage+122,ending,1);
 	memset(PaddedMessage+123, 0, 5); //useless
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 
-#undef ROUND
-#undef MUL5
-#undef MUL7
-#undef MUL9
-#define MUL5(x)   ((x) * SPH_C64(5))
-#define MUL7(x)   ((x) * SPH_C64(7))
-#define MUL9(x)   ((x) * SPH_C64(9))
+	#undef ROUND
+	#undef MUL5
+	#undef MUL7
+	#undef MUL9
+	#define MUL5(x)   ((x) * SPH_C64(5))
+	#define MUL7(x)   ((x) * SPH_C64(7))
+	#define MUL9(x)   ((x) * SPH_C64(9))
 
-#define ROUND(a, b, c, x, mul)    { \
+	#define ROUND(a, b, c, x, mul) { \
 		c ^= x; \
 		a = SPH_T64(a - (cpu_T1[c & 0xFF] ^ cpu_T2[(c >> 16) & 0xFF] \
 				  ^ cpu_T3[(c >> 32) & 0xFF] ^ cpu_T4[(c >> 48) & 0xFF])); \
@@ -782,14 +785,16 @@ __host__ void tiger192_setBlock_120(void *pdata)
 		b = mul(b); \
 	}
 
-
 	uint64_t* alt_data = (uint64_t*) pdata;
-		uint64_t in[8],buf[3];
-		for (int i=0;i<8;i++) {in[i]= alt_data[i];}
-		for (int i=0;i<3;i++) {buf[i]=III[i];}
+	uint64_t in[8],buf[3];
 
-		 TIGER_ROUND_BODY(in, buf)
-	cudaMemcpyToSymbol( bufo, buf, 3*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	for (int i=0;i<8;i++)
+		in[i] = alt_data[i];
 
+	for (int i=0;i<3;i++)
+		buf[i] = III[i];
 
+	TIGER_ROUND_BODY(in, buf)
+
+	cudaMemcpyToSymbol(bufo, buf, 3*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
