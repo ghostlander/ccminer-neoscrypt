@@ -82,6 +82,18 @@ x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
 m7/cuda_tiger192.o: m7/cuda_tiger192.cu
 	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=64 -o $@ -c $<
 
+m7/cuda_m7_sha256.o: m7/cuda_m7_sha256.cu
+	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=80 -o $@ -c $<
+
+m7/m7_keccak512.o: m7/m7_keccak512.cu
+	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=80 -o $@ -c $<
+
+m7/cuda_m7_whirlpool.o: m7/cuda_m7_whirlpool.cu
+	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=64 -o $@ -c $<
+
+m7/cuda_mul.o: m7/cuda_mul.cu
+	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=32 -o $@ -c $<
+
 # ABI requiring code modules
 quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" --maxrregcount=80 -o $@ -c $<

@@ -282,7 +282,7 @@ static const uint32_t IV[5] = {
 		(h)[0] = tmp; \
 	}
 
-__global__
+__global__ __launch_bounds__(256, 4)
 void m7_ripemd160_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -307,10 +307,9 @@ void m7_ripemd160_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outp
 		#define F4(x, y, z)   xandx(z,x,y)
 		#define F5(x, y, z)   xornt64(x,y,z)
 
-		uint32_t in2[16],in3[16];
-		uint32_t in[16],buf[5];
+		uint32_t buf[5], in2[16], in3[16];
 		#pragma unroll 16
-		for (int i=0;i<16;i++) {
+		for (int i=0; i<16; i++) {
 			if ((i+16) < 29)
 				in2[i] = c_PaddedMessage80[i+16];
 			else if ((i+16)==29)
