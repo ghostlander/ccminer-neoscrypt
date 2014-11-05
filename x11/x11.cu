@@ -142,7 +142,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000f;
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{
@@ -202,6 +202,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			if ((vhash64[7] <= Htarg) && fulltest(vhash64, ptarget)) {
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
+				if (opt_benchmark) applog(LOG_INFO, "found nonce!", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {

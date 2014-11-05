@@ -34,7 +34,7 @@ static const uint32_t c_IV_512[32] = {
 	0x7795D246, 0xD43E3B44
 };
 
-static __device__ void rrounds(uint32_t x[2][2][2][2][2])
+static __device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
 {
     int r;
     int j;
@@ -151,7 +151,7 @@ static __device__ void rrounds(uint32_t x[2][2][2][2][2])
 }
 
 
-static __device__ void block_tox(uint32_t block[16], uint32_t x[2][2][2][2][2])
+static __device__ __forceinline__ void block_tox(uint32_t block[16], uint32_t x[2][2][2][2][2])
 {
     int k;
     int l;
@@ -167,7 +167,7 @@ static __device__ void block_tox(uint32_t block[16], uint32_t x[2][2][2][2][2])
                 x[0][0][k][l][m] ^= *in++;
 }
 
-static __device__ void hash_fromx(uint32_t hash[16], uint32_t x[2][2][2][2][2])
+static __device__ __forceinline__ void hash_fromx(uint32_t hash[16], uint32_t x[2][2][2][2][2])
 {
     int j;
     int k;
@@ -227,7 +227,7 @@ void __device__ Init(uint32_t x[2][2][2][2][2])
 #endif
 }
 
-void __device__ Update32(uint32_t x[2][2][2][2][2], const BitSequence *data)
+void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const BitSequence *data)
 {
     /* "xor the block into the first b bytes of the state" */
     /* "and then transform the state invertibly through r identical rounds" */
@@ -235,7 +235,7 @@ void __device__ Update32(uint32_t x[2][2][2][2][2], const BitSequence *data)
     rrounds(x);
 }
 
-void __device__ Final(uint32_t x[2][2][2][2][2], BitSequence *hashval)
+void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], BitSequence *hashval)
 {
     int i;
 

@@ -1,10 +1,17 @@
 
-ccMiner release 1.4.6-tpruvot (Oct 26th 2014) - "S3"
+ccMiner release 1.4.6.sp.Beta6 (nov 05th 2014) - ""
 ---------------------------------------------------------------
 
 ***************************************************************
 If you find this tool useful and like to support its continued 
           development, then consider a donation.
+
+sp-hash@github:
+
+
+  BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
+DRK: 
+  XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
 
 tpruvot@github:
   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
@@ -152,6 +159,7 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Nov  5th  2014  New fork. 4 kernals optimized. Cubehash/Echo/groetsl/Simd/ 
 
   Oct. 26th 2014  v1.4.6
                   Add S3 algo reusing existing code (onecoin)

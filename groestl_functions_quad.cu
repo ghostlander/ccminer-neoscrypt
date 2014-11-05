@@ -15,41 +15,40 @@ __device__ __forceinline__ void G256_Mul2(uint32_t *regs)
 
 __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
 {
-    x0 = ~x0;
-    x1 = ~x1;
-    x2 = ~x2;
-    x3 = ~x3;
-    x4 = ~x4;
-    x5 = ~x5;
-    x6 = ~x6;
-    x7 = ~x7;
+	x0 = ~x0;
+	x1 = ~x1;
+	x2 = ~x2;
+	x3 = ~x3;
+	x4 = ~x4;
+	x5 = ~x5;
+	x6 = ~x6;
+	x7 = ~x7;
 
-    if ((threadIdx.x & 0x03) == 3) {
-        x0 ^= ((- (round & 0x01)    ) & 0xFFFF0000);
-        x1 ^= ((-((round & 0x02)>>1)) & 0xFFFF0000);
-        x2 ^= ((-((round & 0x04)>>2)) & 0xFFFF0000);
-        x3 ^= ((-((round & 0x08)>>3)) & 0xFFFF0000);
-        x4 ^= 0xAAAA0000;
-        x5 ^= 0xCCCC0000;
-        x6 ^= 0xF0F00000;
-        x7 ^= 0xFF000000;
-    }
+	int andmask1 = ((~((threadIdx.x & 0x03) - 3)) & 0xffff0000);
+
+	x0 ^= ((-(round & 0x01)) & andmask1);
+	x1 ^= ((-((round & 0x02) >> 1)) & andmask1);
+	x2 ^= ((-((round & 0x04) >> 2)) & andmask1);
+	x3 ^= ((-((round & 0x08) >> 3)) & andmask1);
+	x4 ^= (0xAAAA0000 & andmask1);
+	x5 ^= (0xCCCC0000 & andmask1);
+	x6 ^= (0xF0F00000 & andmask1);
+	x7 ^= (0xFF000000 & andmask1);
 }
 
 __device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
 {
-    if ((threadIdx.x & 0x03) == 0)
-    {
-        x4 ^= 0xAAAA;
-        x5 ^= 0xCCCC;
-        x6 ^= 0xF0F0;
-        x7 ^= 0xFF00;
+	int andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
-        x0 ^= ((- (round & 0x01)    ) & 0xFFFF);
-        x1 ^= ((-((round & 0x02)>>1)) & 0xFFFF);
-        x2 ^= ((-((round & 0x04)>>2)) & 0xFFFF);
-        x3 ^= ((-((round & 0x08)>>3)) & 0xFFFF);
-    }
+	x4 ^= (0xAAAA & andmask1);
+	x5 ^= (0xCCCC & andmask1);
+	x6 ^= (0xF0F0 & andmask1);
+	x7 ^= (0xFF00 & andmask1);
+
+	x0 ^= ((-(round & 0x01)) & andmask1);
+	x1 ^= ((-((round & 0x02) >> 1)) & andmask1);
+	x2 ^= ((-((round & 0x04) >> 2)) & andmask1);
+	x3 ^= ((-((round & 0x08) >> 3)) & andmask1);
 }
 
 __device__ __forceinline__ void G16mul_quad(uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0,
