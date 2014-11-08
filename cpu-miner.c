@@ -1533,7 +1533,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.7"
+#define PROGRAM_VERSION "1.4.7.SP"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
@@ -1903,7 +1903,7 @@ int main(int argc, char *argv[])
 	int i;
 
 	printf("*** ccMiner for nVidia GPUs by Christian Buchner and Christian H. ***\n");
-	printf("\t This is the forked version "PROGRAM_VERSION" (tpruvot@github)\n");
+	printf("\t This is the forked version "PROGRAM_VERSION" (sp-hash@github)\n");
 #ifdef WIN32
 	printf("\t  Built with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
 #else
@@ -1913,7 +1913,7 @@ int main(int argc, char *argv[])
 	printf("\t    and HVC extension from http://hvc.1gh.com/" "\n\n");
 	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n\n");
 	printf("\tInclude some of djm34 additions, cleaned by Tanguy Pruvot\n");
-	printf("\t  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
+	printf("\t\t  Optimized Kernals By SP^Cryptoburnes\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
