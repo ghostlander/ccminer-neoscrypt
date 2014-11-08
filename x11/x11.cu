@@ -138,11 +138,11 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*256*8;
+	const int throughput = 256*256*11;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xf;
+		((uint32_t*)ptarget)[7] = 0x9;
 
 	if (!init[thr_id])
 	{

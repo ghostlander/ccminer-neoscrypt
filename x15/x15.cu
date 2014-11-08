@@ -177,13 +177,13 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*256*8;
+	const int throughput = 256*256*10;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
 	uint32_t Htarg = ptarget[7];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x0fFF;
+		((uint32_t*)ptarget)[7] = Htarg = 0x0F;
 
 	if (!init[thr_id])
 	{

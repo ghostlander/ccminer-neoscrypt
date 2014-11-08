@@ -75,11 +75,11 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00FF;
+		((uint32_t*)ptarget)[7] = 0x5;
 
 	const uint32_t Htarg = ptarget[7];
 
-	const int throughput = 256*4096; // 100;
+	const int throughput = 256*4096*10; // 100;
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
@@ -126,6 +126,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
+				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);

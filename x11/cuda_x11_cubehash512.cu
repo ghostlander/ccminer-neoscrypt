@@ -253,7 +253,8 @@ void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], BitSequence *ha
 
 /***************************************************/
 // Die Hash-Funktion
-__global__ void x11_cubehash512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ __launch_bounds__(256, 4)
+void x11_cubehash512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -293,7 +294,7 @@ void x11_cubehash512_cpu_init(int thr_id, int threads)
 __host__
 void x11_cubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+    const int threadsperblock = 128;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);

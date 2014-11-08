@@ -51,16 +51,16 @@ const uint64_t c_u512[16] =
 	uint32_t idx1 = sigma[i][x]; \
 	uint32_t idx2 = sigma[i][x+1]; \
 	v[a] += (m[idx1] ^ u512[idx2]) + v[b]; \
-	v[d] = ROTR( v[d] ^ v[a], 32); \
+	v[d] = SWAP32( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 25); \
 	v[a] += (m[idx2] ^ u512[idx1]) + v[b]; \
-	v[d] = ROTR( v[d] ^ v[a], 16); \
+	v[d] = ROR16( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 11); \
 }
 
-__device__ static
+__device__ __forceinline__ 
 void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t ((*sigma)[16]), const uint64_t *u512, const int T0)
 {
     uint64_t v[16], m[16], i;
@@ -181,7 +181,8 @@ void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_n
 	}
 }
 
-__global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+__global__ __launch_bounds__(256,1)
+void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)

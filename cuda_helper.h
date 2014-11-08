@@ -319,7 +319,7 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 	return result;
 }
 #elif __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 3
-__device__
+__device__  __forceinline__
 uint64_t ROTL64(const uint64_t x, const int offset)
 {
 	uint64_t res;
@@ -341,5 +341,48 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 /* host */
 #define ROTL64(x, n)  (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
+
+
+__device__ __forceinline__
+uint64_t SWAP32(const uint64_t value) 
+{
+	#if __CUDA_ARCH__ >= 350
+		uint2 temp;
+		
+		asm("mov.b64 { %0,  %1}, %2; ": "=r"(temp.x), "=r"(temp.y) : "l"(value));
+		asm("mov.b64 %0, {%1, %2}; ":  "=l"(value) : "r"(temp.y), "r"(temp.x));
+
+		return value;
+	#else
+		return ROTL64(value, 32);
+	#endif
+} 
+
+__device__ __forceinline__
+uint64_t ROR16(uint64_t x)
+{
+	#if __CUDA_ARCH__ >= 350
+		short4 temp;
+		asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(x));
+		asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.y), "h"(temp.z), "h"(temp.w), "h"(temp.x));
+		return x;
+	#else
+		return ROTR64(x, 16);
+	#endif
+}
+__device__ __forceinline__
+uint64_t ROL16(uint64_t x)
+{
+#if __CUDA_ARCH__ >= 500
+	short4 temp;
+	asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(x));
+	asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.w), "h"(temp.x), "h"(temp.y), "h"(temp.z));
+	return x;
+#else
+	return ROTR64(x, 16);
+#endif
+}
+
+
 
 #endif // #ifndef CUDA_HELPER_H
