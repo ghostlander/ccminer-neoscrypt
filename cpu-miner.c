@@ -1913,7 +1913,7 @@ int main(int argc, char *argv[])
 	printf("\t    and HVC extension from http://hvc.1gh.com/" "\n\n");
 	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n\n");
 	printf("\tInclude some of djm34 additions, cleaned by Tanguy Pruvot\n");
-	printf("\t\t  Optimized Kernals By SP^Cryptoburnes\n\n");
+	printf("\t\t  Optimized Kernals By SP^Cryptoburners.\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
