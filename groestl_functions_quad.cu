@@ -13,7 +13,7 @@ __device__ __forceinline__ void G256_Mul2(uint32_t *regs)
     regs[0] = tmp;
 }
 
-__device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
+__device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, const int round)
 {
 	x0 = ~x0;
 	x1 = ~x1;
@@ -24,21 +24,21 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 	x6 = ~x6;
 	x7 = ~x7;
 
-	uint32_t andmask1 =-((threadIdx.x & 0x03) == 3) & 0xffff0000;
+	int andmask1 =-((threadIdx.x & 0x03) == 3) & 0xffff0000;
 
 	x0 ^= ((-(round & 0x01)) & andmask1);
-	x1 ^= ((-((round & 0x02) >> 1)) & andmask1);
-	x2 ^= ((-((round & 0x04) >> 2)) & andmask1);
-	x3 ^= ((-((round & 0x08) >> 3)) & andmask1);
+	x1 ^= ((-(round & 0x02)) & andmask1);
+	x2 ^= ((-(round & 0x04)) & andmask1);
+	x3 ^= ((-(round & 0x08)) & andmask1);
 	x4 ^= (0xAAAA0000 & andmask1);
 	x5 ^= (0xCCCC0000 & andmask1);
 	x6 ^= (0xF0F00000 & andmask1);
 	x7 ^= (0xFF000000 & andmask1);
 }
 
-__device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
+__device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, const int round)
 {
-	uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
+	int andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
 	x4 ^= (0xAAAA & andmask1);
 	x5 ^= (0xCCCC & andmask1);
