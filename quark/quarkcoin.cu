@@ -135,7 +135,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*4096*7; // 100;
+	const int throughput = 256*4096*10; // 100;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 
 	if (opt_benchmark)

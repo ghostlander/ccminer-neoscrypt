@@ -109,7 +109,8 @@ __device__ __forceinline__ void cuda_echo_round(
 
 }
 
-__global__ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ __launch_bounds__(320, 3)
+void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -189,7 +190,7 @@ __host__ void x11_echo512_cpu_init(int thr_id, int threads)
 
 __host__ void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+    const int threadsperblock = 320;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
