@@ -36,7 +36,7 @@ void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32
         int hashPosition = nounce - startNounce;
         uint32_t *inpHash = &g_hash[hashPosition << 4];
 
-        const uint16_t thr = threadIdx.x % THF;
+        const uint16_t thr = threadIdx.x & (THF-1);
 
         #pragma unroll
         for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
@@ -57,11 +57,9 @@ void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
 
-        if (thr == 0)
-        {
-            #pragma unroll
-            for(int k=0;k<16;k++) outpHash[k] = hash[k];
-        }
+		if (thr != 0) return;
+        #pragma unroll
+        for(int k=0;k<16;k++) outpHash[k] = hash[k];
     }
 }
 
@@ -79,7 +77,7 @@ __global__ void __launch_bounds__(TPB, THF)
 
         int hashPosition = nounce - startNounce;
         uint32_t * inpHash = &g_hash[hashPosition<<4];
-        const uint16_t thr = threadIdx.x % THF;
+        const uint16_t thr = threadIdx.x & (THF-1);
 
         #pragma unroll
         for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
@@ -100,14 +98,14 @@ __global__ void __launch_bounds__(TPB, THF)
             if (round < 1)
             {
                 // Verkettung zweier Runden inclusive Padding.
-                msgBitsliced[ 0] = __byte_perm(state[ 0], 0x00800100, 0x4341 + (((threadIdx.x%4)==3)<<13));
+                msgBitsliced[ 0] = __byte_perm(state[ 0], 0x00800100, 0x4341 + (((threadIdx.x&3)==3)<<13));
                 msgBitsliced[ 1] = __byte_perm(state[ 1], 0x00800100, 0x4341);
                 msgBitsliced[ 2] = __byte_perm(state[ 2], 0x00800100, 0x4341);
                 msgBitsliced[ 3] = __byte_perm(state[ 3], 0x00800100, 0x4341);
                 msgBitsliced[ 4] = __byte_perm(state[ 4], 0x00800100, 0x4341);
                 msgBitsliced[ 5] = __byte_perm(state[ 5], 0x00800100, 0x4341);
                 msgBitsliced[ 6] = __byte_perm(state[ 6], 0x00800100, 0x4341);
-                msgBitsliced[ 7] = __byte_perm(state[ 7], 0x00800100, 0x4341 + (((threadIdx.x%4)==0)<<4));
+                msgBitsliced[ 7] = __byte_perm(state[ 7], 0x00800100, 0x4341 + (((threadIdx.x&3)==0)<<4));
             }
         }
 
@@ -116,11 +114,10 @@ __global__ void __launch_bounds__(TPB, THF)
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
 
-        if (thr == 0)
-        {
-            #pragma unroll
-            for(int k=0;k<16;k++) outpHash[k] = hash[k];
-        }
+		if (thr != 0) return;
+
+		#pragma unroll
+        for(int k=0;k<16;k++) outpHash[k] = hash[k];
     }
 }
 

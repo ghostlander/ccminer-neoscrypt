@@ -24,7 +24,7 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 	x6 = ~x6;
 	x7 = ~x7;
 
-	int andmask1 = ((~((threadIdx.x & 0x03) - 3)) & 0xffff0000);
+	uint32_t andmask1 =-((threadIdx.x & 0x03) == 3) & 0xffff0000;
 
 	x0 ^= ((-(round & 0x01)) & andmask1);
 	x1 ^= ((-((round & 0x02) >> 1)) & andmask1);
@@ -38,7 +38,7 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 
 __device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
 {
-	int andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
+	uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
 	x4 ^= (0xAAAA & andmask1);
 	x5 ^= (0xCCCC & andmask1);
