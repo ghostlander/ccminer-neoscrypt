@@ -24,7 +24,7 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 	x6 = ~x6;
 	x7 = ~x7;
 
-	int andmask1 =-((threadIdx.x & 0x03) == 3) & 0xffff0000;
+	uint32_t andmask1 = ((-((threadIdx.x & 0x03) == 3)) & 0xffff0000);
 
 	x0 ^= ((-(round & 0x01)) & andmask1);
 	x1 ^= ((-(round & 0x02)) & andmask1);
@@ -38,7 +38,7 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 
 __device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, const int round)
 {
-	int andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
+	uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
 	x4 ^= (0xAAAA & andmask1);
 	x5 ^= (0xCCCC & andmask1);
@@ -162,9 +162,9 @@ __device__ __forceinline__ void G256_ShiftBytesP_quad(uint32_t &x7, uint32_t &x6
 {
     uint32_t t0,t1;
 
-    int tpos = threadIdx.x & 0x03;
-    int shift1 = tpos << 1;
-    int shift2 = shift1+1 + ((tpos == 3)<<2);
+	uint32_t tpos = threadIdx.x & 0x03;
+	uint32_t shift1 = tpos << 1;
+	uint32_t shift2 = shift1 + 1 + ((tpos == 3) << 2);
 
     t0 = __byte_perm(x0, 0, 0x1010)>>shift1;
     t1 = __byte_perm(x0, 0, 0x3232)>>shift2;
@@ -203,9 +203,9 @@ __device__ __forceinline__ void G256_ShiftBytesQ_quad(uint32_t &x7, uint32_t &x6
 {
     uint32_t t0,t1;
 
-    int tpos = threadIdx.x & 0x03;
-    int shift1 = (1-(tpos>>1)) + ((tpos & 0x01)<<2);
-    int shift2 = shift1+2 + ((tpos == 1)<<2);
+	uint32_t tpos = threadIdx.x & 0x03;
+	uint32_t shift1 = (1 - (tpos >> 1)) + ((tpos & 0x01) << 2);
+	uint32_t shift2 = shift1 + 2 + ((tpos == 1) << 2);
 
     t0 = __byte_perm(x0, 0, 0x1010)>>shift1;
     t1 = __byte_perm(x0, 0, 0x3232)>>shift2;
@@ -285,6 +285,7 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 
 __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *r)
 {
+
     for(int round=0;round<14;round++)
     {
         G256_AddRoundConstantP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
