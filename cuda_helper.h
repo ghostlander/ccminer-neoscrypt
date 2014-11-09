@@ -361,7 +361,7 @@ uint64_t SWAP32(const uint64_t value)
 __device__ __forceinline__
 uint64_t ROR16(uint64_t x)
 {
-	#if __CUDA_ARCH__ >= 350
+	#if __CUDA_ARCH__ > 500
 		short4 temp;
 		asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(x));
 		asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.y), "h"(temp.z), "h"(temp.w), "h"(temp.x));
@@ -373,7 +373,7 @@ uint64_t ROR16(uint64_t x)
 __device__ __forceinline__
 uint64_t ROL16(uint64_t x)
 {
-#if __CUDA_ARCH__ >= 500
+#if __CUDA_ARCH__ > 500
 	short4 temp;
 	asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(x));
 	asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.w), "h"(temp.x), "h"(temp.y), "h"(temp.z));
