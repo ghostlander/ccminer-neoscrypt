@@ -379,7 +379,7 @@ uint64_t ROL16(uint64_t x)
 	asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.w), "h"(temp.x), "h"(temp.y), "h"(temp.z));
 	return x;
 #else
-	return ROTR64(x, 16);
+	return ROTL64(x, 16);
 #endif
 }
 
