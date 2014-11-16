@@ -142,7 +142,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x9;
+		((uint32_t*)ptarget)[7] = 0x5;
 
 	if (!init[thr_id])
 	{

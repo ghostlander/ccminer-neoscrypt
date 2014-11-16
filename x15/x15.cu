@@ -183,7 +183,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	uint32_t Htarg = ptarget[7];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x0F;
+		((uint32_t*)ptarget)[7] = Htarg = 0x5;
 
 	if (!init[thr_id])
 	{
