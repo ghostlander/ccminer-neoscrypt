@@ -53,10 +53,6 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 #endif
 }
 
-// das Hi Word in einem 64 Bit Typen ersetzen
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32ULL);
-}
 
 // das Lo Word in einem 64 Bit Typen ersetzen
 __device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) {
@@ -95,6 +91,18 @@ __device__ __forceinline__ uint32_t _HIWORD(const uint64_t &x) {
 #endif
 }
 
+__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) 
+{
+#if __CUDA_ARCH__ >= 320
+	uint64_t res;
+	asm("mov.b64 	%0, {%1, %2} ;" : "=l"(res) : "r"(y), "r"(_LOWORD(x)));
+	return res;
+#else
+	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32ULL);
+#endif
+}
+
+
 #ifdef __CUDA_ARCH__
 __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 {
@@ -129,11 +137,11 @@ do {                                                                  \
 } while (0)
 
 /*********************************************************************/
-#ifdef _WIN64
-#define USE_XOR_ASM_OPTS 0
-#else
+//#ifdef _WIN64
 #define USE_XOR_ASM_OPTS 1
-#endif
+//#else
+//#define USE_XOR_ASM_OPTS 1
+//#endif
 
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
@@ -180,7 +188,7 @@ uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t
 	return result;
 }
 #else
-#define xor8(a,b,c,d,e,f,g,h) (a^b^c^d^e^f^g^h)
+#define xor8(a,b,c,d,e,f,g,h) ((a^b)^(c^d)^(e^f)^(g^h))
 #endif
 
 // device asm for x17
