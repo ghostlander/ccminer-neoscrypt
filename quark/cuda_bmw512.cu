@@ -127,25 +127,6 @@ __device__ void Compression512(uint64_t *msg, uint64_t *hash)
     hash[14] = ROTL64(hash[2],15) + (    XH64     ^     q[30]    ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
     hash[15] = ROTL16(hash[3]) + (    XH64     ^     q[31]    ^ msg[15]) + (SHR(XL64,2) ^ q[22] ^ q[15]);
 }
-static __constant__ uint64_t d_constMem[16];
-static uint64_t h_constMem[16] = {
-	SPH_C64(0x8081828384858687),
-    SPH_C64(0x88898A8B8C8D8E8F),
-    SPH_C64(0x9091929394959697),
-    SPH_C64(0x98999A9B9C9D9E9F),
-    SPH_C64(0xA0A1A2A3A4A5A6A7),
-    SPH_C64(0xA8A9AAABACADAEAF),
-    SPH_C64(0xB0B1B2B3B4B5B6B7),
-    SPH_C64(0xB8B9BABBBCBDBEBF),
-    SPH_C64(0xC0C1C2C3C4C5C6C7),
-    SPH_C64(0xC8C9CACBCCCDCECF),
-    SPH_C64(0xD0D1D2D3D4D5D6D7),
-    SPH_C64(0xD8D9DADBDCDDDEDF),
-    SPH_C64(0xE0E1E2E3E4E5E6E7),
-    SPH_C64(0xE8E9EAEBECEDEEEF),
-    SPH_C64(0xF0F1F2F3F4F5F6F7),
-    SPH_C64(0xF8F9FAFBFCFDFEFF)
-};
 
 __global__ __launch_bounds__(256, 2)
 void quark_bmw512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
@@ -159,28 +140,24 @@ void quark_bmw512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
         uint64_t *inpHash = &g_hash[8 * hashPosition];
 
         // Init
-        uint64_t h[16];
-		/*
-        h[ 0] = SPH_C64(0x8081828384858687);
-        h[ 1] = SPH_C64(0x88898A8B8C8D8E8F);
-        h[ 2] = SPH_C64(0x9091929394959697);
-        h[ 3] = SPH_C64(0x98999A9B9C9D9E9F);
-        h[ 4] = SPH_C64(0xA0A1A2A3A4A5A6A7);
-        h[ 5] = SPH_C64(0xA8A9AAABACADAEAF);
-        h[ 6] = SPH_C64(0xB0B1B2B3B4B5B6B7);
-        h[ 7] = SPH_C64(0xB8B9BABBBCBDBEBF);
-        h[ 8] = SPH_C64(0xC0C1C2C3C4C5C6C7);
-        h[ 9] = SPH_C64(0xC8C9CACBCCCDCECF);
-        h[10] = SPH_C64(0xD0D1D2D3D4D5D6D7);
-        h[11] = SPH_C64(0xD8D9DADBDCDDDEDF);
-        h[12] = SPH_C64(0xE0E1E2E3E4E5E6E7);
-        h[13] = SPH_C64(0xE8E9EAEBECEDEEEF);
-        h[14] = SPH_C64(0xF0F1F2F3F4F5F6F7);
-        h[15] = SPH_C64(0xF8F9FAFBFCFDFEFF);
-		*/
-#pragma unroll 16
-		for(int i=0;i<16;i++)
-			h[i] = d_constMem[i];
+		uint64_t h[16] = {
+			SPH_C64(0x8081828384858687),
+			SPH_C64(0x88898A8B8C8D8E8F),
+			SPH_C64(0x9091929394959697),
+			SPH_C64(0x98999A9B9C9D9E9F),
+			SPH_C64(0xA0A1A2A3A4A5A6A7),
+			SPH_C64(0xA8A9AAABACADAEAF),
+			SPH_C64(0xB0B1B2B3B4B5B6B7),
+			SPH_C64(0xB8B9BABBBCBDBEBF),
+			SPH_C64(0xC0C1C2C3C4C5C6C7),
+			SPH_C64(0xC8C9CACBCCCDCECF),
+			SPH_C64(0xD0D1D2D3D4D5D6D7),
+			SPH_C64(0xD8D9DADBDCDDDEDF),
+			SPH_C64(0xE0E1E2E3E4E5E6E7),
+			SPH_C64(0xE8E9EAEBECEDEEEF),
+			SPH_C64(0xF0F1F2F3F4F5F6F7),
+			SPH_C64(0xF8F9FAFBFCFDFEFF)
+		};
         // Nachricht kopieren (Achtung, die Nachricht hat 64 Byte,
         // BMW arbeitet mit 128 Byte!!!
         uint64_t message[16];
@@ -224,11 +201,24 @@ void quark_bmw512_gpu_hash_80(int threads, uint32_t startNounce, uint64_t *g_has
         uint32_t nounce = startNounce + thread;
 
         // Init
-        uint64_t h[16];
-#pragma unroll 16
-		for(int i=0;i<16;i++)
-			h[i] = d_constMem[i];
-
+		uint64_t h[16] = {
+			SPH_C64(0x8081828384858687),
+			SPH_C64(0x88898A8B8C8D8E8F),
+			SPH_C64(0x9091929394959697),
+			SPH_C64(0x98999A9B9C9D9E9F),
+			SPH_C64(0xA0A1A2A3A4A5A6A7),
+			SPH_C64(0xA8A9AAABACADAEAF),
+			SPH_C64(0xB0B1B2B3B4B5B6B7),
+			SPH_C64(0xB8B9BABBBCBDBEBF),
+			SPH_C64(0xC0C1C2C3C4C5C6C7),
+			SPH_C64(0xC8C9CACBCCCDCECF),
+			SPH_C64(0xD0D1D2D3D4D5D6D7),
+			SPH_C64(0xD8D9DADBDCDDDEDF),
+			SPH_C64(0xE0E1E2E3E4E5E6E7),
+			SPH_C64(0xE8E9EAEBECEDEEEF),
+			SPH_C64(0xF0F1F2F3F4F5F6F7),
+			SPH_C64(0xF8F9FAFBFCFDFEFF)
+		};
         // Nachricht kopieren (Achtung, die Nachricht hat 64 Byte,
         // BMW arbeitet mit 128 Byte!!!
         uint64_t message[16];
@@ -263,10 +253,6 @@ __host__ void quark_bmw512_cpu_init(int thr_id, int threads)
 {
     // nix zu tun ;-)
 	// jetzt schon :D
-	cudaMemcpyToSymbol( d_constMem,
-                        h_constMem,
-                        sizeof(h_constMem),
-                        0, cudaMemcpyHostToDevice);
 }
 
 // Bmw512 für 80 Byte grosse Eingangsdaten

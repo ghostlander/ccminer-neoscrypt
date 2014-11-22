@@ -7,14 +7,6 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
-__device__ __constant__
-static const uint32_t d_ShaviteInitVector[16] = {
-	SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
-	SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
-	SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
-	SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
-};
-
 #include "cuda_x11_aes.cu"
 
 __device__ __forceinline__
@@ -1329,11 +1321,12 @@ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_h
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 
 		// kopiere init-state
-		uint32_t state[16];
-
-		#pragma unroll 16
-		for(int i=0;i<16;i++)
-			state[i] = d_ShaviteInitVector[i];
+		uint32_t state[16] = {
+			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
+			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
+			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
+			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+		};
 
 		// nachricht laden
 		uint32_t msg[32];
@@ -1376,11 +1369,12 @@ void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 		const uint32_t nounce = startNounce + thread;
 
 		// kopiere init-state
-		uint32_t state[16];
-
-		#pragma unroll 16
-		for(int i=0;i<16;i++) {
-			state[i] = d_ShaviteInitVector[i];}
+		uint32_t state[16] = {
+			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
+			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
+			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
+			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+		};
 
 		uint32_t msg[32];
 
