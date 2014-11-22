@@ -45,11 +45,6 @@ extern "C" void pentablakehash(void *output, const void *input)
 
 #define MAXU 0xffffffffU
 
-// in cpu-miner.c
-extern bool opt_n_threads;
-extern bool opt_benchmark;
-extern int device_map[8];
-
 __constant__
 static uint32_t __align__(32) c_Target[8];
 
@@ -112,7 +107,7 @@ const uint64_t c_u512[16] =
 	uint32_t idx1 = c_sigma[i][x]; \
 	uint32_t idx2 = c_sigma[i][x+1]; \
 	v[a] += (m[idx1] ^ c_u512[idx2]) + v[b]; \
-	v[d] = ROTR64(v[d] ^ v[a], 32); \
+	v[d] = SWAPDWORDS(v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR64(v[b] ^ v[c], 25); \
 	v[a] += (m[idx2] ^ c_u512[idx1]) + v[b]; \
@@ -496,9 +491,10 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint32_t throughput = min(128 * 2560, max_nonce - first_nonce);
 	uint32_t endiandata[20];
 	int rc = 0;
+	int throughput = opt_work_size ? opt_work_size : (128 * 2560); // 18.5
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (extra_results[0] != MAXU) {
 		// possible extra result found in previous call
@@ -515,8 +511,8 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 		((uint32_t*)ptarget)[7] = 0x000F;
 
 	if (!init[thr_id]) {
-		if (opt_n_threads > 1) {
-			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		if (num_processors > 1) {
+			cudaSetDevice(device_map[thr_id]);
 		}
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
 		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], 2*sizeof(uint32_t)));

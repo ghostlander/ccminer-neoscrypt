@@ -14,9 +14,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-// in cpu-miner.c
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 extern void keccak256_cpu_init(int thr_id, int threads);
@@ -44,11 +41,10 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000f;
+		((uint32_t*)ptarget)[7] = 0x0005;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*256*8*8;
+	int throughput = opt_work_size ? opt_work_size : (1 << 21); // 256*256*8*4
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id]) {
@@ -72,10 +68,9 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 		uint32_t foundNonce = keccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
-
 			uint32_t vhash64[8];
+			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
-
 			keccak256_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {

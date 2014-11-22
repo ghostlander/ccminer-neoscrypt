@@ -1,13 +1,12 @@
 ccminer
 =======
-Optimized kernals by SP. 
 
-For faster HASHING please donate some beers to:
+Based on Christian Buchner's &amp; Christian H.'s CUDA project
 
-BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
-DRK: XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
+Fork by tpruvot@github with X14,X15,X17,WHIRL and Blake256 support (NEOS + BlakeCoin), and some others, check the [README.txt](README.txt)
 
-Based on Christian Buchner's &amp; Christian H.'s CUDA project and tpruvot@github fork with X14,X15,X17,WHIRL and Blake256 support (NEOS + BlakeCoin), and some others, check the [README.txt](README.txt)
+   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
+   [![tip for next commit](https://tip4commit.com/projects/927.svg)](https://tip4commit.com/github/tpruvot/ccminer)
 
 A part of the recent algos were originally wrote by [djm34](https://github.com/djm34).
 

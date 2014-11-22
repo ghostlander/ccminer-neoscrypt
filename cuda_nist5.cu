@@ -11,9 +11,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-// in cpu-miner.c
-extern int device_map[8];
-
 // Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
@@ -75,11 +72,10 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x5;
+		((uint32_t*)ptarget)[7] = 0x00FF;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*4096*10; // 100;
+	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	throughput = min(throughput, (int) (max_nonce - first_nonce));
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
@@ -119,6 +115,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
+			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
 			nist5hash(vhash64, endiandata);
 
@@ -126,7 +123,6 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
-				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);

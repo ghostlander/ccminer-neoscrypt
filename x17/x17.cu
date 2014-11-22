@@ -33,13 +33,9 @@ extern "C"
 
 static uint32_t *d_hash[8];
 
-// in cpu-miner.c
-extern int device_map[8];
-
 extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_bmw512_cpu_init(int thr_id, int threads);
 extern void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -65,7 +61,7 @@ extern void x11_cubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x11_simd512_cpu_init(int thr_id, int threads);
+extern int  x11_simd512_cpu_init(int thr_id, int threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x11_echo512_cpu_init(int thr_id, int threads);
@@ -197,17 +193,16 @@ extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*256*8;
-	static bool init[8] = {0,0,0,0,0,0,0,0};
-	uint32_t Htarg = ptarget[7];
+	static bool init[8] = { 0 };
+	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x00FF;
+		((uint32_t*)ptarget)[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
@@ -226,6 +221,8 @@ extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 		x15_whirlpool_cpu_init(thr_id, throughput, 0);
 		x17_sha512_cpu_init(thr_id, throughput);
 		x17_haval256_cpu_init(thr_id, throughput);
+
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -265,6 +262,7 @@ extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
+			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
 			x17hash(vhash64, endiandata);
 

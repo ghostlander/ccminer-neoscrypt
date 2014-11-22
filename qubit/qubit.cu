@@ -14,8 +14,6 @@ extern "C" {
 
 #include "cuda_helper.h"
 
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 extern void qubit_luffa512_cpu_init(int thr_id, int threads);
@@ -28,7 +26,7 @@ extern void x11_cubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x11_simd512_cpu_init(int thr_id, int threads);
+extern int x11_simd512_cpu_init(int thr_id, int threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x11_echo512_cpu_init(int thr_id, int threads);
@@ -78,10 +76,11 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
-	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*256*8;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
+	const uint32_t first_nonce = pdata[19];
+	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
@@ -90,13 +89,13 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
-
 		qubit_luffa512_cpu_init(thr_id, throughput);
 		x11_cubehash512_cpu_init(thr_id, throughput);
 		x11_shavite512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
+
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 

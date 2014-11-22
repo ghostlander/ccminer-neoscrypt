@@ -18,6 +18,7 @@
 
 struct hashlog_data {
 	uint32_t tm_sent;
+	uint32_t height;
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 	uint32_t last_from;
@@ -42,7 +43,7 @@ static uint64_t hextouint(char* jobid)
 /**
  * @return time of a job/nonce submission (or last nonce if nonce is 0)
  */
-extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
+uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 {
 	uint32_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -60,16 +61,16 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 /**
  * Store submitted nonces of a job
  */
-extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t scanned_from)
+void hashlog_remember_submit(struct work* work, uint32_t nonce)
 {
-	uint64_t njobid = hextouint(jobid);
-	uint64_t keyall = (njobid << 32);
-	uint64_t key = keyall + nonce;
+	uint64_t njobid = hextouint(work->job_id);
+	uint64_t key = (njobid << 32) + nonce;
 	hashlog_data data;
 
 	memset(&data, 0, sizeof(data));
-	data.scanned_from = scanned_from;
+	data.scanned_from = work->scanned_from;
 	data.scanned_to = nonce;
+	data.height = work->height;
 	data.tm_add = data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
 	tlastshares[key] = data;
 }
@@ -77,15 +78,15 @@ extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t sc
 /**
  * Update job scanned range
  */
-extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to)
+void hashlog_remember_scan_range(struct work* work)
 {
-	uint64_t njobid = hextouint(jobid);
-	uint64_t keyall = (njobid << 32);
-	uint64_t range = hashlog_get_scan_range(jobid);
+	uint64_t njobid = hextouint(work->job_id);
+	uint64_t key = (njobid << 32);
+	uint64_t range = hashlog_get_scan_range(work->job_id);
 	hashlog_data data;
 
 	// global scan range of a job
-	data = tlastshares[keyall];
+	data = tlastshares[key];
 	if (range == 0) {
 		memset(&data, 0, sizeof(data));
 	} else {
@@ -97,20 +98,20 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 	if (data.tm_add == 0)
 		data.tm_add = (uint32_t) time(NULL);
 
-	data.last_from = scanned_from;
+	data.last_from = work->scanned_from;
 
-	if (scanned_from < scanned_to) {
-		if (data.scanned_to == 0 || scanned_from == data.scanned_to + 1)
-			data.scanned_to = scanned_to;
+	if (work->scanned_from < work->scanned_to) {
+		if (data.scanned_to == 0 || work->scanned_from == data.scanned_to + 1)
+			data.scanned_to = work->scanned_to;
 		if (data.scanned_from == 0)
-			data.scanned_from = scanned_from ? scanned_from : 1; // min 1
-		else if (scanned_from < data.scanned_from || scanned_to == (data.scanned_from - 1))
-			data.scanned_from = scanned_from;
+			data.scanned_from = work->scanned_from ? work->scanned_from : 1; // min 1
+		else if (work->scanned_from < data.scanned_from || work->scanned_to == (data.scanned_from - 1))
+			data.scanned_from = work->scanned_from;
 	}
 
 	data.tm_upd = (uint32_t) time(NULL);
 
-	tlastshares[keyall] = data;
+	tlastshares[key] = data;
 /* 	applog(LOG_BLUE, "job %s range : %x %x -> %x %x", jobid,
 		scanned_from, scanned_to, data.scanned_from, data.scanned_to); */
 }
@@ -119,18 +120,19 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
  * Returns the range of a job
  * @return uint64_t to|from
  */
-extern "C" uint64_t hashlog_get_scan_range(char* jobid)
+uint64_t hashlog_get_scan_range(char* jobid)
 {
 	uint64_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
+	uint64_t keymsk = (0xffffffffULL << 32);
 	hashlog_data data;
 
 	data.scanned_from = 0;
 	data.scanned_to = 0;
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((keypfx & i->first) == keypfx && i->second.scanned_to > ret) {
+		if ((keymsk & i->first) == keypfx && i->second.scanned_to > ret) {
 			if (i->second.scanned_to > data.scanned_to)
 				data.scanned_to = i->second.scanned_to;
 			if (i->second.scanned_from < data.scanned_from || data.scanned_from == 0)
@@ -147,7 +149,7 @@ extern "C" uint64_t hashlog_get_scan_range(char* jobid)
  * Search last submitted nonce for a job
  * @return max nonce
  */
-extern "C" uint32_t hashlog_get_last_sent(char* jobid)
+uint32_t hashlog_get_last_sent(char* jobid)
 {
 	uint32_t nonce = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -165,7 +167,7 @@ extern "C" uint32_t hashlog_get_last_sent(char* jobid)
 /**
  * Remove entries of a job...
  */
-extern "C" void hashlog_purge_job(char* jobid)
+void hashlog_purge_job(char* jobid)
 {
 	int deleted = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -187,7 +189,7 @@ extern "C" void hashlog_purge_job(char* jobid)
 /**
  * Remove old entries to reduce memory usage
  */
-extern "C" void hashlog_purge_old(void)
+void hashlog_purge_old(void)
 {
 	int deleted = 0;
 	uint32_t now = (uint32_t) time(NULL);
@@ -208,15 +210,24 @@ extern "C" void hashlog_purge_old(void)
 /**
  * Reset the submitted nonces cache
  */
-extern "C" void hashlog_purge_all(void)
+void hashlog_purge_all(void)
 {
 	tlastshares.clear();
 }
 
 /**
+ * API meminfo
+ */
+void hashlog_getmeminfo(uint64_t *mem, uint32_t *records)
+{
+	(*records) = tlastshares.size();
+	(*mem) = (*records) * sizeof(hashlog_data);
+}
+
+/**
  * Used to debug ranges...
  */
-extern "C" void hashlog_dump_job(char* jobid)
+void hashlog_dump_job(char* jobid)
 {
 	if (opt_debug) {
 		uint64_t njobid = hextouint(jobid);
@@ -228,8 +239,8 @@ extern "C" void hashlog_dump_job(char* jobid)
 				if (i->first != keypfx)
 					applog(LOG_DEBUG, CL_YLW "job %s, found %08x ", jobid, LO_DWORD(i->first));
 				else
-					applog(LOG_DEBUG, CL_YLW "job %s scanned range : %08x-%08x", jobid,
-						i->second.scanned_from, i->second.scanned_to);
+					applog(LOG_DEBUG, CL_YLW "job %s(%u) range done: %08x-%08x", jobid,
+						i->second.height, i->second.scanned_from, i->second.scanned_to);
 			}
 			i++;
 		}

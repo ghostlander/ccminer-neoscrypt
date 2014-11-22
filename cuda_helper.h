@@ -4,19 +4,25 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#if defined(__INTELLISENSE__)
-/* reduce warnings */
+#ifdef __INTELLISENSE__
+/* reduce vstudio warnings (__byteperm, blockIdx...) */
 #include <device_functions.h>
 #include <device_launch_parameters.h>
+#define __launch_bounds__(max_tpb, min_blocks)
 #endif
 
 #include <stdint.h>
+
+extern int device_map[8];
+extern int device_sm[8];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, int threads);
 extern void cuda_check_cpu_setTarget(const void *ptarget);
 extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+extern uint32_t cuda_check_hash_fast(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, int order);
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
 
 extern __device__ __device_builtin__ void __syncthreads(void);
 
@@ -36,7 +42,7 @@ extern const uint3 threadIdx;
 
 #define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
 
-#if __CUDA_ARCH__ < 350
+#if __CUDA_ARCH__ < 320
 // Kepler (Compute 3.0)
 #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
 #else
@@ -53,6 +59,10 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 #endif
 }
 
+// das Hi Word in einem 64 Bit Typen ersetzen
+__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) {
+	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32U);
+}
 
 // das Lo Word in einem 64 Bit Typen ersetzen
 __device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) {
@@ -91,18 +101,6 @@ __device__ __forceinline__ uint32_t _HIWORD(const uint64_t &x) {
 #endif
 }
 
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) 
-{
-#if __CUDA_ARCH__ >= 320
-	uint64_t res;
-	asm("mov.b64 	%0, {%1, %2} ;" : "=l"(res) : "r"(y), "r"(_LOWORD(x)));
-	return res;
-#else
-	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32ULL);
-#endif
-}
-
-
 #ifdef __CUDA_ARCH__
 __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 {
@@ -125,23 +123,40 @@ __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 #endif
 
 /*********************************************************************/
-// Macro to catch CUDA errors in CUDA runtime calls
+// Macros to catch CUDA errors in CUDA runtime calls
+
 #define CUDA_SAFE_CALL(call)                                          \
 do {                                                                  \
 	cudaError_t err = call;                                           \
 	if (cudaSuccess != err) {                                         \
-		fprintf (stderr, "Cuda error in file '%s' in line %i : %s.\n",\
-		         __FILE__, __LINE__, cudaGetErrorString(err) );       \
+		fprintf(stderr, "Cuda error in func '%s' at line %i : %s.\n", \
+		         __FUNCTION__, __LINE__, cudaGetErrorString(err) );   \
 		exit(EXIT_FAILURE);                                           \
 	}                                                                 \
 } while (0)
 
+#define CUDA_CALL_OR_RET(call) do {                                   \
+	cudaError_t err = call;                                           \
+	if (cudaSuccess != err) {                                         \
+		cudaReportHardwareFailure(thr_id, err, __FUNCTION__);         \
+		return;                                                       \
+	}                                                                 \
+} while (0)
+
+#define CUDA_CALL_OR_RET_X(call, ret) do {                            \
+	cudaError_t err = call;                                           \
+	if (cudaSuccess != err) {                                         \
+		cudaReportHardwareFailure(thr_id, err, __FUNCTION__);         \
+		return ret;                                                   \
+	}                                                                 \
+} while (0)
+
 /*********************************************************************/
-//#ifdef _WIN64
+#ifdef _WIN64
+#define USE_XOR_ASM_OPTS 0
+#else
 #define USE_XOR_ASM_OPTS 1
-//#else
-//#define USE_XOR_ASM_OPTS 1
-//#endif
+#endif
 
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
@@ -261,7 +276,7 @@ uint64_t shl_t64(uint64_t x, uint32_t n)
 #endif
 
 // 64-bit ROTATE RIGHT
-#if __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 1
+#if __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 1
 /* complicated sm >= 3.5 one (with Funnel Shifter beschleunigt), to bench */
 __device__ __forceinline__
 uint64_t ROTR64(const uint64_t value, const int offset) {
@@ -297,7 +312,7 @@ uint64_t ROTR64(const uint64_t x, const int offset)
 #endif
 
 // 64-bit ROTATE LEFT
-#if __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 1
+#if __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 1
 __device__ __forceinline__
 uint64_t ROTL64(const uint64_t value, const int offset) {
 	uint2 result;
@@ -327,7 +342,7 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 	return result;
 }
 #elif __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 3
-__device__  __forceinline__
+__device__
 uint64_t ROTL64(const uint64_t x, const int offset)
 {
 	uint64_t res;
@@ -350,36 +365,33 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 #define ROTL64(x, n)  (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
 
+__device__ __forceinline__
+uint64_t SWAPDWORDS(uint64_t value)
+{
+#if __CUDA_ARCH__ >= 320
+	uint2 temp;
+	asm("mov.b64 {%0, %1}, %2; ": "=r"(temp.x), "=r"(temp.y) : "l"(value));
+	asm("mov.b64 %0, {%1, %2}; ": "=l"(value) : "r"(temp.y), "r"(temp.x));
+	return value;
+#else
+	return ROTL64(value, 32);
+#endif
+}
 
 __device__ __forceinline__
-uint64_t SWAP32(const uint64_t value) 
+uint64_t ROTR16(uint64_t x)
 {
-	#if __CUDA_ARCH__ >= 350
-		uint2 temp;
-		
-		asm("mov.b64 { %0,  %1}, %2; ": "=r"(temp.x), "=r"(temp.y) : "l"(value));
-		asm("mov.b64 %0, {%1, %2}; ":  "=l"(value) : "r"(temp.y), "r"(temp.x));
-
-		return value;
-	#else
-		return ROTL64(value, 32);
-	#endif
-} 
-
-__device__ __forceinline__
-uint64_t ROR16(uint64_t x)
-{
-	#if __CUDA_ARCH__ > 500
-		short4 temp;
-		asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(x));
-		asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.y), "h"(temp.z), "h"(temp.w), "h"(temp.x));
-		return x;
-	#else
-		return ROTR64(x, 16);
-	#endif
+#if __CUDA_ARCH__ > 500
+	short4 temp;
+	asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(x));
+	asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(x) : "h"(temp.y), "h"(temp.z), "h"(temp.w), "h"(temp.x));
+	return x;
+#else
+	return ROTR64(x, 16);
+#endif
 }
 __device__ __forceinline__
-uint64_t ROL16(uint64_t x)
+uint64_t ROTL16(uint64_t x)
 {
 #if __CUDA_ARCH__ > 500
 	short4 temp;
@@ -390,7 +402,6 @@ uint64_t ROL16(uint64_t x)
 	return ROTL64(x, 16);
 #endif
 }
-
 
 
 #endif // #ifndef CUDA_HELPER_H

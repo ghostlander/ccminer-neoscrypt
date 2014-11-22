@@ -51,6 +51,21 @@ void *alloca (size_t);
 # endif
 #endif
 
+#ifdef __INTELLISENSE__
+/* should be in stdint.h but... */
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+typedef __int32 int32_t;
+typedef unsigned __int32 uint32_t;
+typedef __int16 int16_t;
+typedef unsigned __int16 uint16_t;
+typedef __int16 int8_t;
+typedef unsigned __int16 uint8_t;
+
+typedef unsigned __int32 time_t;
+typedef char *  va_list;
+#endif
+
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 0
 # define _ALIGN(x) __align__(x)
 #elif _MSC_VER
@@ -74,6 +89,8 @@ enum {
 };
 #endif
 
+typedef unsigned char uchar;
+
 #undef unlikely
 #undef likely
 #if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
@@ -86,6 +103,18 @@ enum {
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
+
+#ifndef max
+# define max(a, b)  ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
+# define min(a, b)  ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef UINT32_MAX
+/* for gcc 4.4 */
+#define UINT32_MAX UINT_MAX
 #endif
 
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
@@ -335,10 +364,45 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+/* api related */
+void *api_thread(void *userdata);
+
+struct cgpu_info {
+	uint8_t gpu_id;
+	uint8_t thr_id;
+	int accepted;
+	int rejected;
+	int hw_errors;
+	double khashes;
+	uint8_t intensity;
+	uint8_t has_monitoring;
+	float gpu_temp;
+	int gpu_fan;
+	int gpu_clock;
+	int gpu_memclock;
+	size_t gpu_mem;
+	uint32_t gpu_usage;
+	double gpu_vddc;
+	int16_t gpu_pstate;
+	int16_t gpu_bus;
+
+	uint16_t gpu_vid;
+	uint16_t gpu_pid;
+	char gpu_desc[64];
+};
+
+struct thr_api {
+	int id;
+	pthread_t pth;
+	struct thread_q	*q;
+};
+/* end of api */
+
 struct thr_info {
 	int		id;
 	pthread_t	pth;
 	struct thread_q	*q;
+	struct cgpu_info gpu;
 };
 
 struct work_restart {
@@ -350,6 +414,10 @@ extern bool opt_benchmark;
 extern bool opt_debug;
 extern bool opt_quiet;
 extern bool opt_protocol;
+extern bool opt_tracegpu;
+extern int opt_intensity;
+extern int opt_n_threads;
+extern int num_processors;
 extern int opt_timeout;
 extern bool want_longpoll;
 extern bool have_longpoll;
@@ -364,10 +432,14 @@ extern pthread_mutex_t applog_lock;
 extern struct thr_info *thr_info;
 extern int longpoll_thr_id;
 extern int stratum_thr_id;
+extern int api_thr_id;
 extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;
+extern uint32_t opt_work_size;
+
 extern uint64_t global_hashrate;
+extern double   global_diff;
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
@@ -406,6 +478,7 @@ extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
 extern void diff_to_target(uint32_t *target, double diff);
+extern void get_currentalgo(char* buf, int sz);
 
 struct stratum_job {
 	char *job_id;
@@ -420,6 +493,7 @@ struct stratum_job {
 	unsigned char ntime[4];
 	bool clean;
 	unsigned char nreward[2];
+	uint32_t height;
 	double diff;
 };
 
@@ -444,7 +518,39 @@ struct stratum_ctx {
 	pthread_mutex_t work_lock;
 
 	int srvtime_diff;
-	int bloc_height;
+};
+
+struct work {
+	uint32_t data[32];
+	uint32_t target[8];
+	uint32_t maxvote;
+
+	char job_id[128];
+	size_t xnonce2_len;
+	uchar xnonce2[32];
+
+	union {
+		uint32_t u32[2];
+		uint64_t u64[1];
+	} noncerange;
+
+	double difficulty;
+	uint32_t height;
+
+	uint32_t scanned_from;
+	uint32_t scanned_to;
+};
+
+struct stats_data {
+	uint32_t tm_stat;
+	uint32_t hashcount;
+	uint32_t height;
+	double difficulty;
+	double hashrate;
+	uint8_t thr_id;
+	uint8_t gpu_id;
+	uint8_t hashfound;
+	uint8_t ignored;
 };
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
@@ -456,8 +562,8 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
-void hashlog_remember_submit(char* jobid, uint32_t nounce, uint32_t scanned_from);
-void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to);
+void hashlog_remember_submit(struct work* work, uint32_t nonce);
+void hashlog_remember_scan_range(struct work* work);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
 uint64_t hashlog_get_scan_range(char* jobid);
@@ -465,6 +571,14 @@ void hashlog_purge_old(void);
 void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
 void hashlog_dump_job(char* jobid);
+void hashlog_getmeminfo(uint64_t *mem, uint32_t *records);
+
+void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found, uint32_t height);
+double stats_get_speed(int thr_id, double def_speed);
+int  stats_get_history(int thr_id, struct stats_data *data, int max_records);
+void stats_purge_old(void);
+void stats_purge_all(void);
+void stats_getmeminfo(uint64_t *mem, uint32_t *records);
 
 struct thread_q;
 

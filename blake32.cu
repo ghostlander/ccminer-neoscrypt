@@ -8,8 +8,6 @@
 
 #include "miner.h"
 
-typedef unsigned char uchar;
-
 extern "C" {
 #include "sph/sph_blake.h"
 #include <stdint.h>
@@ -18,7 +16,6 @@ extern "C" {
 
 /* threads per block and throughput (intensity) */
 #define TPB 128
-#define INTENSITY (1 << 20) // = 1048576 nonces per call
 
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
@@ -40,13 +37,6 @@ extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14
 
 #include "cuda_helper.h"
 
-#define MAXU 0xffffffffU
-
-// in cpu-miner.c
-extern bool opt_n_threads;
-extern bool opt_tracegpu;
-extern int device_map[8];
-
 #if PRECALC64
 __constant__ uint32_t _ALIGN(32) d_data[12];
 #else
@@ -64,7 +54,7 @@ static uint32_t *h_resNonce[8];
 
 /* max count of found nonces in one call */
 #define NBN 2
-static uint32_t extra_results[NBN] = { MAXU };
+static uint32_t extra_results[NBN] = { UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
@@ -256,7 +246,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 	const uint32_t crcsum, const int8_t rounds)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -345,7 +335,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	const int8_t rounds)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -396,33 +386,36 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint64_t targetHigh = ((uint64_t*)ptarget)[3]; // 0x00000000.0fffffff
+	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 	uint32_t _ALIGN(64) endiandata[20];
 #if PRECALC64
 	uint32_t _ALIGN(64) midstate[8];
 #else
 	uint32_t crcsum;
 #endif
-	/* todo: -i param */
-	uint32_t throughput = min(INTENSITY, max_nonce - first_nonce);
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 20;
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << intensity);
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	int rc = 0;
 
 #if NBN > 1
-	if (extra_results[0] != MAXU) {
+	if (extra_results[0] != UINT32_MAX) {
 		// possible extra result found in previous call
 		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
 			pdata[19] = extra_results[0];
 			*hashes_done = pdata[19] - first_nonce + 1;
-			extra_results[0] = MAXU;
+			extra_results[0] = UINT32_MAX;
 			rc = 1;
 			goto exit_scan;
 		}
 	}
 #endif
 
-	if (opt_benchmark)
+	if (opt_benchmark) {
 		targetHigh = 0x1ULL << 32;
+		((uint32_t*)ptarget)[6] = swab32(0xff);
+	}
 
 	if (opt_tracegpu) {
 		/* test call from util.c */
@@ -432,11 +425,10 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	}
 
 	if (!init[thr_id]) {
-		if (opt_n_threads > 1) {
-			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		}
-		CUDA_SAFE_CALL(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)));
-		CUDA_SAFE_CALL(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)));
+		if (num_processors > 1)
+			cudaSetDevice(device_map[thr_id]);
+		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		init[thr_id] = true;
 	}
 
@@ -459,7 +451,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		// GPU FULL HASH
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], targetHigh, crcsum, blakerounds);
 #endif
-		if (foundNonce != MAXU)
+		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhashcpu[8];
 			uint32_t Htarg = (uint32_t)targetHigh;
@@ -476,7 +468,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 				pdata[19] = foundNonce;
 				rc = 1;
 
-				if (extra_results[0] != MAXU) {
+				if (extra_results[0] != UINT32_MAX) {
 					// Rare but possible if the throughput is big
 					be32enc(&endiandata[19], extra_results[0]);
 
@@ -485,7 +477,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 						applog(LOG_NOTICE, "GPU found more than one result " CL_GRN "yippee!");
 						rc = 2;
 					} else {
-						extra_results[0] = MAXU;
+						extra_results[0] = UINT32_MAX;
 					}
 				}
 
@@ -494,8 +486,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 				goto exit_scan;
 			}
 			else if (opt_debug) {
-				applog_hash((uint8_t*)ptarget);
-				applog_compare_hash((uint8_t*)vhashcpu,(uint8_t*)ptarget);
+				applog_hash((uchar*)ptarget);
+				applog_compare_hash((uchar*)vhashcpu, (uchar*)ptarget);
 				applog(LOG_DEBUG, "GPU #%d: result for nonce %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}

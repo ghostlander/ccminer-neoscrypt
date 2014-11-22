@@ -51,11 +51,11 @@ const uint64_t c_u512[16] =
 	uint32_t idx1 = sigma[i][x]; \
 	uint32_t idx2 = sigma[i][x+1]; \
 	v[a] += (m[idx1] ^ u512[idx2]) + v[b]; \
-	v[d] = SWAP32( v[d] ^ v[a]); \
+	v[d] = SWAPDWORDS( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 25); \
 	v[a] += (m[idx2] ^ u512[idx1]) + v[b]; \
-	v[d] = ROR16( v[d] ^ v[a]); \
+	v[d] = ROTR16( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 11); \
 }
@@ -105,15 +105,14 @@ void quark_blake512_compress(uint64_t *h, const uint64_t *block, const uint8_t((
 {
 	uint64_t v[16];
 	uint64_t m[16];
-	int i;
 
 	#pragma unroll 16
-	for( i = 0; i < 16; i++) {
+	for( int i = 0; i < 16; i++) {
 		m[i] = cuda_swab64(block[i]);
 	}
 
 	#pragma unroll 8
-	for (i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++)
 		v[i] = h[i];
 	v[ 8] = u512[0];
 	v[ 9] = u512[1];
@@ -125,7 +124,7 @@ void quark_blake512_compress(uint64_t *h, const uint64_t *block, const uint8_t((
 	v[15] = u512[7];
 
 	//#pragma unroll 16
-	for( i = 0; i < 16; ++i )
+	for(int i = 0; i < 16; ++i )
 	{
 
 #if __CUDA_ARCH__ < 520

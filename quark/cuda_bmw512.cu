@@ -13,7 +13,7 @@ __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + paddi
 #define SHR(x, n)            ((x) >> (n))
 
 #define CONST_EXP2    q[i+0] + ROTL64(q[i+1], 5)  + q[i+2] + ROTL64(q[i+3], 11) + \
-                    q[i+4] + ROTL64(q[i+5], 27) + q[i+6] + SWAP32(q[i+7]) + \
+                    q[i+4] + ROTL64(q[i+5], 27) + q[i+6] + SWAPDWORDS(q[i+7]) + \
                     q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
                     q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
@@ -125,7 +125,7 @@ __device__ void Compression512(uint64_t *msg, uint64_t *hash)
     hash[12] = ROTL64(hash[0],13) + (    XH64     ^     q[28]    ^ msg[12]) + (SHR(XL64,3) ^ q[19] ^ q[12]);
     hash[13] = ROTL64(hash[1],14) + (    XH64     ^     q[29]    ^ msg[13]) + (SHR(XL64,4) ^ q[20] ^ q[13]);
     hash[14] = ROTL64(hash[2],15) + (    XH64     ^     q[30]    ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
-    hash[15] = ROL16(hash[3]) + (    XH64     ^     q[31]    ^ msg[15]) + (SHR(XL64,2) ^ q[22] ^ q[15]);
+    hash[15] = ROTL16(hash[3]) + (    XH64     ^     q[31]    ^ msg[15]) + (SHR(XL64,2) ^ q[22] ^ q[15]);
 }
 static __constant__ uint64_t d_constMem[16];
 static uint64_t h_constMem[16] = {

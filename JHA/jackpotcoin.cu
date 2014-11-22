@@ -10,8 +10,6 @@ extern "C"
 #include "miner.h"
 #include "cuda_helper.h"
 
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 extern void jackpot_keccak512_cpu_init(int thr_id, int threads);
@@ -85,9 +83,6 @@ extern "C" unsigned int jackpothash(void *state, const void *input)
     return round;
 }
 
-
-extern bool opt_benchmark;
-
 extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
@@ -95,30 +90,33 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		((uint32_t*)ptarget)[7] = 0x000f;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*4096*4; // 100;
+	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		// Konstanten kopieren, Speicher belegen
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+
 		jackpot_keccak512_cpu_init(thr_id, throughput);
 		jackpot_compactTest_cpu_init(thr_id, throughput);
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
+
 		cuda_check_cpu_init(thr_id, throughput);
-		cudaMalloc(&d_jackpotNonces[thr_id], sizeof(uint32_t)*throughput*2);
+
 		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput*2);
 		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput*2);
 		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput*2);
+
+		CUDA_SAFE_CALL(cudaMalloc(&d_jackpotNonces[thr_id], sizeof(uint32_t)*throughput*2));
+
 		init[thr_id] = true;
 	}
 
@@ -212,6 +210,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		{
 			unsigned int rounds;
 			uint32_t vhash64[8];
+			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
 
 			// diese jackpothash Funktion gibt die Zahl der Runden zurück
@@ -220,7 +219,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
 
 				pdata[19] = foundNonce;
-				*hashes_done = (foundNonce - first_nonce + 1)/2;
+				*hashes_done = foundNonce - first_nonce + 1;
 				//applog(LOG_INFO, "GPU #%d: result for nonce $%08X does validate on CPU (%d rounds)!", thr_id, foundNonce, rounds);
 				return 1;
 			} else {
@@ -228,10 +227,15 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			}
 		}
 
+		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
+
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = (pdata[19] - first_nonce + 1)/2;
+	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }

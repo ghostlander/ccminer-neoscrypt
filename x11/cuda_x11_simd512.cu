@@ -641,8 +641,8 @@ x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, ui
 	}
 }
 
-__host__
-void x11_simd512_cpu_init(int thr_id, int threads)
+__host__ 
+int x11_simd512_cpu_init(int thr_id, int threads)
 {
 	CUDA_SAFE_CALL(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads));
 	CUDA_SAFE_CALL(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads));
@@ -663,6 +663,7 @@ void x11_simd512_cpu_init(int thr_id, int threads)
 	texRef1D_128.filterMode = cudaFilterModePoint;
 	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
 	CUDA_SAFE_CALL(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads));
+	return 0;
 }
 
 __host__

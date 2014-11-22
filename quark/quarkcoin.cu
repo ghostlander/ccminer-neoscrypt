@@ -12,8 +12,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
@@ -135,11 +133,13 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*4096*10; // 100;
-	static bool init[8] = {0,0,0,0,0,0,0,0};
+	static bool init[8] = { 0 };
+
+	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x005;
+		((uint32_t*)ptarget)[7] = 0x00F;
 
 	if (!init[thr_id])
 	{
@@ -237,8 +237,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 
 				pdata[19] = foundNonce;
-				*hashes_done = (foundNonce - first_nonce + 1)/2;
-				if (opt_benchmark) applog(LOG_INFO, "found nonce!", thr_id, foundNonce, vhash64[7], Htarg);
+				*hashes_done = foundNonce - first_nonce + 1;
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
@@ -249,6 +248,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = (pdata[19] - first_nonce + 1)/2;
+	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
