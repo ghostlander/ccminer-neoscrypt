@@ -19,8 +19,7 @@ uint4 *d_temp4[8];
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
 
-__constant__ uint8_t c_perm[8][8];
-const uint8_t h_perm[8][8] = {
+__constant__ uint8_t c_perm[8][8] = {
 	{ 2, 3, 6, 7, 0, 1, 4, 5 },
 	{ 6, 7, 2, 3, 4, 5, 0, 1 },
 	{ 7, 6, 5, 4, 3, 2, 1, 0 },
@@ -31,16 +30,14 @@ const uint8_t h_perm[8][8] = {
 	{ 4, 5, 2, 3, 6, 7, 0, 1 }
 };
 
-__constant__ uint32_t c_IV_512[32];
-const uint32_t h_IV_512[32] = {
+__constant__ uint32_t c_IV_512[32] = {
 	0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558,
 	0xac506643, 0xa90635a5, 0xe25b878b, 0xaab7878f, 0x88817f7a, 0x0a02892b, 0x559a7550, 0x598f657e,
 	0x7eef60a1, 0x6b70e3e8, 0x9c1714d1, 0xb958e2a8, 0xab02675e, 0xed1c014f, 0xcd8d65bb, 0xfdb7a257,
 	0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22
 };
 
-__constant__ short c_FFT128_8_16_Twiddle[128];
-static const short h_FFT128_8_16_Twiddle[128] = {
+__constant__ short c_FFT128_8_16_Twiddle[128] = {
 	1,   1,   1,   1,   1,    1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
 	1,  60,   2, 120,   4,  -17,   8, -34,  16, -68,  32, 121,  64, -15, 128, -30,
 	1,  46,  60, -67,   2,   92, 120, 123,   4, -73, -17, -11,   8, 111, -34, -22,
@@ -51,8 +48,7 @@ static const short h_FFT128_8_16_Twiddle[128] = {
 	1, -61, 123, -50, -34,   18, -70, -99, 128, -98,  67,  25,  17,  -9,  35, -79
 };
 
-__constant__ short c_FFT256_2_128_Twiddle[128];
-static const short h_FFT256_2_128_Twiddle[128] = {
+__constant__ short c_FFT256_2_128_Twiddle[128] = {
 	  1,  41,-118,  45,  46,  87, -31,  14,
 	 60,-110, 116,-127, -67,  80, -61,  69,
 	  2,  82,  21,  90,  92, -83, -62,  28,
@@ -646,16 +642,6 @@ int x11_simd512_cpu_init(int thr_id, int threads)
 {
 	CUDA_SAFE_CALL(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads));
 	CUDA_SAFE_CALL(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads));
-
-	cudaMemcpyToSymbol(c_perm, h_perm, sizeof(h_perm), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
-
-	cudaMemcpyToSymbol(d_cw0, h_cw0, sizeof(h_cw0), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(d_cw1, h_cw1, sizeof(h_cw1), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(d_cw2, h_cw2, sizeof(h_cw2), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(d_cw3, h_cw3, sizeof(h_cw3), 0, cudaMemcpyHostToDevice);
 
 	// Texture for 128-Bit Zugriffe
 	cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();

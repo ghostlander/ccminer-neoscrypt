@@ -1,4 +1,5 @@
 #include "cuda_helper.h"
+#include <memory.h> // memcpy()
 
 #define TPB 128
 
