@@ -28,7 +28,6 @@ __device__ __forceinline__ void AES_2ROUND(
 	k0++;
 }
 
-
 __device__ __forceinline__ void cuda_echo_round(
 	const uint32_t *const __restrict__ sharedMemory, uint32_t *const __restrict__  hash)
 {
@@ -110,7 +109,7 @@ __device__ __forceinline__ void cuda_echo_round(
 	k0 = 512 + 8;
 
 #pragma unroll
-	for (int idx = 0; idx < 16; idx+= 4)
+	for (int idx = 0; idx < 16; idx += 4)
 	{
 		AES_2ROUND(sharedMemory,
 			h[idx + 0], h[idx + 1], h[idx + 2], h[idx + 3], k0);
@@ -120,86 +119,107 @@ __device__ __forceinline__ void cuda_echo_round(
 	uint32_t W[64];
 
 #pragma unroll
-	for (int i = 0; i < 4; i++) 
+	for (int i = 0; i < 4; i++)
 	{
-		
-		const uint32_t ab = P[i] ^ P[i + 4];
-		const uint32_t bc = P[i + 4] ^ h[i + 8];
-		const uint32_t cd = h[i + 8] ^ P[i + 8];
+		uint32_t a = P[i];
+		uint32_t b = P[i + 4];
+		uint32_t c = h[i + 8];
+		uint32_t d = P[i + 8];
 
-		const uint32_t t = (ab & 0x80808080);
-		const uint32_t t2 = (bc & 0x80808080);
-		const uint32_t t3 = (cd & 0x80808080);
-
-		const uint32_t abx = (t >> 7) * 27 ^ ((ab^t) << 1);
-		const uint32_t bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
-		const uint32_t cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
-
-		W[0 + i] = abx ^ bc ^ P[i + 8];
-		W[0 + i + 4] = bcx ^ P[i] ^ cd;
-		W[0 + i + 8] = cdx ^ ab ^ P[i + 8];
-		W[0 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ h[i + 8];
-
-		const uint32_t ab_2 = P[12 + i] ^ h[i + 4];
-		const uint32_t bc_2 = h[i + 4] ^ P[12 + i + 4];
-		const uint32_t cd_2 = P[12 + i + 4] ^ P[12 + i + 8];
+		uint32_t ab = a ^ b;
+		uint32_t bc = b ^ c;
+		uint32_t cd = c ^ d;
 
 
-		const uint32_t t_2 = (ab_2 & 0x80808080);
-		const uint32_t t2_2 = (bc_2 & 0x80808080);
-		const uint32_t t3_2 = (cd_2 & 0x80808080);
+		uint32_t t = (ab & 0x80808080);
+		uint32_t t2 = (bc & 0x80808080);
+		uint32_t t3 = (cd & 0x80808080);
 
-		const uint32_t abx_2 = (t_2 >> 7) * 27 ^ ((ab_2^t_2) << 1);
-		const uint32_t bcx_2 = (t2_2 >> 7) * 27 ^ ((bc_2^t2_2) << 1);
-		const uint32_t cdx_2 = (t3_2 >> 7) * 27 ^ ((cd_2^t3_2) << 1);
+		uint32_t abx = (t >> 7) * 27 ^ ((ab^t) << 1);
+		uint32_t bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
+		uint32_t cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
 
-		W[16 + i] = abx_2 ^ bc_2 ^ P[12 + i + 8];
-		W[16 + i + 4] = bcx_2 ^ P[12 + i] ^ cd_2;
-		W[16 + i + 8] = cdx_2 ^ ab_2 ^ P[12 + i + 8];
-		W[16 + i + 12] = abx_2 ^ bcx_2 ^ cdx_2 ^ ab_2 ^ P[12 + i + 4];
+		W[0 + i] = abx ^ bc ^ d;
+		W[0 + i + 4] = bcx ^ a ^ cd;
+		W[0 + i + 8] = cdx ^ ab ^ d;
+		W[0 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
+
+		a = P[12 + i];
+		b = h[i + 4];
+		c = P[12 + i + 4];
+		d = P[12 + i + 8];
+
+		ab = a ^ b;
+		bc = b ^ c;
+		cd = c ^ d;
 
 
-		const uint32_t ab_3 = h[i] ^ P[24 + i + 0];
-		const uint32_t bc_3 = P[24 + i + 0] ^ P[24 + i + 4];
-		const uint32_t cd_3 = P[24 + i + 4] ^ P[24 + i + 8];
+		t = (ab & 0x80808080);
+		t2 = (bc & 0x80808080);
+		t3 = (cd & 0x80808080);
 
-		const uint32_t t_3 = (ab_3 & 0x80808080);
-		const uint32_t t2_3 = (bc_3 & 0x80808080);
-		const uint32_t t3_3 = (cd_3 & 0x80808080);
+		abx = (t >> 7) * 27 ^ ((ab^t) << 1);
+		bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
+		cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
 
-		const uint32_t abx_3 = (t_3 >> 7) * 27 ^ ((ab_3^t_3) << 1);
-		const uint32_t bcx_3 = (t2_3 >> 7) * 27 ^ ((bc_3^t2_3) << 1);
-		const uint32_t cdx_3 = (t3_3 >> 7) * 27 ^ ((cd_3^t3_3) << 1);
+		W[16 + i] = abx ^ bc ^ d;
+		W[16 + i + 4] = bcx ^ a ^ cd;
+		W[16 + i + 8] = cdx ^ ab ^ d;
+		W[16 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
 
-		W[32 + i] = abx_3 ^ bc_3 ^ P[24 + i + 8];
-		W[32 + i + 4] = bcx_3 ^ h[i] ^ cd_3;
-		W[32 + i + 8] = cdx_3 ^ ab_3 ^ P[24 + i + 8];
-		W[32 + i + 12] = abx_3 ^ bcx_3 ^ cdx_3 ^ ab_3 ^ P[24 + i + 4];
+		a = h[i];
+		b = P[24 + i + 0];
+		c = P[24 + i + 4];
+		d = P[24 + i + 8];
 
-		const uint32_t ab_4 = P[36 + i] ^ P[36 + i + 4];
-		const uint32_t bc_4 = P[36 + i + 4] ^ P[36 + i + 8];
-		const uint32_t cd_4 = P[36 + i + 8] ^ h[i + 12];
+		ab = a ^ b;
+		bc = b ^ c;
+		cd = c ^ d;
 
-		const uint32_t t_4 = (ab_4 & 0x80808080);
-		const uint32_t t2_4 = (bc_4 & 0x80808080);
-		const uint32_t t3_4 = (cd_4 & 0x80808080);
 
-		const uint32_t abx_4 = (t_4 >> 7) * 27 ^ ((ab_4^t_4) << 1);
-		const uint32_t bcx_4 = (t2_4 >> 7) * 27 ^ ((bc_4^t2_4) << 1);
-		const uint32_t cdx_4 = (t3_4 >> 7) * 27 ^ ((cd_4^t3_4) << 1);
+		t = (ab & 0x80808080);
+		t2 = (bc & 0x80808080);
+		t3 = (cd & 0x80808080);
 
-		W[48 + i] = abx_4 ^ bc_4 ^ h[i + 12];
-		W[48 + i + 4] = bcx_4 ^ P[36 + i] ^ cd_4;
-		W[48 + i + 8] = cdx_4 ^ ab_4 ^ h[i + 12];
-		W[48 + i + 12] = abx_4 ^ bcx_4 ^ cdx_4 ^ ab_4 ^ P[36 + i + 8];
+		abx = (t >> 7) * 27 ^ ((ab^t) << 1);
+		bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
+		cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
+
+		W[32 + i] = abx ^ bc ^ d;
+		W[32 + i + 4] = bcx ^ a ^ cd;
+		W[32 + i + 8] = cdx ^ ab ^ d;
+		W[32 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
+
+		a = P[36 + i];
+		b = P[36 + i + 4];
+		c = P[36 + i + 8];
+		d = h[i + 12];
+
+		ab = a ^ b;
+		bc = b ^ c;
+		cd = c ^ d;
+
+		t = (ab & 0x80808080);
+		t2 = (bc & 0x80808080);
+		t3 = (cd & 0x80808080);
+
+		abx = (t >> 7) * 27 ^ ((ab^t) << 1);
+		bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
+		cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
+
+		W[48 + i] = abx ^ bc ^ d;
+		W[48 + i + 4] = bcx ^ a ^ cd;
+		W[48 + i + 8] = cdx ^ ab ^ d;
+		W[48 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
+
 	}
 
 	for (int k = 1; k < 10; k++)
 	{
 
 		// Big Sub Words
-		#pragma unroll
-		for (int idx = 0; idx < 64; idx+=16)
+#pragma unroll
+		for (int idx = 0; idx < 64; idx += 16)
 		{
 			AES_2ROUND(sharedMemory,
 				W[idx + 0], W[idx + 1], W[idx + 2], W[idx + 3],
@@ -253,22 +273,28 @@ __device__ __forceinline__ void cuda_echo_round(
 			for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
 			{
 
-				const uint32_t ab = W[idx + i] ^ W[idx + i + 4];
-				const uint32_t bc = W[idx + i + 4] ^ W[idx + i + 8];
-				const uint32_t cd = W[idx + i + 8] ^ W[idx + i + 12];
+				uint32_t a = W[idx + i];
+				uint32_t b = W[idx + i + 4];
+				uint32_t c = W[idx + i + 8];
+				uint32_t d = W[idx + i + 12];
 
-				const uint32_t t = (ab & 0x80808080);
-				const uint32_t t2 = (bc & 0x80808080);
-				const uint32_t t3 = (cd & 0x80808080);
+				uint32_t ab = a ^ b;
+				uint32_t bc = b ^ c;
+				uint32_t cd = c ^ d;
 
-				const uint32_t abx = (t >> 7) * 27 ^ ((ab^t) << 1);
-				const uint32_t bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
-				const uint32_t cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
+				uint32_t t, t2, t3;
+				t = (ab & 0x80808080);
+				t2 = (bc & 0x80808080);
+				t3 = (cd & 0x80808080);
 
-				W[idx + i] = abx ^ bc ^ W[idx + i + 12];
-				W[idx + i + 4] = bcx ^ W[idx + i] ^ cd;
-				W[idx + i + 8] = cdx ^ ab ^ W[idx + i + 12];
-				W[idx + i + 12] = abx ^ bcx ^ cdx ^ ab ^ W[idx + i + 8];
+				uint32_t abx = (t >> 7) * 27 ^ ((ab^t) << 1);
+				uint32_t bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
+				uint32_t cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
+
+				W[idx + i] = abx ^ bc ^ d;
+				W[idx + i + 4] = bcx ^ a ^ cd;
+				W[idx + i + 8] = cdx ^ ab ^ d;
+				W[idx + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
 			}
 		}
 	}
@@ -286,6 +312,7 @@ __device__ __forceinline__ void cuda_echo_round(
 	for (int i = 0; i<16; i++)
 		hash[i] ^= W[i];
 }
+
 
 
 __device__ __forceinline__
