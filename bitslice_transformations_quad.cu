@@ -10,7 +10,7 @@
 #ifdef __CUDA_ARCH__
 
 __device__ __forceinline__
-void to_bitslice_quad(uint32_t *input, uint32_t *output)
+void to_bitslice_quad(uint32_t * __restrict__ input, uint32_t * __restrict__ output)
 {
     uint32_t other[8];
     const int n = threadIdx.x % 4;
@@ -289,7 +289,7 @@ void to_bitslice_quad(uint32_t *input, uint32_t *output)
 }
 
 __device__ __forceinline__
-void from_bitslice_quad(uint32_t *input, uint32_t *output)
+void from_bitslice_quad(uint32_t * __restrict__ input, uint32_t * __restrict__ output)
 {
 #pragma unroll 8
     for (int i=0; i < 16; i+=2) output[i] = 0;
