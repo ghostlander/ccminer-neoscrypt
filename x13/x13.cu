@@ -61,7 +61,9 @@ extern void x13_hamsi512_cpu_init(int thr_id, int threads);
 extern void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x13_fugue512_cpu_init(int thr_id, int threads);
-extern void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x13_fugue512_cpu_setTarget(const void *ptarget);
+
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, 
@@ -155,7 +157,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000f;
+		((uint32_t*)ptarget)[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
@@ -188,7 +190,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	cuda_check_cpu_setTarget(ptarget);
+	x13_fugue512_cpu_setTarget(ptarget);
 
 	do {
 		uint32_t foundNonce;
@@ -205,10 +207,8 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		foundNonce=x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		// Scan nach Gewinner Hashes auf der GPU
-		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
