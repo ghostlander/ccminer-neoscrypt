@@ -12,25 +12,23 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define U64TO32_LE(p, v) \
     *p = (uint32_t)((v)); *(p+1) = (uint32_t)((v) >> 32);
 
-static const uint64_t host_keccak_round_constants[24] = {
-    0x0000000000000001ull, 0x0000000000008082ull,
-    0x800000000000808aull, 0x8000000080008000ull,
-    0x000000000000808bull, 0x0000000080000001ull,
-    0x8000000080008081ull, 0x8000000000008009ull,
-    0x000000000000008aull, 0x0000000000000088ull,
-    0x0000000080008009ull, 0x000000008000000aull,
-    0x000000008000808bull, 0x800000000000008bull,
-    0x8000000000008089ull, 0x8000000000008003ull,
-    0x8000000000008002ull, 0x8000000000000080ull,
-    0x000000000000800aull, 0x800000008000000aull,
-    0x8000000080008081ull, 0x8000000000008080ull,
-    0x0000000080000001ull, 0x8000000080008008ull
+__constant__ uint64_t c_keccak_round_constants[24] = {
+	0x0000000000000001ull, 0x0000000000008082ull,
+	0x800000000000808aull, 0x8000000080008000ull,
+	0x000000000000808bull, 0x0000000080000001ull,
+	0x8000000080008081ull, 0x8000000000008009ull,
+	0x000000000000008aull, 0x0000000000000088ull,
+	0x0000000080008009ull, 0x000000008000000aull,
+	0x000000008000808bull, 0x800000000000008bull,
+	0x8000000000008089ull, 0x8000000000008003ull,
+	0x8000000000008002ull, 0x8000000000000080ull,
+	0x000000000000800aull, 0x800000008000000aull,
+	0x8000000080008081ull, 0x8000000000008080ull,
+	0x0000000080000001ull, 0x8000000080008008ull
 };
 
-__constant__ uint64_t c_keccak_round_constants[24];
-
 static __device__ __forceinline__ void
-keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_constants) {
+keccak_block(uint64_t *s, const uint32_t *in) {
     size_t i;
     uint64_t t[5], u[5], v, w;
 
@@ -96,7 +94,7 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
         v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
         /* iota: a[0,0] ^= round constant */
-        s[0] ^= keccak_round_constants[i];
+        s[0] ^= c_keccak_round_constants[i];
     }
 }
 
@@ -127,7 +125,7 @@ void quark_keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_
             keccak_gpu_state[i] = 0;
 
         // den Block einmal gut durchschütteln
-        keccak_block(keccak_gpu_state, message, c_keccak_round_constants);
+        keccak_block(keccak_gpu_state, message);
 
         // das Hash erzeugen
         uint32_t hash[16];
@@ -150,10 +148,6 @@ void quark_keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_
 __host__ void quark_keccak512_cpu_init(int thr_id, int threads)
 {
     // Kopiere die Hash-Tabellen in den GPU-Speicher
-    cudaMemcpyToSymbol( c_keccak_round_constants,
-                        host_keccak_round_constants,
-                        sizeof(host_keccak_round_constants),
-                        0, cudaMemcpyHostToDevice);
 }
 
 __host__ void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

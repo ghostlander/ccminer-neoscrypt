@@ -1043,8 +1043,7 @@ __device__ __forceinline__ void STEP8_IF_35(const uint32_t *const __restrict__ w
 		A[j] = R[j];
 	}
 }
-static __constant__ uint32_t d_cw0[8][8];
-static const uint32_t h_cw0[8][8] = {
+static __constant__ uint32_t d_cw0[8][8] = {
 	0x531B1720, 	0xAC2CDE09, 	0x0B902D87, 	0x2369B1F4, 	0x2931AA01, 	0x02E4B082, 	0xC914C914, 	0xC1DAE1A6, 
 	0xF18C2B5C, 	0x08AC306B, 	0x27BFC914, 	0xCEDC548D, 	0xC630C4BE, 	0xF18C4335, 	0xF0D3427C, 	0xBE3DA380, 
 	0x143C02E4, 	0xA948C630, 	0xA4F2DE09, 	0xA71D2085, 	0xA439BD84, 	0x109FCD6A, 	0xEEA8EF61, 	0xA5AB1CE8, 
@@ -1067,8 +1066,7 @@ __device__ __forceinline__ void Round8_0_final(uint32_t *A,
 	STEP8_MAJ_6(d_cw0[6], t, u, &A[16], &A[24], A, &A[8]);
 	STEP8_MAJ_7(d_cw0[7], u, r, &A[8], &A[16], &A[24], A);
 }
-static __constant__ uint32_t d_cw1[8][8];
-static const uint32_t h_cw1[8][8] = {
+static __constant__ uint32_t d_cw1[8][8] = {
 	0xC34C07F3, 	0xC914143C, 	0x599CBC12, 	0xBCCBE543, 	0x385EF3B7, 	0x14F54C9A, 	0x0AD7C068, 	0xB64A21F7, 
 	0xDEC2AF10, 	0xC6E9C121, 	0x56B8A4F2, 	0x1158D107, 	0xEB0BA88F, 	0x050FAABA, 	0xC293264D, 	0x548D46D2, 
 	0xACE5E8E0, 	0x53D421F7, 	0xF470D279, 	0xDC974E0C, 	0xD6CF55FF, 	0xFD1C4F7E, 	0x36EC36EC, 	0x3E261E5A, 
@@ -1091,8 +1089,7 @@ __device__ __forceinline__ void Round8_1_final(uint32_t *A,
 	STEP8_MAJ_14(d_cw1[6], t, u, &A[16], &A[24], A, &A[8]);
 	STEP8_MAJ_15(d_cw1[7], u, r, &A[8], &A[16], &A[24], A);
 }
-static __constant__ uint32_t d_cw2[8][8];
-static const uint32_t h_cw2[8][8] = {
+static __constant__ uint32_t d_cw2[8][8] = {
 	0xA4135BED, 	0xE10E1EF2, 	0x6C4F93B1, 	0x6E2191DF, 	0xE2E01D20, 	0xD1952E6B, 	0x6A7D9583, 	0x131DECE3, 
 	0x369CC964, 	0xFB73048D, 	0x9E9D6163, 	0x280CD7F4, 	0xD9C6263A, 	0x1062EF9E, 	0x2AC7D539, 	0xAD2D52D3, 
 	0x0A03F5FD, 	0x197CE684, 	0xAA72558E, 	0xDE5321AD, 	0xF0870F79, 	0x607A9F86, 	0xAFE85018, 	0x2AC7D539, 
@@ -1115,8 +1112,7 @@ __device__ __forceinline__ void Round8_2_final(uint32_t *A,
 	STEP8_MAJ_22(d_cw2[6], t, u, &A[16], &A[24], A, &A[8]);
 	STEP8_MAJ_23(d_cw2[7], u, r, &A[8], &A[16], &A[24], A);
 }
-static __constant__ uint32_t d_cw3[8][8];
-static const uint32_t h_cw3[8][8] = {
+static __constant__ uint32_t d_cw3[8][8] = {
 	0x1234EDCC, 	0xF5140AEC, 	0xCDF1320F, 	0x3DE4C21C, 	0x48D0B730, 	0x1234EDCC, 	0x131DECE3, 	0x52D3AD2D, 
 	0xE684197C, 	0x6D3892C8, 	0x72AE8D52, 	0x6FF3900D, 	0x73978C69, 	0xEB1114EF, 	0x15D8EA28, 	0x71C58E3B, 
 	0x90F66F0A, 	0x15D8EA28, 	0x9BE2641E, 	0x65F09A10, 	0xEA2815D8, 	0xBD8F4271, 	0x3A40C5C0, 	0xD9C6263A, 

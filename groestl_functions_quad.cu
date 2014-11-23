@@ -306,7 +306,7 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *r)
     }
 }
 
-__device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t *state, uint32_t *message)
+__device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t * __restrict__ state, uint32_t * __restrict__ message)
 {
 #pragma unroll 8
     for(int u=0;u<8;u++) state[u] = message[u];
