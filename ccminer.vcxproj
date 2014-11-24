@@ -174,7 +174,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
@@ -440,6 +440,7 @@
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_hamsi512.cu">
       <MaxRegCount>80</MaxRegCount>
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">80</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_fugue512.cu">
     </CudaCompile>
