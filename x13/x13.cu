@@ -157,7 +157,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		((uint32_t*)ptarget)[7] = 0x005;
 
 	if (!init[thr_id])
 	{
@@ -208,7 +208,6 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		foundNonce=x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
 		if  (foundNonce != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
