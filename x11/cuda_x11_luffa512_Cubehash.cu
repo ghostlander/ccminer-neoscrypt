@@ -616,12 +616,6 @@ void x11_luffaCubehash512_gpu_hash_64(int threads, uint32_t startNounce, uint64_
 	}
 }
 
-
-// Setup-Funktionen
-__host__ void x11_luffaCubehash512_cpu_init(int thr_id, int threads)
-{
-}
-
 __host__ void x11_luffaCubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     const int threadsperblock = 256;

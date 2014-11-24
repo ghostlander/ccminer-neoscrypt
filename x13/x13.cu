@@ -26,7 +26,6 @@ extern "C"
 static uint32_t *d_hash[8];
 
 
-extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
@@ -36,19 +35,14 @@ extern void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 extern void quark_groestl512_cpu_init(int thr_id, int threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_skein512_cpu_init(int thr_id, int threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_keccak512_cpu_init(int thr_id, int threads);
 extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_jh512_cpu_init(int thr_id, int threads);
 extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x11_luffaCubehash512_cpu_init(int thr_id, int threads);
 extern void x11_luffaCubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern int  x11_simd512_cpu_init(int thr_id, int threads);
@@ -63,6 +57,7 @@ extern void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 extern void x13_fugue512_cpu_init(int thr_id, int threads);
 extern uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void x13_fugue512_cpu_setTarget(const void *ptarget);
+extern void  x13_fugue512_cpu_free(int32_t thr_id);
 
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
@@ -157,20 +152,14 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x005;
+		((uint32_t*)ptarget)[7] = 0x05;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
-		quark_skein512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
-		quark_keccak512_cpu_init(thr_id, throughput);
-		quark_jh512_cpu_init(thr_id, throughput);
-		x11_luffaCubehash512_cpu_init(thr_id, throughput);
-		x11_shavite512_cpu_init(thr_id, throughput);
 		if (x11_simd512_cpu_init(thr_id, throughput) != 0) {
 			return 0;
 		}
@@ -219,6 +208,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
 				if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				x13_fugue512_cpu_free(thr_id);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {

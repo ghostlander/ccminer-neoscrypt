@@ -270,9 +270,6 @@ __constant__ uint32_t d_AES3[256] = {
 	AESx(0x7BCBB0B0), AESx(0xA8FC5454), AESx(0x6DD6BBBB), AESx(0x2C3A1616)
 };
 
-static void aes_cpu_init()
-{
-}
 
 __device__ __forceinline__
 void aes_gpu_init(uint32_t *sharedMemory)

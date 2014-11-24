@@ -285,12 +285,6 @@ void x11_cubehash512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_
 }
 
 
-// Setup-Funktionen
-__host__
-void x11_cubehash512_cpu_init(int thr_id, int threads)
-{
-}
-
 __host__
 void x11_cubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {

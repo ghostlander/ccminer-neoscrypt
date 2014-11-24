@@ -295,10 +295,6 @@ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 
 // ---------------------------- END CUDA quark_blake512 functions ------------------------------------
 
-// Setup-Funktionen
-__host__ void quark_blake512_cpu_init(int thr_id, int threads)
-{
-}
 
 // Blake512 für 80 Byte grosse Eingangsdaten
 __host__ void quark_blake512_cpu_setBlock_80(void *pdata)

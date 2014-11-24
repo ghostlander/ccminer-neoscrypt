@@ -144,12 +144,6 @@ void quark_keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_
     }
 }
 
-// Setup-Funktionen
-__host__ void quark_keccak512_cpu_init(int thr_id, int threads)
-{
-    // Kopiere die Hash-Tabellen in den GPU-Speicher
-}
-
 __host__ void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     const int threadsperblock = 32;

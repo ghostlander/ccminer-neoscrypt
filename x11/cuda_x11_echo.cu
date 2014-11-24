@@ -641,7 +641,6 @@ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash
 __host__ void x11_echo512_cpu_init(int thr_id, int threads)
 {
 	cudaMalloc(&d_nonce[thr_id], sizeof(uint32_t));
-	aes_cpu_init();
 }
 
 __host__ void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -662,6 +661,13 @@ __host__ void x11_echo512_cpu_setTarget(const void *ptarget)
 {
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
 }
+
+__host__ void x11_echo512_cpu_free(int32_t thr_id)
+{
+	cudaFree(pTarget);
+	cudaFreeHost(&d_nonce[thr_id]);
+}
+
 
 __global__ __launch_bounds__(128, 7)
 void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)

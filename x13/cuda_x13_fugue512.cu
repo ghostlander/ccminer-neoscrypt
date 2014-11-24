@@ -817,6 +817,11 @@ __host__ void x13_fugue512_cpu_setTarget(const void *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
 }
 
+__host__ void  x13_fugue512_cpu_free(int32_t thr_id)
+{
+	cudaFree(pTarget);
+	cudaFreeHost(&d_nonce[thr_id]);
+}
 
 __host__ void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
