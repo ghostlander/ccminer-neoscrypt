@@ -35,6 +35,7 @@
  * ===========================(LICENSE END)=============================
  *
  * @author   phm <phm@inbox.com>
+ * @author   sp <sp-hash@github>
  */
 
 #include "cuda_helper.h"
@@ -628,54 +629,9 @@ static const uint32_t d_T512[64][16] = {
 	  SPH_C32(0x0a8a6c53), SPH_C32(0x56f56eec), SPH_C32(0x62c91877),
 	  SPH_C32(0xe7e00a94) }
 };
-
-#define INPUT_BIG  { \
-		const uint32_t *tp = &d_T512[0][0]; \
-		unsigned u, v; \
-		m0 = 0; \
-		m1 = 0; \
-		m2 = 0; \
-		m3 = 0; \
-		m4 = 0; \
-		m5 = 0; \
-		m6 = 0; \
-		m7 = 0; \
-		m8 = 0; \
-		m9 = 0; \
-		mA = 0; \
-		mB = 0; \
-		mC = 0; \
-		mD = 0; \
-		mE = 0; \
-		mF = 0; \
-		for (u = 0; u < 8; u ++) { \
-			unsigned db = buf(u); \
-			for (v = 0; v < 8; v ++, db >>= 1) { \
-				uint32_t dm = SPH_T32(-(uint32_t)(db & 1)); \
-				m0 ^= dm & *tp ++; \
-				m1 ^= dm & *tp ++; \
-				m2 ^= dm & *tp ++; \
-				m3 ^= dm & *tp ++; \
-				m4 ^= dm & *tp ++; \
-				m5 ^= dm & *tp ++; \
-				m6 ^= dm & *tp ++; \
-				m7 ^= dm & *tp ++; \
-				m8 ^= dm & *tp ++; \
-				m9 ^= dm & *tp ++; \
-				mA ^= dm & *tp ++; \
-				mB ^= dm & *tp ++; \
-				mC ^= dm & *tp ++; \
-				mD ^= dm & *tp ++; \
-				mE ^= dm & *tp ++; \
-				mF ^= dm & *tp ++; \
-			} \
-		} \
-	}
-
-
 /***************************************************/
 // Die Hash-Funktion
-__global__ __launch_bounds__(320, 1)
+__global__ 
 void x13_hamsi512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -698,24 +654,150 @@ void x13_hamsi512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 #define buf(u) (h1[i+u])
 		#pragma unroll 8
 		for(int i = 0; i < 64; i += 8) {
-			INPUT_BIG;
+			const uint32_t *tp = &d_T512[0][0];
+				unsigned u, v;
+				m0 = 0;
+				m1 = 0;
+				m2 = 0;
+				m3 = 0;
+				m4 = 0;
+				m5 = 0;
+				m6 = 0;
+				m7 = 0;
+				m8 = 0;
+				m9 = 0;
+				mA = 0;
+				mB = 0;
+				mC = 0;
+				mD = 0;
+				mE = 0;
+				mF = 0;
+
+				#pragma unroll
+				for (u = 0; u < 8; u++) {
+					unsigned db = buf(u);
+					#pragma unroll
+					for (v = 0; v < 8; v++, db >>= 1) {
+						uint32_t dm = SPH_T32(-(uint32_t)(db & 1)); 
+						m0 ^= dm & *tp++; 
+						m1 ^= dm & *tp++; 
+						m2 ^= dm & *tp++; 
+						m3 ^= dm & *tp++; 
+						m4 ^= dm & *tp++; 
+						m5 ^= dm & *tp++; 
+						m6 ^= dm & *tp++; 
+						m7 ^= dm & *tp++; 
+						m8 ^= dm & *tp++; 
+						m9 ^= dm & *tp++; 
+						mA ^= dm & *tp++; 
+						mB ^= dm & *tp++; 
+						mC ^= dm & *tp++; 
+						mD ^= dm & *tp++; 
+						mE ^= dm & *tp++; 
+						mF ^= dm & *tp++; 
+					} 
+				} 
 			P_BIG;
 			T_BIG;
 		}
 
 #undef buf
 #define buf(u) (u == 0 ? 0x80 : 0)
-		INPUT_BIG;
+		const uint32_t *tp = &d_T512[0][0];
+		unsigned u, v;
+		m0 = 0;
+		m1 = 0;
+		m2 = 0;
+		m3 = 0;
+		m4 = 0;
+		m5 = 0;
+		m6 = 0;
+		m7 = 0;
+		m8 = 0;
+		m9 = 0;
+		mA = 0;
+		mB = 0;
+		mC = 0;
+		mD = 0;
+		mE = 0;
+		mF = 0;
+
+#pragma unroll
+		for (u = 0; u < 8; u++) {
+			unsigned db = buf(u);
+#pragma unroll
+			for (v = 0; v < 8; v++, db >>= 1) {
+				uint32_t dm = SPH_T32(-(uint32_t)(db & 1));
+				m0 ^= dm & *tp++;
+				m1 ^= dm & *tp++;
+				m2 ^= dm & *tp++;
+				m3 ^= dm & *tp++;
+				m4 ^= dm & *tp++;
+				m5 ^= dm & *tp++;
+				m6 ^= dm & *tp++;
+				m7 ^= dm & *tp++;
+				m8 ^= dm & *tp++;
+				m9 ^= dm & *tp++;
+				mA ^= dm & *tp++;
+				mB ^= dm & *tp++;
+				mC ^= dm & *tp++;
+				mD ^= dm & *tp++;
+				mE ^= dm & *tp++;
+				mF ^= dm & *tp++;
+			}
+		}
 		P_BIG;
 		T_BIG;
 
 #undef buf
 #define buf(u) (u == 6 ? 2 : 0)
-		INPUT_BIG;
+		tp = &d_T512[0][0];
+//		unsigned u, v;
+		m0 = 0;
+		m1 = 0;
+		m2 = 0;
+		m3 = 0;
+		m4 = 0;
+		m5 = 0;
+		m6 = 0;
+		m7 = 0;
+		m8 = 0;
+		m9 = 0;
+		mA = 0;
+		mB = 0;
+		mC = 0;
+		mD = 0;
+		mE = 0;
+		mF = 0;
+
+#pragma unroll
+		for (u = 0; u < 8; u++) {
+			unsigned db = buf(u);
+#pragma unroll
+			for (v = 0; v < 8; v++, db >>= 1) {
+				uint32_t dm = SPH_T32(-(uint32_t)(db & 1));
+				m0 ^= dm & *tp++;
+				m1 ^= dm & *tp++;
+				m2 ^= dm & *tp++;
+				m3 ^= dm & *tp++;
+				m4 ^= dm & *tp++;
+				m5 ^= dm & *tp++;
+				m6 ^= dm & *tp++;
+				m7 ^= dm & *tp++;
+				m8 ^= dm & *tp++;
+				m9 ^= dm & *tp++;
+				mA ^= dm & *tp++;
+				mB ^= dm & *tp++;
+				mC ^= dm & *tp++;
+				mD ^= dm & *tp++;
+				mE ^= dm & *tp++;
+				mF ^= dm & *tp++;
+			}
+		}
 		PF_BIG;
 		T_BIG;
 
-		#pragma unroll 16
+		#pragma unroll
 		for (int i = 0; i < 16; i++)
 			Hash[i] = cuda_swab32(h[i]);
 	}
@@ -728,7 +810,7 @@ __host__ void x13_hamsi512_cpu_init(int thr_id, int threads)
 
 __host__ void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 320;
+	const int threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
