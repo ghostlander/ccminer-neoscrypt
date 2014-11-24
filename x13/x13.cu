@@ -148,7 +148,9 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0 };
-	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
+	int intensity = 256 * 256 * 10;
+	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
+
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
