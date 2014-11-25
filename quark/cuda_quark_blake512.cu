@@ -48,18 +48,18 @@ const uint64_t c_u512[16] =
 #define G(a,b,c,d,x) { \
 	uint8_t idx1 = c_sigma[i][x]; \
 	uint8_t idx2 = c_sigma[i][x+1]; \
-	v[a] += (m[idx1] ^ c_u512[idx2]) + v[b]; \
+	v[a] += (block[idx1] ^ c_u512[idx2]) + v[b]; \
 	v[d] = SWAPDWORDS( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 25); \
-	v[a] += (m[idx2] ^ c_u512[idx1]) + v[b]; \
+	v[a] += (block[idx2] ^ c_u512[idx1]) + v[b]; \
 	v[d] = ROTR16( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 11); \
 }
 
 __device__ __forceinline__
-void G3(uint64_t a, uint64_t b, uint64_t c, uint64_t d, const uint64_t x, uint64_t *m, uint64_t *v, int i)
+void G3(uint64_t a, uint64_t b, uint64_t c, uint64_t d, const uint64_t x, const uint64_t *m, uint64_t *v, int i)
 {
 	const uint32_t	idx1 = c_sigma[i][x];
 	const uint32_t	idx2 = c_sigma[i][x + 1];
@@ -102,14 +102,6 @@ __device__ __forceinline__
 void quark_blake512_compress(uint64_t *const __restrict__ h, const uint64_t *const __restrict__ block, const int T0)
 {
 	uint64_t v[16];
-	uint64_t m[16];
-	if (T0 == 640)
-	{
-#pragma unroll 16
-		for (int i = 0; i < 16; i++) {
-			m[i] = cuda_swab64(block[i]);
-		}
-	}
 
 	#pragma unroll 8
 	for (int i = 0; i < 8; i++)
@@ -137,14 +129,14 @@ void quark_blake512_compress(uint64_t *const __restrict__ h, const uint64_t *con
 		G( 2, 7, 8, 13, 12 );
 		G( 3, 4, 9, 14, 14 );
  #else
-		G3(0, 4, 8, 12, 0,m,v,i);
-		G3(1, 5, 9, 13, 2, m, v, i);
-		G3(2, 6, 10, 14, 4, m, v, i);
-		G3(3, 7, 11, 15, 6, m, v, i);
-		G3(0, 5, 10, 15, 8, m, v, i);
-		G3(1, 6, 11, 12, 10, m, v, i);
-		G3(2, 7, 8, 13, 12, m, v, i);
-		G3(3, 4, 9, 14, 14, m, v, i);
+		G3(0, 4, 8, 12, 0,block,v,i);
+		G3(1, 5, 9, 13, 2, block, v, i);
+		G3(2, 6, 10, 14, 4, block, v, i);
+		G3(3, 7, 11, 15, 6, block, v, i);
+		G3(0, 5, 10, 15, 8, block, v, i);
+		G3(1, 6, 11, 12, 10, block, v, i);
+		G3(2, 7, 8, 13, 12, block, v, i);
+		G3(3, 4, 9, 14, 14, block, v, i);
 #endif
 	}
 
@@ -273,7 +265,7 @@ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, uint32_t *out
 			buf[i] = c_PaddedMessage80[i];
 
 		// The test Nonce
-		((uint32_t*)buf)[19] = cuda_swab32(nounce);
+		((uint32_t*)buf)[18] = nounce;
 
 		quark_blake512_compress( h, buf, 640 );
 
@@ -310,7 +302,8 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 	PaddedMessage[111] = 1;
 	PaddedMessage[126] = 0x02;
 	PaddedMessage[127] = 0x80;
-
+	for (int i = 0; i < 16; i++)
+		((uint64_t*)PaddedMessage)[i] = cuda_swab64(((uint64_t*)PaddedMessage)[i]);
 	CUDA_SAFE_CALL(
 		cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice)
 	);
