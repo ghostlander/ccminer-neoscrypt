@@ -114,7 +114,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	if (count == 512)
 	{
 		rk10 = 0x80U;
-		x0 = pC;
+		x0 = pC ^ 0x80U;
 		rk11 = 0;
 		x1 = pD;
 		rk12 = 0;
