@@ -514,7 +514,7 @@ void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNoun
 					rc = false;
 					}
 				}
-			else if (Hash[i] <= pTarget[i])
+			if (Hash[i] <= pTarget[i])
 				 {
 				if (position < i)
 					{
@@ -555,10 +555,6 @@ void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, u
 	size_t shared_size = 0;
 
 	quark_skein512_gpu_hash_64 << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-
-	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, order, thr_id);
-
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

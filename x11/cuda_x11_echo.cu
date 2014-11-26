@@ -620,7 +620,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 }
 
 
-__global__ __launch_bounds__(128, 7)
+__global__ __launch_bounds__(128, 5)
 void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -668,8 +668,8 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-
-__global__ __launch_bounds__(128, 7)
+//s__launch_bounds__(128, 7)
+__global__ __launch_bounds__(128, 5)
 void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -684,8 +684,15 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition << 3];
 
 		cuda_echo_round_final(sharedMemory, Hash);
+		/*
+		if (Hash[7] <= pTarget[7] && Hash[6] <= pTarget[6] && Hash[5] <= pTarget[5] 
+			&& Hash[4] <= pTarget[4] && Hash[3] <= pTarget[3] && Hash[2] <= pTarget[2] 
+			&& Hash[1] <= pTarget[1] && Hash[0] <= pTarget[0])
+		{
+			d_nonce[0] = nounce;
+		}
+		*/
 		bool rc = true;
-
 		int position = -1;
 #pragma unroll 8
 		for (int i = 7; i >= 0; i--)
@@ -698,7 +705,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 					rc = false;
 				}
 			}
-			else if (Hash[i] <= pTarget[i])
+			if (Hash[i] <= pTarget[i])
 			{
 				if (position < i)
 				{
@@ -706,9 +713,12 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 					rc = true;
 				}
 			}
-		}
-		if (rc == true) d_nonce[0] = nounce;
 
+		}
+		if (rc == true)
+		{
+			d_nonce[0] = nounce;
+		}
 	}
 }
 __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -722,7 +732,7 @@ __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_
 
 	size_t shared_size = 0;
 	x11_echo512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
