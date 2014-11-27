@@ -82,8 +82,8 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			myriadhash(tmpHash, endiandata);
 			if (tmpHash[7] <= Htarg && 
 					fulltest(tmpHash, ptarget)) {
+						*hashes_done = pdata[19] + throughPut - start_nonce;
 						pdata[19] = foundNounce;
-						*hashes_done = foundNounce - start_nonce + 1;
 						free(outputHash);
 				return true;
 			} else {
@@ -101,7 +101,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - start_nonce + 1;
+	*hashes_done = pdata[19] - start_nonce;
 	free(outputHash);
 	return 0;
 }

@@ -68,8 +68,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 			if (hash[7] <= Htarg && fulltest(hash, ptarget))
 			{
+				*hashes_done = pdata[19] + throughPut - start_nonce;
 				pdata[19] = foundNounce;
-				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
@@ -85,7 +85,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - start_nonce + 1;
+	*hashes_done = pdata[19] - start_nonce;
 	return 0;
 }
 

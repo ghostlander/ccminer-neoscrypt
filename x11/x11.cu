@@ -188,8 +188,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			x11hash(vhash64, endiandata);
 
 			if ((vhash64[7] <= Htarg) && fulltest(vhash64, ptarget)) {
+				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
 				if(opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				x11_echo512_cpu_free(thr_id);
 				return 1;
@@ -206,6 +206,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
