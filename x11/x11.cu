@@ -130,7 +130,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0 };
-	int intensity = 256 * 256 * 11;		//(device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 20 : 19;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 11;
+
 	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
@@ -180,7 +181,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		if (device_sm[device_map[thr_id]] >= 500) x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		else x11_simd512_cpu_hash_64_30(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
