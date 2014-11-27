@@ -82,23 +82,6 @@ blake32.o: blake32.cu
 keccak/cuda_keccak256.o: keccak/cuda_keccak256.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=92 -o $@ -c $<
 
-qubit/qubit_luffa512.o: qubit/qubit_luffa512.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
-
-# Luffa and Echo are faster with 80 registers than 128
-x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
-
-x13/cuda_x13_hamsi512.o: x13/cuda_x13_hamsi512.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=72 -o $@ -c $<
-
-x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
-
-	
-x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
-
 quark/cuda_quark_blake512.o: quark/cuda_quark_blake512.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
 

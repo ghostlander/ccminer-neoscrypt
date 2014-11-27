@@ -664,7 +664,8 @@ __global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint
 	}
 }
 
-__global__ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
+__global__ 
+void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
 	extern __shared__ char mixtabs[];
 
@@ -679,6 +680,8 @@ __global__ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+
+		
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;

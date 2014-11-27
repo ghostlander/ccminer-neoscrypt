@@ -12,6 +12,9 @@ extern int device_map[8];
 #define SHL(x, n)			((x) << (n))
 #define SHR(x, n)			((x) >> (n))
 
+__constant__ uint32_t pTarget[8];
+static uint32_t *d_nonce[8];
+
 #if __CUDA_ARCH__ >= 320
 __device__
 uint64_t skein_rotl64(const uint64_t x, const int offset)
@@ -404,6 +407,141 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 	}
 }
 
+
+__global__ __launch_bounds__(1024, 1)
+void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce)
+{
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		// Skein
+		uint64_t p[8];
+		uint64_t h0, h1, h2, h3, h4, h5, h6, h7, h8;
+		uint64_t t0, t1, t2;
+
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+
+		int hashPosition = nounce - startNounce;
+		uint64_t *inpHash = &g_hash[8 * hashPosition];
+
+		// Initialisierung
+		h0 = 0x4903ADFF749C51CEull;
+		h1 = 0x0D95DE399746DF03ull;
+		h2 = 0x8FD1934127C79BCEull;
+		h3 = 0x9A255629FF352CB1ull;
+		h4 = 0x5DB62599DF6CA7B0ull;
+		h5 = 0xEABE394CA9D5C3F4ull;
+		h6 = 0x991112C71A75B523ull;
+		h7 = 0xAE18A40B660FCC33ull;
+
+		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg		
+#pragma unroll 8
+		for (int i = 0; i<8; i++)
+			p[i] = inpHash[i];
+
+		t0 = 64; // ptr
+		t1 = 480ull << 55; // etype
+		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		TFBIG_4e(0);
+		TFBIG_4o(1);
+		TFBIG_4e(2);
+		TFBIG_4o(3);
+		TFBIG_4e(4);
+		TFBIG_4o(5);
+		TFBIG_4e(6);
+		TFBIG_4o(7);
+		TFBIG_4e(8);
+		TFBIG_4o(9);
+		TFBIG_4e(10);
+		TFBIG_4o(11);
+		TFBIG_4e(12);
+		TFBIG_4o(13);
+		TFBIG_4e(14);
+		TFBIG_4o(15);
+		TFBIG_4e(16);
+		TFBIG_4o(17);
+		TFBIG_ADDKEY(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+
+		h0 = inpHash[0] ^ p[0];
+		h1 = inpHash[1] ^ p[1];
+		h2 = inpHash[2] ^ p[2];
+		h3 = inpHash[3] ^ p[3];
+		h4 = inpHash[4] ^ p[4];
+		h5 = inpHash[5] ^ p[5];
+		h6 = inpHash[6] ^ p[6];
+		h7 = inpHash[7] ^ p[7];
+
+		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
+#pragma unroll 8
+		for (int i = 0; i<8; i++)
+			p[i] = 0;
+
+		t0 = 8; // ptr
+		t1 = 510ull << 55; // etype
+		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		TFBIG_4e(0);
+		TFBIG_4o(1);
+		TFBIG_4e(2);
+		TFBIG_4o(3);
+		TFBIG_4e(4);
+		TFBIG_4o(5);
+		TFBIG_4e(6);
+		TFBIG_4o(7);
+		TFBIG_4e(8);
+		TFBIG_4o(9);
+		TFBIG_4e(10);
+		TFBIG_4o(11);
+		TFBIG_4e(12);
+		TFBIG_4o(13);
+		TFBIG_4e(14);
+		TFBIG_4o(15);
+		TFBIG_4e(16);
+		TFBIG_4o(17);
+		TFBIG_ADDKEY(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+
+		uint32_t *Hash = (uint32_t *)&p[0];	
+
+		bool rc = true;		
+		int position = -1;
+		#pragma unroll 8
+			 for (int i = 7; i >= 0; i--)
+			 {
+			if (Hash[i] > pTarget[i])
+				 {
+				if (position < i)
+					 {
+					position = i;
+					rc = false;
+					}
+				}
+			if (Hash[i] <= pTarget[i])
+				 {
+				if (position < i)
+					{
+						position = i;
+						rc = true;
+					}
+				}
+			}
+		if (rc == true) d_nonce[0] = nounce;
+	}
+}
+
+__host__ void quark_skein512_cpu_init(int thr_id)
+{
+	cudaMalloc(&d_nonce[thr_id], sizeof(uint32_t));
+}
+
+__host__ void quark_skein512_setTarget(const void *ptarget)
+{
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
+}
+__host__ void quark_skein512_cpu_free(int32_t thr_id)
+{
+	cudaFree(pTarget);
+	cudaFreeHost(&d_nonce[thr_id]);
+}
+
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
@@ -416,8 +554,25 @@ void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, u
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-	quark_skein512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	quark_skein512_gpu_hash_64 << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	uint32_t res;
+	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+}
 
-	// Strategisches Sleep Kommando zur Senkung der CPU Last
+__host__
+uint32_t quark_skein512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+{
+	const int threadsperblock = 256;
+
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	size_t shared_size = 0;
+	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
+
+	quark_skein512_gpu_hash_64_final<< <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
 	MyStreamSynchronize(NULL, order, thr_id);
+	uint32_t res;
+	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	return res;
 }
