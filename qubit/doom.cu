@@ -83,12 +83,12 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		pdata[19] += throughput;
 
 		if ((uint64_t) pdata[19] + throughput > max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
+		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);
 

@@ -113,7 +113,9 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		pdata[19] += throughput;
+		if (pdata[19] + throughput < pdata[19])
+			pdata[19] = max_nonce;
+		else pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 

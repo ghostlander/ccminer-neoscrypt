@@ -108,7 +108,9 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-		pdata[19] += throughput;
+		if (pdata[19] + throughput < pdata[19])
+			pdata[19] = max_nonce;
+		else pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
