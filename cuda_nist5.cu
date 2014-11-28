@@ -73,7 +73,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x5;
 
-	int intensity = 256 * 4096 * 10;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256*4096 * 12 : 256 * 4096 * 10;
 	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
