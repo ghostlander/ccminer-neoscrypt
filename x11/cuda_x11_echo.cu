@@ -668,7 +668,6 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-//s__launch_bounds__(128, 7)
 __global__ __launch_bounds__(128, 5)
 void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
 {

@@ -1,14 +1,18 @@
 ccminer
 =======
 
-Based on Christian Buchner's &amp; Christian H.'s CUDA project
+Based on Christian Buchner's & Christian H.'s CUDA project
 
-Fork by tpruvot@github with X14,X15,X17,WHIRL and Blake256 support (NEOS + BlakeCoin), and some others, check the [README.txt](README.txt)
+Forked from tpruvot@github
 
-   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
-   [![tip for next commit](https://tip4commit.com/projects/927.svg)](https://tip4commit.com/github/tpruvot/ccminer)
+Fork by sp-hash@github with X14,X15,X17,WHIRL and Blake256 support (NEOS + BlakeCoin), and some others, check the [README.txt](README.txt)
 
-A part of the recent algos were originally wrote by [djm34](https://github.com/djm34).
+   BTC donation address: 
+	sp-hash@github:
+		BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
+		DRK: XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
+
+A part of the recent algos were originally written by [djm34](https://github.com/djm34).
 
 This variant was tested and built on Linux (ubuntu server 14.04) and VStudio 2013 on Windows 7.
 

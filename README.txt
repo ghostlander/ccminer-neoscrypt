@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.9-tpruvot (SP-MOD) (22 Nov 2014) - "GPU Monitoring"
+ccMiner release 1.5.0-tpruvot (SP-MOD) (28 Nov 2014)
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -13,8 +13,8 @@ tpruvot@github:
   XST  : S9TqZucWgT6ajZLDBxQnHUtmkotCEHn9z9
 
 sp-hash@github:
-BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
-DRK: XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
+  BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
+  DRK: XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
   
 DJM34:
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
@@ -90,7 +90,8 @@ its command line interface and options.
                         Alternatively give string names of your card like
                         gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
 
-  -i, --intensity       GPU threads per call 0-31 (default: 0=auto)
+  -i, --intensity       GPU threads per call 8-31 (default: 0=auto)
+                        Decimals are allowed for fine tuning
   -f, --diff            Divide difficulty by this factor (std is 1)
   -v, --vote            Heavycoin block vote (default: 512)
   -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
