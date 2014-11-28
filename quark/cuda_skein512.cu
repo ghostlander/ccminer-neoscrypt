@@ -20,18 +20,29 @@ __device__
 uint64_t skein_rotl64(const uint64_t x, const int offset)
 {
 	uint64_t res;
-	asm("{\n\t"
-		".reg .u32 tl,th,vl,vh;\n\t"
-		".reg .pred p;\n\t"
-		"mov.b64 {tl,th}, %1;\n\t"
-		"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
-		"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
-		"setp.lt.u32 p, %2, 32;\n\t"
-		"@!p mov.b64 %0, {vl,vh};\n\t"
-		"@p  mov.b64 %0, {vh,vl};\n\t"
-	"}"
-		: "=l"(res) : "l"(x) , "r"(offset)
-	);
+	if(offset<32)
+	{
+		asm("{\n\t"
+			".reg .u32 tl,th,vl,vh;\n\t"
+			"mov.b64 {tl,th}, %1;\n\t"
+			"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
+			"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
+			"mov.b64 %0, {vh,vl};\n\t"
+			"}"
+			: "=l"(res) : "l"(x) , "r"(offset)
+			);
+	} else
+	{
+		asm("{\n\t"
+			".reg .u32 tl,th,vl,vh;\n\t"
+			"mov.b64 {tl,th}, %1;\n\t"
+			"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
+			"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
+			"mov.b64 %0, {vl,vh};\n\t"
+			"}"
+			: "=l"(res) : "l"(x) , "r"(offset)
+			);
+	}
 	return res;
 }
 #undef ROTL64
