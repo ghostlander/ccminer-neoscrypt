@@ -119,7 +119,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
 
     } while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
     
-    *hashes_done = pdata[19] - start_nonce;
+    *hashes_done = pdata[19] - start_nonce + 1;
     free(outputHash);
     return 0;
 }

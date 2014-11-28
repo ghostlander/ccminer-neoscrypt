@@ -294,7 +294,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
                         }
                         else
                         {
-                            *hashes_done = pdata[19] - first_nonce;
+                            *hashes_done = pdata[19] - first_nonce + 1;
                             rc = 1;
                             goto exit;
                         }
@@ -310,7 +310,7 @@ emptyNonceVector:
 		else pdata[19] += throughput;
 
     } while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
-    *hashes_done = pdata[19] - first_nonce;
+    *hashes_done = pdata[19] - first_nonce + 1;
 
 exit:
     cudaFreeHost(cpu_nonceVector);

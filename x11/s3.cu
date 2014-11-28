@@ -119,6 +119,6 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce;
+	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
