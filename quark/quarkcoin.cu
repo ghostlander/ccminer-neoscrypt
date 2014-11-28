@@ -237,7 +237,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			}
 		}
 		if (pdata[19] + throughput < pdata[19])
-		if (pdata[19] + throughput < pdata[19])
 			pdata[19] = max_nonce;
 		else pdata[19] += throughput;
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
