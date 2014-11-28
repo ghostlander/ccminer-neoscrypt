@@ -549,7 +549,7 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 }
 
 /***************************************************/
-__global__ void __launch_bounds__(TPB, 8)
+__global__ void __launch_bounds__(TPB, 4)
 x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x)/8;
