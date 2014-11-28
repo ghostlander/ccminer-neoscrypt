@@ -317,8 +317,7 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 		TFBIG_MIX8(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 25, 29, 39, 43); \
 		TFBIG_MIX8(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
 	}
-
-__global__ __launch_bounds__(1024, 1)
+__global__ 
 void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -556,7 +555,7 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const int threadsperblock = 448;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -573,7 +572,7 @@ void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, u
 __host__
 uint32_t quark_skein512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const int threadsperblock = 448;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
