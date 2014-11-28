@@ -417,8 +417,7 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 	}
 }
 
-
-__global__ __launch_bounds__(1024, 1)
+__global__ 
 void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
