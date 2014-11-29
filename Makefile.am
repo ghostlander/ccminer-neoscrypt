@@ -34,7 +34,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu cuda_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
-			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu quark/cuda_quark_jh512_keccak512.cu  \
+			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu quark/cuda_jh512keccak512.cu  \
 			  quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu  \
 			  cuda_nist5.cu blake32.cu pentablake.cu \
@@ -74,22 +74,7 @@ nvcc_FLAGS += $(JANSSON_INCLUDES) --ptxas-options="-v"
 
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=128 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 blake32.o: blake32.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
-
-keccak/cuda_keccak256.o: keccak/cuda_keccak256.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=92 -o $@ -c $<
-
-quark/cuda_quark_blake512.o: quark/cuda_quark_blake512.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
-
-quark/cuda_quark_keccak512.o: quark/cuda_quark_keccak512.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=88 -o $@ -c $<
-
-quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
-
-JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
