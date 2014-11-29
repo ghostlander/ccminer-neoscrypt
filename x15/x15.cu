@@ -164,7 +164,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	static bool init[8] = { 0 };
 	uint32_t endiandata[20];
 
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 16 : 256 * 256 * 10;
 	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
