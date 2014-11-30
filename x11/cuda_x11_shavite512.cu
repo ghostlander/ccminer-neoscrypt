@@ -42,8 +42,8 @@ static void KEY_EXPAND_ELT(
 	k3 = y0;
 }
 
-__device__
-static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, uint32_t count)
+__device__ __forceinline__
+static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, const uint32_t count)
 {
 	uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
 	uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
