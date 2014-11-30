@@ -192,8 +192,6 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		cuda_jh512Keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-//		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-//		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
@@ -231,6 +229,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		else pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart);
 
+	x13_fugue512_cpu_free(thr_id);
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }

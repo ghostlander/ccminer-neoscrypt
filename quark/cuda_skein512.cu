@@ -515,7 +515,7 @@ void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNoun
 		#pragma unroll 8
 			 for (int i = 7; i >= 0; i--)
 			 {
-			if (Hash[i] > pTarget[i])
+			if (Hash[i] >= pTarget[i])
 				 {
 				if (position < i)
 					 {
@@ -523,7 +523,7 @@ void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNoun
 					rc = false;
 					}
 				}
-			if (Hash[i] <= pTarget[i])
+			if (Hash[i] < pTarget[i])
 				 {
 				if (position < i)
 					{

@@ -775,7 +775,7 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 #pragma unroll 8
 		for (int i = 7; i >= 0; i--)
 		{
-			if (Hash[i] > pTarget[i])
+			if (Hash[i] >= pTarget[i])
 			{
 				if (position < i)
 				{
@@ -783,7 +783,7 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 					rc = false;
 				}
 			}
-			else if (Hash[i] <= pTarget[i])
+			else if (Hash[i] < pTarget[i])
 			{
 				if (position < i)
 				{
