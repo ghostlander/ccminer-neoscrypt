@@ -769,30 +769,8 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 				Hash[14] = cuda_swab32(S29);
 				Hash[15] = cuda_swab32(S30);*/
 
-		bool rc = true;
-
-		int position = -1;
-#pragma unroll 8
-		for (int i = 7; i >= 0; i--)
-		{
-			if (Hash[i] >= pTarget[i])
-			{
-				if (position < i)
-				{
-					position = i;
-					rc = false;
-				}
-			}
-			else if (Hash[i] < pTarget[i])
-			{
-				if (position < i)
-				{
-					position = i;
-					rc = true;
-				}
-			}
-		}
-		if (rc == true) d_nonce[0] = nounce;
+		if (cuda_hashisbelowtarget(Hash, pTarget))
+			d_nonce[0] = nounce;
 	}
 }
 

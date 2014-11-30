@@ -403,5 +403,39 @@ uint64_t ROTL16(uint64_t x)
 #endif
 }
 
+__device__ __forceinline__ bool cuda_hashisbelowtarget(const uint32_t *const __restrict__ hash, const uint32_t *const __restrict__ target)
+{
+	if (hash[7] > target[7])
+		return false;
+	if (hash[7] < target[7])
+		return true;
+	if (hash[6] > target[6])
+		return false;
+	if (hash[6] < target[6])
+		return true;
+	if (hash[5] > target[5])
+		return false;
+	if (hash[5] < target[5])
+		return true;
+	if (hash[4] > target[4])
+		return false;
+	if (hash[4] < target[4])
+		return true;
+	if (hash[3] > target[3])
+		return false;
+	if (hash[3] < target[3])
+		return true;
+	if (hash[2] > target[2])
+		return false;
+	if (hash[2] < target[2])
+		return true;
+	if (hash[1] > target[1])
+		return false;
+	if (hash[1] < target[1])
+		return true;
+	if (hash[0] > target[0])
+		return false;
+	return true;
+}
 
 #endif // #ifndef CUDA_HELPER_H

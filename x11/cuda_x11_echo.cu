@@ -691,33 +691,8 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			d_nonce[0] = nounce;
 		}
 		*/
-		bool rc = true;
-		int position = -1;
-#pragma unroll 8
-		for (int i = 7; i >= 0; i--)
-		{
-			if (Hash[i] >= pTarget[i])
-			{
-				if (position < i)
-				{
-					position = i;
-					rc = false;
-				}
-			}
-			if (Hash[i] < pTarget[i])
-			{
-				if (position < i)
-				{
-					position = i;
-					rc = true;
-				}
-			}
-
-		}
-		if (rc == true)
-		{
+		if (cuda_hashisbelowtarget(Hash, pTarget))
 			d_nonce[0] = nounce;
-		}
 	}
 }
 __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
