@@ -266,10 +266,8 @@ __global__ void
         for (int i=0; i < 16; i++)
             out_state[i] = inpHash[i];
 
-        myriadgroestl_gpu_sha256(out_state);
-        
-		if (cuda_hashisbelowtarget(out_state, pTarget))
-			resNounce[0] = nounce;
+        myriadgroestl_gpu_sha256(out_state);        
+		if (cuda_hashisbelowtarget(out_state, pTarget)) resNounce[0] = nounce;		
 	}
 }
 

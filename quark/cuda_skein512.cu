@@ -510,8 +510,7 @@ void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNoun
 
 		uint32_t *Hash = (uint32_t *)&p[0];	
 
-		if (cuda_hashisbelowtarget(Hash, pTarget))
-			d_nonce[0] = nounce;
+		if (cuda_hashisbelowtarget(Hash, pTarget)) d_nonce[0] = nounce;
 	}
 }
 

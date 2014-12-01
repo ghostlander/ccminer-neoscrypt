@@ -683,16 +683,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition << 3];
 
 		cuda_echo_round_final(sharedMemory, Hash);
-		/*
-		if (Hash[7] <= pTarget[7] && Hash[6] <= pTarget[6] && Hash[5] <= pTarget[5] 
-			&& Hash[4] <= pTarget[4] && Hash[3] <= pTarget[3] && Hash[2] <= pTarget[2] 
-			&& Hash[1] <= pTarget[1] && Hash[0] <= pTarget[0])
-		{
-			d_nonce[0] = nounce;
-		}
-		*/
-		if (cuda_hashisbelowtarget(Hash, pTarget))
-			d_nonce[0] = nounce;
+		if (cuda_hashisbelowtarget(Hash, pTarget)) d_nonce[0] = nounce;
 	}
 }
 __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
