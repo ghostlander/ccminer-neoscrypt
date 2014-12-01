@@ -431,15 +431,6 @@ static const uint32_t mixtab0_cpu[] = {
 		x20 ^= x06; \
 	}
 
-#define CMIX36(x00, x01, x02, x04, x05, x06, x18, x19, x20) { \
-		x00 ^= x04; \
-		x01 ^= x05; \
-		x02 ^= x06; \
-		x18 ^= x04; \
-		x19 ^= x05; \
-		x20 ^= x06; \
-		}
-
 #define SMIX(x0, x1, x2, x3) { \
 		uint32_t c0 = 0; \
 		uint32_t c1 = 0; \
