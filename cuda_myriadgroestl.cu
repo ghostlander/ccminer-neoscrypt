@@ -266,30 +266,8 @@ __global__ void
         for (int i=0; i < 16; i++)
             out_state[i] = inpHash[i];
 
-        myriadgroestl_gpu_sha256(out_state);
-        
-        int i, position = -1;
-        bool rc = true;
-
-#pragma unroll 8
-        for (i = 7; i >= 0; i--) {
-            if (out_state[i] > pTarget[i]) {
-                if(position < i) {
-                    position = i;
-                    rc = false;
-                }
-             }
-             if (out_state[i] < pTarget[i]) {
-                if(position < i) {
-                    position = i;
-                    rc = true;
-                }
-             }
-        }
-
-        if(rc == true)
-            if(resNounce[0] > nounce)
-                resNounce[0] = nounce;
+        myriadgroestl_gpu_sha256(out_state);        
+		if (cuda_hashisbelowtarget(out_state, pTarget)) resNounce[0] = nounce;		
     }
 }
 

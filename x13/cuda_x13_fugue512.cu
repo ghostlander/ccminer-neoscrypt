@@ -431,6 +431,15 @@ static const uint32_t mixtab0_cpu[] = {
 		x20 ^= x06; \
 	}
 
+#define CMIX36(x00, x01, x02, x04, x05, x06, x18, x19, x20) { \
+		x00 ^= x04; \
+		x01 ^= x05; \
+		x02 ^= x06; \
+		x18 ^= x04; \
+		x19 ^= x05; \
+		x20 ^= x06; \
+		}
+
 #define SMIX(x0, x1, x2, x3) { \
 		uint32_t c0 = 0; \
 		uint32_t c1 = 0; \
@@ -501,8 +510,7 @@ static const uint32_t mixtab0_cpu[] = {
 			| ((c0 ^ (r1 >> 8)) & SPH_C32(0x00FF0000)) \
 			| ((c1 ^ (r2 >> 8)) & SPH_C32(0x0000FF00)) \
 			| ((c2 ^ (r3 >> 8)) & SPH_C32(0x000000FF)); \
-	}
-
+		}
 #define ROR3 { \
 	B33 = S33, B34 = S34, B35 = S35; \
     S35 = S32; S34 = S31; S33 = S30; S32 = S29; S31 = S28; S30 = S27; S29 = S26; S28 = S25; S27 = S24; \
@@ -559,30 +567,30 @@ static const uint32_t mixtab0_cpu[] = {
         SMIX(S00, S01, S02, S03); \
 	}
 
-
-__global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+//__launch_bounds__(128, 6)
+__global__ __launch_bounds__(288, 3)
+void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	extern __shared__ char mixtabs[];
 
-	*((uint32_t*)mixtabs + (    threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (256+threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (512+threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (768+threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
 
-	__syncthreads();
 
-	int i;
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 
 		#pragma unroll 16
-		for( i = 0; i < 16; i++ )
+		for (int i = 0; i < 16; i++)
 			Hash[i] = cuda_swab32(Hash[i]);
+		__syncthreads(); 
 
 		uint32_t S00, S01, S02, S03, S04, S05, S06, S07, S08, S09;
 		uint32_t S10, S11, S12, S13, S14, S15, S16, S17, S18, S19;
@@ -606,15 +614,16 @@ __global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint
 		FUGUE512_3((Hash[0x9]), (Hash[0xA]), (Hash[0xB]));
 		FUGUE512_3((Hash[0xC]), (Hash[0xD]), (Hash[0xE]));
 		FUGUE512_3((Hash[0xF]), bchi, bclo);
-
-		#pragma unroll 32
-		for (i = 0; i < 32; i ++) {
+		
+	//#pragma unroll
+		for (int i = 0; i < 32; i++) {
 			ROR3;
 			CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20);
 			SMIX(S00, S01, S02, S03);
 		}
-		#pragma unroll 13
-		for (i = 0; i < 13; i ++) {
+
+	//#pragma	unroll
+		for (int i = 0; i < 13; i++) {
 			S04 ^= S00;
 			S09 ^= S00;
 			S18 ^= S00;
@@ -664,32 +673,32 @@ __global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint
 	}
 }
 
-__global__ 
+//__launch_bounds__(128, 6)
+__global__ __launch_bounds__(416, 2)
 void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
 	extern __shared__ char mixtabs[];
 
-	*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
-
-	__syncthreads();
-
-	int i;
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-
-		
+			*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
+			//	*((uint32_t*)mixtabs + (128 + threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x + 128);
+			*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
+			//	*((uint32_t*)mixtabs + (256 + 128 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x + 128);
+			*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
+			//	*((uint32_t*)mixtabs + (512 + 128 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x + 128);
+			*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
+			//	*((uint32_t*)mixtabs + (768 + 128 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x + 128);
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition << 3];
+		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition * 8];
 
 #pragma unroll 16
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			Hash[i] = cuda_swab32(Hash[i]);
+		__syncthreads(); 
 
 		uint32_t S00, S01, S02, S03, S04, S05, S06, S07, S08, S09;
 		uint32_t S10, S11, S12, S13, S14, S15, S16, S17, S18, S19;
@@ -714,14 +723,14 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 		FUGUE512_3((Hash[0xC]), (Hash[0xD]), (Hash[0xE]));
 		FUGUE512_3((Hash[0xF]), bchi, bclo);
 
-#pragma unroll 32
-		for (i = 0; i < 32; i++) {
+	//#pragma unroll 32
+		for (int i = 0; i < 32; i++) {
 			ROR3;
 			CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20);
 			SMIX(S00, S01, S02, S03);
 		}
-#pragma unroll 13
-		for (i = 0; i < 13; i++) {
+	//#pragma unroll 13
+		for (int i = 0; i < 13; i++) {
 			S04 ^= S00;
 			S09 ^= S00;
 			S18 ^= S00;
@@ -749,8 +758,8 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 		}
 		S04 ^= S00;
 		S09 ^= S00;
-		S18 ^= S00;
-		S27 ^= S00;
+		//S18 ^= S00;
+		//S27 ^= S00;
 
 		Hash[0] = cuda_swab32(S01);
 		Hash[1] = cuda_swab32(S02);
@@ -769,30 +778,7 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 				Hash[14] = cuda_swab32(S29);
 				Hash[15] = cuda_swab32(S30);*/
 
-		bool rc = true;
-
-		int position = -1;
-#pragma unroll 8
-		for (int i = 7; i >= 0; i--)
-		{
-			if (Hash[i] >= pTarget[i])
-			{
-				if (position < i)
-				{
-					position = i;
-					rc = false;
-				}
-			}
-			else if (Hash[i] < pTarget[i])
-			{
-				if (position < i)
-				{
-					position = i;
-					rc = true;
-				}
-			}
-		}
-		if (rc == true) d_nonce[0] = nounce;
+		if (cuda_hashisbelowtarget(Hash, pTarget)) d_nonce[0] = nounce;
 	}
 }
 
@@ -855,7 +841,7 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
 	x13_fugue512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
