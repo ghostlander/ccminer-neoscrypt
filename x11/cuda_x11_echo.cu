@@ -341,7 +341,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 }
 
 
-__global__ __launch_bounds__(128, 7)
+__global__ __launch_bounds__(128, 6)
 void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -401,7 +401,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition << 3];
+		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition *8];
 
 		uint32_t h[16];
 		const uint32_t P[48] = {
@@ -471,15 +471,17 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		};
 		uint32_t k0;
 
+
 #pragma unroll 16
 		for (int i = 0; i < 16; i++)
 		{
 			h[i] = Hash[i];
 		}
+		uint32_t backup = h[7];
 
 		k0 = 512 + 8;
 
-#pragma unroll 4
+//#pragma unroll 4
 		for (int idx = 0; idx < 16; idx += 4)
 		{
 			AES_2ROUND(sharedMemory,
@@ -489,7 +491,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 
 		uint32_t W[64];
 
-#pragma unroll 4
+//#pragma unroll 4
 		for (int i = 0; i < 4; i++)
 		{
 			uint32_t a = P[i];
@@ -690,7 +692,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		}
 
 		// Shift Rows
-#pragma unroll 4
+//#pragma unroll 4
 		for (int i = 0; i < 4; i++)
 		{
 			uint32_t t;
@@ -718,11 +720,13 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			W[12 + i] = t;
 		}
 
+
+
 		// Mix Columns
-#pragma unroll 4
+//#pragma unroll 4
 		for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
 		{
-#pragma unroll 8
+//#pragma unroll 8
 			for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
 			{
 
@@ -751,17 +755,12 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			}
 		}
 
-		W[7] ^= W[32 + 4 + 3] ^ Hash[7];
-		if (W[7] < pTarget[7]) d_nonce[0] = nounce;
-		return;
-//		W[6] ^= W[32 + 4 + 2] ^ Hash[6];
-//		W[5] ^= W[32 + 4 + 1] ^ Hash[5];
-//		W[4] ^= W[32 + 4] ^ 512 ^ Hash[4];
-//		W[3] ^= W[32 + 0 + 3] ^ Hash[3];
-//		W[2] ^= W[32 + 0 + 2] ^ Hash[2];
-//		W[1] ^= W[32 + 0 + 1] ^ Hash[1];
-//		W[0] ^= W[32 + 0] ^ 512 ^ Hash[0];
-//		if (cuda_hashisbelowtarget(W, pTarget)) d_nonce[0] = nounce;
+		W[7] ^= W[32 + 4 + 3] ^ backup;
+		if (W[7] <= pTarget[7])
+		{
+			d_nonce[0] = nounce;
+			return;
+		}
 	}
 }
 __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

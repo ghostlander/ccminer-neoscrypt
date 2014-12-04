@@ -42,11 +42,12 @@ extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 
 extern int  x11_simd512_cpu_init(int thr_id, int threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void x11_simd512_cpu_hash_64_30(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 
 extern void x11_echo512_cpu_init(int thr_id, int threads);
 extern uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
@@ -183,8 +184,25 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[19], foundNonce);
 			x11hash(vhash64, endiandata);
 
-			if ((vhash64[7] <= Htarg) && fulltest(vhash64, ptarget)) {
-
+			if ((vhash64[7] <= Htarg)) 
+			{
+				bool ok = fulltest(vhash64, ptarget);
+				if(!ok) //quicktest failed. we need to check the whole hash
+				{
+					x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
+					foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
+					
+					if (foundNonce != 0xffffffff)
+					{
+						be32enc(&endiandata[19], foundNonce);
+						x11hash(vhash64, endiandata);
+						if (!fulltest(vhash64, ptarget))
+						{
+							goto error;
+						}
+					}
+					else goto error;
+				}
 			
 				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
@@ -198,7 +216,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
 			}
 			else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+error:			applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 		pdata[19] += throughput;
