@@ -837,7 +837,7 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
 	x13_fugue512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
