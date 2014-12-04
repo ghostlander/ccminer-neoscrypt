@@ -20,8 +20,9 @@ extern "C"
 #include <stdio.h>
 #include <memory.h>
 
-static uint32_t *d_hash[8];
+static __align__(64) uint32_t *d_hash[8 * 32];
 
+//
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
@@ -50,6 +51,7 @@ extern uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
                                           uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);
+extern void x11_simd512_cpu_free(int32_t thr_id);
 extern void x11_echo512_cpu_free(int32_t thr_id);
 extern void x11_echo512_cpu_setTarget(const void *ptarget);
 
@@ -124,28 +126,29 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
+
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0 };
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 11;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 11 ;
 
 	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x5;
-
+	{
+		((uint32_t*)ptarget)[7] = 0xff;
+	}
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id * 32], 16 * sizeof(uint32_t) * throughput), 0);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
 		if (x11_simd512_cpu_init(thr_id, throughput) != 0) {
 			return 0;
 		}
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -159,23 +162,21 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	x11_echo512_cpu_setTarget(ptarget);
 
+	int order = 0;
 	do {
 		const uint32_t Htarg = ptarget[7];
-
-		int order = 0;
 		uint32_t foundNonce;
-
+		order = order & 0x2f;
 		// Hash with CUDA
-		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		cuda_jh512Keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		if (device_sm[device_map[thr_id]] >= 500) x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		else x11_simd512_cpu_hash_64_30(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id*32], order++);
+		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
+		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
+		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
+		cuda_jh512Keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
+		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
+		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
+		x11_simd512_cpu_hash_64(thr_id, throughput , pdata[19], NULL, d_hash[thr_id * 32] , order++);
+		foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput , pdata[19], NULL, d_hash[thr_id * 32], order);
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
@@ -183,10 +184,14 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			x11hash(vhash64, endiandata);
 
 			if ((vhash64[7] <= Htarg) && fulltest(vhash64, ptarget)) {
+
+			
 				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
 				if(opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				x11_echo512_cpu_free(thr_id);
+				cudaFree(&d_hash[thr_id * 32]);
+				x11_simd512_cpu_free(thr_id);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
@@ -196,13 +201,12 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-		if (pdata[19] + throughput < pdata[19])
-			 pdata[19] = max_nonce;
-		else pdata[19] += throughput;
-
+		pdata[19] += throughput;
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	x11_echo512_cpu_free(thr_id);
+	cudaFree(&d_hash[thr_id * 32]);
+	x11_simd512_cpu_free(thr_id);
 	return 0;
 }
