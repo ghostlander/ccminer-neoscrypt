@@ -56,6 +56,9 @@ extern void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 
 extern void x13_fugue512_cpu_init(int thr_id, int threads);
 extern uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
 extern void x13_fugue512_cpu_setTarget(const void *ptarget);
 extern void  x13_fugue512_cpu_free(int32_t thr_id);
 
@@ -205,7 +208,23 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[19], foundNonce);
 			x13hash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget) ) {
+			if (vhash64[7] <= Htarg)
+			{
+				if (!fulltest(vhash64, ptarget))
+				{
+					x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
+					foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
+					if (foundNonce != 0xffffffff)
+					{
+						be32enc(&endiandata[19], foundNonce);
+						x13hash(vhash64, endiandata);
+						if (!fulltest(vhash64, ptarget))
+						{
+							goto error;
+						}
+					}
+					else goto error;
+				}
 				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
 				if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
@@ -216,7 +235,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
 			}
 			else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+error:				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
