@@ -1438,7 +1438,7 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t start
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
+	size_t shared_size = 4096;
 
 	x11_shavite512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	MyStreamSynchronize(NULL, order, thr_id);
@@ -1452,7 +1452,7 @@ __host__ void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t start
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
+	size_t shared_size = 4096;
 
 	x11_shavite512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
 	MyStreamSynchronize(NULL, order, thr_id);

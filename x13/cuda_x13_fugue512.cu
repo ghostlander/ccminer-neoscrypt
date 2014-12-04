@@ -666,7 +666,7 @@ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 
 //__launch_bounds__(128, 6)
 __global__ __launch_bounds__(416, 2)
-void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
+void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, volatile uint32_t *d_nonce)
 {
 	extern __shared__ char mixtabs[];
 
@@ -832,7 +832,7 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
 	x13_fugue512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
-//	MyStreamSynchronize(NULL, order, thr_id);
+	MyStreamSynchronize(NULL, order, thr_id);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;

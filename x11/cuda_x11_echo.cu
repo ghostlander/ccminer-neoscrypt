@@ -718,6 +718,8 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			W[12 + i] = t;
 		}
 
+
+
 		// Mix Columns
 #pragma unroll 4
 		for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
@@ -752,16 +754,11 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		}
 
 		W[7] ^= W[32 + 4 + 3] ^ Hash[7];
-		if (W[7] < pTarget[7]) d_nonce[0] = nounce;
-		return;
-//		W[6] ^= W[32 + 4 + 2] ^ Hash[6];
-//		W[5] ^= W[32 + 4 + 1] ^ Hash[5];
-//		W[4] ^= W[32 + 4] ^ 512 ^ Hash[4];
-//		W[3] ^= W[32 + 0 + 3] ^ Hash[3];
-//		W[2] ^= W[32 + 0 + 2] ^ Hash[2];
-//		W[1] ^= W[32 + 0 + 1] ^ Hash[1];
-//		W[0] ^= W[32 + 0] ^ 512 ^ Hash[0];
-//		if (cuda_hashisbelowtarget(W, pTarget)) d_nonce[0] = nounce;
+		if (W[7] <= pTarget[7])
+		{
+			d_nonce[0] = nounce;
+			return;
+		}
 	}
 }
 __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

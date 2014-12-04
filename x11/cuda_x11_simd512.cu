@@ -651,7 +651,11 @@ int x11_simd512_cpu_init(int thr_id, int threads)
 	CUDA_SAFE_CALL(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads));
 	return 0;
 }
-
+void x11_simd512_cpu_free(int thr_id)
+{
+	cudaFree(&d_state[thr_id]);
+	cudaFree(&d_temp4[thr_id]);
+}
 __host__
 void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
