@@ -216,7 +216,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
 			}
 			else {
-error:			applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+error:			if (vhash64[7] != Htarg)
+					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 		pdata[19] += throughput;
