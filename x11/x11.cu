@@ -178,6 +178,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput , pdata[19], NULL, d_hash[thr_id * 32] , order++);
 		foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput , pdata[19], NULL, d_hash[thr_id * 32], order);
+
+		bool error=false;
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
@@ -189,35 +191,43 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				bool ok = fulltest(vhash64, ptarget);
 				if(!ok) //quicktest failed. we need to check the whole hash
 				{
-					x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
-					foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
-					
-					if (foundNonce != 0xffffffff)
+					if (vhash64[7] != Htarg) // avoid wrong error messages since we don't make a full test in the kernel
 					{
-						be32enc(&endiandata[19], foundNonce);
-						x11hash(vhash64, endiandata);
-						if (!fulltest(vhash64, ptarget))
+						x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
+						foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order);
+
+						if (foundNonce != 0xffffffff)
 						{
-							goto error;
+							be32enc(&endiandata[19], foundNonce);
+							x11hash(vhash64, endiandata);
+							if (!fulltest(vhash64, ptarget))
+							{
+								error = true;
+							}
+						}
+						else
+						{
+							error = true;
 						}
 					}
-					else goto error;
+					else
+					{
+						applog(LOG_INFO, "GPU #%d: almost yay!", thr_id, foundNonce);
+					}
 				}
-			
-				*hashes_done = pdata[19] + throughput - first_nonce;
-				pdata[19] = foundNonce;
-				if(opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				x11_echo512_cpu_free(thr_id);
-				cudaFree(&d_hash[thr_id * 32]);
-				x11_simd512_cpu_free(thr_id);
-				return 1;
+				else // ok
+				{
+					*hashes_done = pdata[19] + throughput - first_nonce;
+					pdata[19] = foundNonce;
+					if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+					x11_echo512_cpu_free(thr_id);
+					cudaFree(&d_hash[thr_id * 32]);
+					x11_simd512_cpu_free(thr_id);
+					return 1;
+				}
 			}
-			else if (vhash64[7] > Htarg) {
-				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
-			}
-			else {
-error:			applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
-			}
+		if(error)
+			applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 		}
 		pdata[19] += throughput;
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
