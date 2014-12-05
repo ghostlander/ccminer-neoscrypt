@@ -691,8 +691,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 
 		}
 
-		// Shift Rows
-//#pragma unroll 4
+		#pragma unroll 4
 		for (int i = 0; i < 4; i++)
 		{
 			uint32_t t;

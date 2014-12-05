@@ -40,7 +40,7 @@ extern void x11_luffaCubehash512_cpu_hash_64(int thr_id, int threads, uint32_t s
 
 extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern int  x11_simd512_cpu_init(int thr_id, int threads);
+extern int x11_simd512_cpu_init(int thr_id, int threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 
@@ -150,7 +150,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		if (x11_simd512_cpu_init(thr_id, throughput) != 0) {
 			return 0;
 		}
-
 		cuda_check_cpu_init(thr_id, throughput);
 
 		init[thr_id] = true;
@@ -201,7 +200,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 							goto error;
 						}
 					}
-					else goto error;
+					else goto next;
 				}
 			
 				*hashes_done = pdata[19] + throughput - first_nonce;
@@ -219,7 +218,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 error:			applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-		pdata[19] += throughput;
+	next:	pdata[19] += throughput;
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;

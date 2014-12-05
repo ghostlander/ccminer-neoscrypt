@@ -294,30 +294,30 @@ const uint32_t *const __restrict__ sharedMemory,
 {
 
 	y0 = xor4_32(
-		sharedMemory[x0 & 0xffU],
+		sharedMemory[__byte_perm(x0, 0, 0x4440)],
 		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x2, 0, 0x4442) + 512],
-		sharedMemory[(x3 >> 24) + 768]);
+		sharedMemory[__byte_perm(x3, 0, 0x4443) + 768]);
 
 	y1 = xor4_32(
-		sharedMemory[x1 & 0xffU],
+		sharedMemory[__byte_perm(x1, 0, 0x4440)],
 		sharedMemory[__byte_perm(x2, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x3, 0, 0x4442) + 512],
-		sharedMemory[(x0 >> 24)  + 768]);
+		sharedMemory[__byte_perm(x0, 0, 0x4443) + 768]);
 
 	y2 = xor4_32(
-		sharedMemory[x2 & 0xffU],
+		sharedMemory[__byte_perm(x2, 0, 0x4440)],
 		sharedMemory[__byte_perm(x3, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x0, 0, 0x4442) + 512],
-		sharedMemory[(x1 >> 24) + 768]); // ^k2
+		sharedMemory[__byte_perm(x1, 0, 0x4443) + 768]); // ^k2
 
 	y0 ^= k0;
 
 	y3 = xor4_32(
-		sharedMemory[x3 & 0xffU],
+		sharedMemory[__byte_perm(x3, 0, 0x4440)],
 		sharedMemory[__byte_perm(x0, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x1, 0, 0x4442) + 512],
-		sharedMemory[(x2>>24) + 768]); // ^k3
+		sharedMemory[__byte_perm(x2, 0, 0x4443) + 768]); // ^k3
 }
 
 __device__
@@ -327,27 +327,27 @@ const uint32_t *const __restrict__ sharedMemory,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
 	y0 = xor4_32(
-		sharedMemory[x0 & 0xffU],
+		sharedMemory[__byte_perm(x0, 0, 0x4440)],
 		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x2, 0, 0x4442) + 512],
 		sharedMemory[__byte_perm(x3, 0, 0x4443) + 768]);
 
 	y1 = xor4_32(
-		sharedMemory[x1 & 0xffU],
+		sharedMemory[__byte_perm(x1, 0, 0x4440)],
 		sharedMemory[__byte_perm(x2, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x3, 0, 0x4442) + 512],
-		sharedMemory[(x0 >> 24) + 768]);
+		sharedMemory[__byte_perm(x0, 0, 0x4443) + 768]);
 
 	y2 = xor4_32(
-		sharedMemory[x2 & 0xffU],
+		sharedMemory[__byte_perm(x2, 0, 0x4440)],
 		sharedMemory[__byte_perm(x3, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x0, 0, 0x4442) + 512],
-		sharedMemory[(x1 >> 24) + 768]); // ^k2
+		sharedMemory[__byte_perm(x1, 0, 0x4443) + 768]); // ^k2
 
 	y3 = xor4_32(
-		sharedMemory[x3 & 0xffU],
+		sharedMemory[__byte_perm(x3, 0, 0x4440)],
 		sharedMemory[__byte_perm(x0, 0, 0x4441) + 256],
 		sharedMemory[__byte_perm(x1, 0, 0x4442) + 512],
-		sharedMemory[(x2 >> 24) + 768]); // ^k3
+		sharedMemory[__byte_perm(x2, 0, 0x4443) + 768]); // ^k3
 }
 

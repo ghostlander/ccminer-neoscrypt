@@ -223,7 +223,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 							goto error;
 						}
 					}
-					else goto error;
+					else goto next;
 				}
 				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
@@ -239,13 +239,12 @@ error:				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!",
 			}
 		}
 
-		if ((uint64_t)pdata[19] + throughput > (uint64_t)max_nonce) {
+next:	if ((uint64_t)pdata[19] + throughput > (uint64_t)max_nonce) 
+		{
 			pdata[19] = max_nonce;
 			break;
-		}
-		if (pdata[19] + throughput < pdata[19])
-			 pdata[19] = max_nonce;
-		else pdata[19] += throughput;
+		} else
+		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart);
 
 	x13_fugue512_cpu_free(thr_id);
