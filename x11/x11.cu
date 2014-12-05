@@ -218,12 +218,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 error:			applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-next:	if ((uint64_t)pdata[19] + throughput > (uint64_t)max_nonce)
-		{
-			pdata[19] = max_nonce;
-			break;
-		}
-		else pdata[19] += throughput;	pdata[19] += throughput;
+	next:	pdata[19] += throughput;
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;

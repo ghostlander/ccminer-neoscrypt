@@ -691,8 +691,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 
 		}
 
-		// Shift Rows
-//#pragma unroll 4
+		#pragma unroll 4
 		for (int i = 0; i < 4; i++)
 		{
 			uint32_t t;
@@ -720,42 +719,23 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			W[12 + i] = t;
 		}
 
-
-
 		// Mix Columns
-//#pragma unroll 4
-		for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
-		{
-//#pragma unroll 8
-			for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
-			{
+		uint32_t c = W[11];
 
-				uint32_t a = W[idx + i];
-				uint32_t b = W[idx + i + 4];
-				uint32_t c = W[idx + i + 8];
-				uint32_t d = W[idx + i + 12];
+		uint32_t bc = W[7] ^ c;
+		uint32_t cd = c ^ W[15];
 
-				uint32_t ab = a ^ b;
-				uint32_t bc = b ^ c;
-				uint32_t cd = c ^ d;
+		uint32_t t2 = (bc & 0x80808080);
 
-				uint32_t t, t2, t3;
-				t = (ab & 0x80808080);
-				t2 = (bc & 0x80808080);
-				t3 = (cd & 0x80808080);
+		W[7] = (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[3] ^ cd;
 
-				uint32_t abx = (t >> 7) * 27 ^ ((ab^t) << 1);
-				uint32_t bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
-				uint32_t cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
+		c = W[43];
 
-				W[idx + i] = abx ^ bc ^ d;
-				W[idx + i + 4] = bcx ^ a ^ cd;
-				W[idx + i + 8] = cdx ^ ab ^ d;
-				W[idx + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
-			}
-		}
+		bc = W[39] ^ c;
 
-		W[7] ^= W[32 + 4 + 3] ^ backup;
+		t2 = (bc & 0x80808080);
+
+		W[7] ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ c ^ W[47] ^ backup;
 		if (W[7] <= pTarget[7])
 		{
 			d_nonce[0] = nounce;
