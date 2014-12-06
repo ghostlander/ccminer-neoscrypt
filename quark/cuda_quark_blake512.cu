@@ -272,13 +272,13 @@ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, uint32_t *out
 #if __CUDA_ARCH__ <= 350
 		uint32_t *outHash = outputHash + 16 * thread;
 		#pragma unroll 8
-		for (uint32_t i=0; i < 8; i++) {
+		for (int i=0; i < 8; i++) {
 			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
 		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-		for (uint32_t i=0; i < 8; i++) {
+		for (int i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64( h[i] );
 		}
 #endif

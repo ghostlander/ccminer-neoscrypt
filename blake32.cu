@@ -133,7 +133,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 	m[2] = block[2];
 	m[3] = block[3];
 
-	for (uint32_t i = 4; i < 16; i++) {
+	for (int i = 4; i < 16; i++) {
 #if PRECALC64
 		m[i] = c_Padding[i];
 #else
@@ -173,7 +173,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 	h[7U] ^= v[7U] ^ v[15U];
 #else
 	//#pragma unroll 16
-	for (uint32_t i = 0; i < 16; i++) {
+	for (int i = 0; i < 16; i++) {
 		uint32_t j = i % 8U;
 		h[j] ^= v[i];
 	}
