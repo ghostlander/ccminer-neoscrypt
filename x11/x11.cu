@@ -130,7 +130,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0 };
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 11 ;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 19 : 256 * 256 * 10 ;
 
 	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
@@ -151,7 +151,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			return 0;
 		}
 		cuda_check_cpu_init(thr_id, throughput);
-
 		init[thr_id] = true;
 	}
 
@@ -161,13 +160,12 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	x11_echo512_cpu_setTarget(ptarget);
+	cuda_check_cpu_setTarget(ptarget);
 
 	int order = 0;
 	do {
 		const uint32_t Htarg = ptarget[7];
 		uint32_t foundNonce;
-		order = order & 0x2f;
-		// Hash with CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id*32], order++);
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id * 32], order++);
