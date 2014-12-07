@@ -746,7 +746,11 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		W[7] ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ c ^ W[47] ^ backup;
 		if (W[7] <= pTarget[7])
 		{
-			d_nonce[0] = nounce;
+			if (d_nonce[0] != 0xffffffff)
+			{
+				if (d_nonce[0] < nounce)  d_nonce[0] = nounce;
+			}
+			else d_nonce[0] = nounce;
 		}
 	}
 }

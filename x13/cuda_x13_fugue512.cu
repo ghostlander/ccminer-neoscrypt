@@ -773,7 +773,11 @@ void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t 
 		S04 ^= S00;
 		if (cuda_swab32(S04) <= pTarget[7])
 		{
-			d_nonce[0] = nounce;
+			if (d_nonce[0] != 0xffffffff)
+			{
+				if (d_nonce[0] < nounce)  d_nonce[0] = nounce;
+			}
+			else d_nonce[0] = nounce;
 		}
 	}
 }
