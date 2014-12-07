@@ -212,7 +212,7 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
-				applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
