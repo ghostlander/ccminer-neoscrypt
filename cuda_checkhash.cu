@@ -26,16 +26,11 @@ void cuda_check_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonce
 		for (int i=0; i < 8; i++)
 			hash[i] = inpHash[i];
 
-		for (int i = 7; i >= 0; i--) {
-			if (hash[i] > pTarget[i]) {
-				return;
-			}
-			if (hash[i] <= pTarget[i]) {
-				break;
-			}
+		if (cuda_hashisbelowtarget(hash, pTarget))
+		{
+			if (resNounce[0] > nounce)
+				resNounce[0] = nounce;
 		}
-		if (resNounce[0] > nounce)
-			resNounce[0] = nounce;
 	}
 }
 
