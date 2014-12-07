@@ -341,7 +341,11 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 }
 
 
+#if __CUDA_ARCH__ > 500
 __global__ __launch_bounds__(128, 6)
+#else
+__global__ __launch_bounds__(128, 7)
+#endif
 void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
