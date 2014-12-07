@@ -204,7 +204,7 @@ __device__ __forceinline__ void Compression512_64_first(const uint64_t *const __
 		((((14 + 16)*(0x0555555555555555ull)) +
 		ROTL64(msg[14 - 13], (14 - 13) + 1) - 0x0000000000010000ull) ^ h_c[14 - 9]);
 	q[15 + 16] = CONST_EXP2(15) +
-		((((15 + 16)*(0x0555555555555555ull)) + ROTL64(512ULL, 15 + 1) +
+		((((15 + 16)*(0x0555555555555555ull)) + ((512ULL << 16) | ((512ULL) >> (64 - (16)))) +  //ROTL64(512ULL, 15 + 1) +
 		ROTL64(msg[15 - 13], (15 - 13) + 1)) ^ h_c[15 - 9]);
 
 	uint64_t XL64 = q[16] ^ q[17] ^ q[18] ^ q[19] ^ q[20] ^ q[21] ^ q[22] ^ q[23];
@@ -229,7 +229,7 @@ __device__ __forceinline__ void Compression512_64_first(const uint64_t *const __
 	hash[15] = ROTL16(hash[3]) + (XH64     ^     q[31] ^ 512) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
 
-__device__ __forceinline__ void Compression512(uint64_t *msg, uint64_t *hash)
+__device__ __forceinline__ void Compression512(const uint64_t *const __restrict__ msg, uint64_t *const __restrict__ hash)
 {
     // Compression ref. implementation
     uint64_t tmp;
@@ -318,7 +318,7 @@ __device__ __forceinline__ void Compression512(uint64_t *msg, uint64_t *hash)
 		ROTL64(msg[4 + 3], 4 + 4) - ROTL64(msg[4 + 10], 4 + 11)) ^ hash[4 + 7]);
 	q[5 + 16] = CONST_EXP2(5) +
 		((((5 + 16)*(0x0555555555555555ull)) + ROTL64(msg[5], 5 + 1) +
-		ROTL64(msg[5 + 3], 5 + 4) - ROTL16(msg[5 + 10])) ^ hash[5 + 7]);
+		ROTL64(msg[5 + 3], 5 + 4) - ROTL64(msg[5 + 10],16)) ^ hash[5 + 7]);
 
 	q[6 + 16] = CONST_EXP2(6) +
 		((((6 + 16)*(0x0555555555555555ull)) + ROTL64(msg[6], 6 + 1) +
@@ -350,32 +350,36 @@ __device__ __forceinline__ void Compression512(uint64_t *msg, uint64_t *hash)
 		((((14 + 16)*(0x0555555555555555ull)) + ROTL64(msg[14], 14 + 1) +
 		ROTL64(msg[14 - 13], (14 - 13) + 1) - ROTL64(msg[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
 	q[15 + 16] = CONST_EXP2(15) +
-		((((15 + 16)*(0x0555555555555555ull)) + ROTL64(msg[15], 15 + 1) +
+		((((15 + 16)*(0x0555555555555555ull)) + ROTL64(msg[15],16) +
 		ROTL64(msg[15 - 13], (15 - 13) + 1) - ROTL64(msg[15 - 6], (15 - 6) + 1)) ^ hash[15 - 9]);
 
-    uint64_t XL64 = q[16]^q[17]^q[18]^q[19]^q[20]^q[21]^q[22]^q[23];
-    uint64_t XH64 = XL64^q[24]^q[25]^q[26]^q[27]^q[28]^q[29]^q[30]^q[31];
+	uint64_t XL64 = q[16] ^ q[17] ^ q[18] ^ q[19] ^ q[20] ^ q[21] ^ q[22] ^ q[23];
+	uint64_t XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
-    hash[0] =                       (SHL(XH64, 5) ^ SHR(q[16],5) ^ msg[ 0]) + (    XL64    ^ q[24] ^ q[ 0]);
-    hash[1] =                       (SHR(XH64, 7) ^ SHL(q[17],8) ^ msg[ 1]) + (    XL64    ^ q[25] ^ q[ 1]);
-    hash[2] =                       (SHR(XH64, 5) ^ SHL(q[18],5) ^ msg[ 2]) + (    XL64    ^ q[26] ^ q[ 2]);
-    hash[3] =                       (SHR(XH64, 1) ^ SHL(q[19],5) ^ msg[ 3]) + (    XL64    ^ q[27] ^ q[ 3]);
-    hash[4] =                       (SHR(XH64, 3) ^     q[20]    ^ msg[ 4]) + (    XL64    ^ q[28] ^ q[ 4]);
-    hash[5] =                       (SHL(XH64, 6) ^ SHR(q[21],6) ^ msg[ 5]) + (    XL64    ^ q[29] ^ q[ 5]);
-    hash[6] =                       (SHR(XH64, 4) ^ SHL(q[22],6) ^ msg[ 6]) + (    XL64    ^ q[30] ^ q[ 6]);
-    hash[7] =                       (SHR(XH64,11) ^ SHL(q[23],2) ^ msg[ 7]) + (    XL64    ^ q[31] ^ q[ 7]);
+//    hash[0] =                       ;
+//    hash[1] =                       ;
+//    hash[2] =                       ;
+//    hash[3] =                       ;
+//    hash[4] =                       ;
+//    hash[5] =                       ;
+//    hash[6] =                       ;
+//    hash[7] =                       ;
 
-    hash[ 8] = ROTL64(hash[4], 9) + (    XH64     ^     q[24]    ^ msg[ 8]) + (SHL(XL64,8) ^ q[23] ^ q[ 8]);
-    hash[ 9] = ROTL64(hash[5],10) + (    XH64     ^     q[25]    ^ msg[ 9]) + (SHR(XL64,6) ^ q[16] ^ q[ 9]);
-    hash[10] = ROTL64(hash[6],11) + (    XH64     ^     q[26]    ^ msg[10]) + (SHL(XL64,6) ^ q[17] ^ q[10]);
-    hash[11] = ROTL64(hash[7],12) + (    XH64     ^     q[27]    ^ msg[11]) + (SHL(XL64,4) ^ q[18] ^ q[11]);
-    hash[12] = ROTL64(hash[0],13) + (    XH64     ^     q[28]    ^ msg[12]) + (SHR(XL64,3) ^ q[19] ^ q[12]);
-    hash[13] = ROTL64(hash[1],14) + (    XH64     ^     q[29]    ^ msg[13]) + (SHR(XL64,4) ^ q[20] ^ q[13]);
-    hash[14] = ROTL64(hash[2],15) + (    XH64     ^     q[30]    ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
-    hash[15] = ROTL16(hash[3]) + (    XH64     ^     q[31]    ^ msg[15]) + (SHR(XL64,2) ^ q[22] ^ q[15]);
+	hash[8] = ROTL64(((SHR(XH64, 3) ^ q[20] ^ msg[4]) + (XL64    ^ q[28] ^ q[4])), 9) + (XH64     ^     q[24] ^ msg[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
+	hash[9] = ROTL64(((SHL(XH64, 6) ^ SHR(q[21], 6) ^ msg[5]) + (XL64    ^ q[29] ^ q[5])), 10) + (XH64     ^     q[25] ^ msg[9]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
+	hash[10] = ROTL64(((SHR(XH64, 4) ^ SHL(q[22], 6) ^ msg[6]) + (XL64    ^ q[30] ^ q[6])), 11) + (XH64     ^     q[26] ^ msg[10]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
+	hash[11] = ROTL64(((SHR(XH64, 11) ^ SHL(q[23], 2) ^ msg[7]) + (XL64    ^ q[31] ^ q[7])), 12) + (XH64     ^     q[27] ^ msg[11]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
+	hash[12] = ROTL64(((SHL(XH64, 5) ^ SHR(q[16], 5) ^ msg[0]) + (XL64    ^ q[24] ^ q[0])), 13) + (XH64     ^     q[28] ^ msg[12]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
+	hash[13] = ROTL64(((SHR(XH64, 7) ^ SHL(q[17], 8) ^ msg[1]) + (XL64    ^ q[25] ^ q[1])), 14) + (XH64     ^     q[29] ^ msg[13]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
+	hash[14] = ROTL64(((SHR(XH64, 5) ^ SHL(q[18], 5) ^ msg[2]) + (XL64    ^ q[26] ^ q[2])), 15) + (XH64     ^     q[30] ^ msg[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
+	hash[15] = ROTL16(((SHR(XH64, 1) ^ SHL(q[19], 5) ^ msg[3]) + (XL64    ^ q[27] ^ q[3]))) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
 
+#if __CUDA_ARCH__ > 500
+__global__ __launch_bounds__(128, 4)
+#else
 __global__ __launch_bounds__(256, 2)
+#endif
 void quark_bmw512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -479,9 +483,13 @@ __host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
 
 __host__ void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 64;
+	int threadsperblock = 32;
+	if (device_sm[device_map[thr_id]] > 500)
+	{
+		threadsperblock = 128;
+	} 
 
-    // berechne wie viele Thread Blocks wir brauchen
+		// berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
@@ -494,7 +502,7 @@ __host__ void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 
 __host__ void quark_bmw512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 64;
+	const int threadsperblock = 32;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
