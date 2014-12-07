@@ -2338,20 +2338,19 @@ void oldwhirlpool_gpu_hash_80(int threads, uint32_t startNounce, void *outputHas
 
 		/// round 2 ///////
 		//////////////////////////////////
-		n[0] = c_PaddedMessage80[8];    //read data
-		n[1] = REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)); //whirlpool
-		n[2] = 0x0000000000000080; //whirlpool
-		n[3] = 0;
-		n[4] = 0;
-		n[5] = 0;
-		n[6] = 0;
-		n[7] = 0x8002000000000000;
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
 			h[i] = state[i];   //read state
-			n[i] = xor1(n[i],h[i]);
 		}
+		n[0] = xor1(c_PaddedMessage80[8], h[0]);
+		n[1] = xor1(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)), h[1]);
+		n[2] = xor1(0x0000000000000080, h[2]);
+		n[3] = h[3];
+		n[4] = h[4];
+		n[5] = h[5];
+		n[6] = h[6];
+		n[7] = xor1(0x8002000000000000, h[7]);
 
 		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
@@ -2423,18 +2422,18 @@ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_ha
 		for (i=0; i<8; i++)
 			state[i] = xor1(n[i], hash[i]);
 
-		#pragma unroll 6
-		for (i=1; i<7; i++)
-			n[i]=0;
-
-		n[0] = 0x80;
-		n[7] = 0x2000000000000;
-
 		#pragma unroll 8
 		for (i=0; i < 8; i++) {
 			h[i] = state[i];
-			n[i] = xor1(n[i], h[i]);
 		}
+		n[0] = xor1(0x80, state[0]);
+		n[1] = state[1];
+		n[2] = state[2];
+		n[3] = state[3];
+		n[4] = state[4];
+		n[5] = state[5];
+		n[6] = state[6];
+		n[7] = xor1(0x2000000000000, state[7]);
 
 		#pragma unroll 10
 		for (i=0; i < 10; i++) {
@@ -2511,17 +2510,20 @@ void oldwhirlpool_gpu_finalhash_64(int threads, uint32_t startNounce, uint64_t *
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
 			state[i] = xor1(n[i], h8[i]);
-			n[i]=0;
 		}
-
-		n[0] = 0x80;
-		n[7] = 0x2000000000000;
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
 			h[i] = state[i];
-			n[i] = xor1(n[i], h[i]);
 		}
+		n[0] = xor1(0x80, state[0]);
+		n[1] = state[1];
+		n[2] = state[2];
+		n[3] = state[3];
+		n[4] = state[4];
+		n[5] = state[5];
+		n[6] = state[6];
+		n[7] = xor1(0x2000000000000, state[7]);
 
 		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
