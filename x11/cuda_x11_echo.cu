@@ -389,7 +389,11 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
+#if __CUDA_ARCH__ > 500
+__global__ __launch_bounds__(128, 6)
+#else
 __global__ __launch_bounds__(128, 8)
+#endif
 void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -739,7 +743,6 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		if (W[7] <= pTarget[7])
 		{
 			d_nonce[0] = nounce;
-			return;
 		}
 	}
 }
