@@ -11,7 +11,7 @@ __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + paddi
 #include "cuda_x11_aes.cu"
 
 __device__ __forceinline__
-static void AES_ROUND_NOKEY(
+ void AES_ROUND_NOKEY(
 	const uint32_t* __restrict__ sharedMemory,
 	uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3)
 {
@@ -27,7 +27,7 @@ static void AES_ROUND_NOKEY(
 }
 
 __device__ __forceinline__
-static void KEY_EXPAND_ELT(
+void KEY_EXPAND_ELT(
 	const uint32_t* __restrict__ sharedMemory,
 	uint32_t &k0, uint32_t &k1, uint32_t &k2, uint32_t &k3)
 {
