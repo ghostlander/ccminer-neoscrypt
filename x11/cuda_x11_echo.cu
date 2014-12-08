@@ -475,14 +475,17 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			h[i] = Hash[i];
 		}
 		uint32_t backup = h[7];
-		uint32_t k0 = 512 + 8;
 
-		for (int i = 0; i < 16; i+=4)
-		{
-			AES_2ROUND(sharedMemory, h[0 + 0], h[0 + 1], h[0 + 2], h[0 + 3], k0++);
-		}
+		AES_2ROUND(sharedMemory,
+				h[0 + 0], h[0 + 1], h[0 + 2], h[0 + 3], 512 + 8);
+		AES_2ROUND(sharedMemory,
+				h[4 + 0], h[4 + 1], h[4 + 2], h[4 + 3], 512 + 9);
+		AES_2ROUND(sharedMemory,
+				h[8 + 0], h[8 + 1], h[8 + 2], h[8 + 3], 512 + 10);
+		AES_2ROUND(sharedMemory,
+				h[12 + 0], h[12 + 1], h[12 + 2], h[12 + 3], 512 + 11);
+
 		uint32_t W[64];
-		k0 += 4;
 
 //#pragma unroll 4
 		for (int i = 0; i < 4; i++)
@@ -579,6 +582,8 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			W[48 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
 
 		}
+
+		uint32_t k0 = 512 + 16;
 
 		for (int k = 1; k < 9; k++)
 		{
@@ -703,13 +708,11 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		test ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ W[11] ^ W[31] ^ backup;
 		if (test <= target)
 		{
-			if (d_nonce[0] < nounce)  d_nonce[0] = nounce;
-/*			if (d_nonce[0] != 0xffffffff)
+			if (d_nonce[0] != 0xffffffff)
 			{
 				if (d_nonce[0] < nounce)  d_nonce[0] = nounce;
 			}
 			else d_nonce[0] = nounce;
-*/
 		}
 	}
 }
