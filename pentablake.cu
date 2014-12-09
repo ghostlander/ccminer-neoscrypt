@@ -149,7 +149,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 	m[2] = block[2];
 	m[3] = block[3];
 
-	for (uint32_t i = 4; i < 16; i++) {
+	for (int i = 4; i < 16; i++) {
 		m[i] = (T0 == 0x200) ? block[i] : c_Padding[i];
 	}
 
@@ -167,7 +167,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 	v[14] = c_u512[6];
 	v[15] = c_u512[7];
 
-	for (uint32_t i = 0; i < 16; i++) {
+	for (int i = 0; i < 16; i++) {
 		/* column step */
 		G(0, 4, 0x8, 0xC, 0x0);
 		G(1, 5, 0x9, 0xD, 0x2);
@@ -181,7 +181,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 	}
 
 	//#pragma unroll 16
-	for (uint32_t i = 0; i < 16; i++) {
+	for (int i = 0; i < 16; i++) {
 		uint32_t j = i % 8;
 		h[j] ^= v[i];
 	}
@@ -293,13 +293,13 @@ void pentablake_gpu_hash_80(int threads, const uint32_t startNounce, void *outpu
 #if __CUDA_ARCH__ < 300
 		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 		#pragma unroll 8
-		for (uint32_t i=0; i < 8; i++) {
+		for (int i=0; i < 8; i++) {
 			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
 		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-		for (uint32_t i=0; i < 8; i++) {
+		for (int i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64( h[i] );
 		}
 #endif

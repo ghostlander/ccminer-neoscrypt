@@ -45,7 +45,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define sM    16
 
 #define C32   SPH_C32
-#define T32   SPH_T32
+#define T32(x) (x)   
 
 #define O1   13
 #define O2    9
@@ -192,22 +192,22 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 	} while (0)
 
 #define APPLY_P   do { \
-		B0 = T32(B0 << 17) | (B0 >> 15); \
-		B1 = T32(B1 << 17) | (B1 >> 15); \
-		B2 = T32(B2 << 17) | (B2 >> 15); \
-		B3 = T32(B3 << 17) | (B3 >> 15); \
-		B4 = T32(B4 << 17) | (B4 >> 15); \
-		B5 = T32(B5 << 17) | (B5 >> 15); \
-		B6 = T32(B6 << 17) | (B6 >> 15); \
-		B7 = T32(B7 << 17) | (B7 >> 15); \
-		B8 = T32(B8 << 17) | (B8 >> 15); \
-		B9 = T32(B9 << 17) | (B9 >> 15); \
-		BA = T32(BA << 17) | (BA >> 15); \
-		BB = T32(BB << 17) | (BB >> 15); \
-		BC = T32(BC << 17) | (BC >> 15); \
-		BD = T32(BD << 17) | (BD >> 15); \
-		BE = T32(BE << 17) | (BE >> 15); \
-		BF = T32(BF << 17) | (BF >> 15); \
+		B0 = ROTL32(B0, 17); \
+		B1 = ROTL32(B1, 17); \
+		B2 = ROTL32(B2, 17); \
+		B3 = ROTL32(B3, 17); \
+		B4 = ROTL32(B4, 17); \
+		B5 = ROTL32(B5, 17); \
+		B6 = ROTL32(B6, 17); \
+		B7 = ROTL32(B7, 17); \
+		B8 = ROTL32(B8, 17); \
+		B9 = ROTL32(B9, 17); \
+		BA = ROTL32(BA, 17); \
+		BB = ROTL32(BB, 17); \
+		BC = ROTL32(BC, 17); \
+		BD = ROTL32(BD, 17); \
+		BE = ROTL32(BE, 17); \
+		BF = ROTL32(BF, 17); \
 		PERM_STEP_0; \
 		PERM_STEP_1; \
 		PERM_STEP_2; \
@@ -248,6 +248,28 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 		A01 = T32(A01 + C4); \
 		A00 = T32(A00 + C3); \
 	} while (0)
+
+#define APPLY_P_FINAL   do { \
+		B0 = ROTL32(B0, 17); \
+		B1 = ROTL32(B1, 17); \
+		B2 = ROTL32(B2, 17); \
+		B3 = ROTL32(B3, 17); \
+		B4 = ROTL32(B4, 17); \
+		B5 = ROTL32(B5, 17); \
+		B6 = ROTL32(B6, 17); \
+		B7 = ROTL32(B7, 17); \
+		B8 = ROTL32(B8, 17); \
+		B9 = ROTL32(B9, 17); \
+		BA = ROTL32(BA, 17); \
+		BB = ROTL32(BB, 17); \
+		BC = ROTL32(BC, 17); \
+		BD = ROTL32(BD, 17); \
+		BE = ROTL32(BE, 17); \
+		BF = ROTL32(BF, 17); \
+		PERM_STEP_0; \
+		PERM_STEP_1; \
+		PERM_STEP_2; \
+		} while (0)
 
 #define INCR_W   do { \
 		if ((Wlow = T32(Wlow + 1)) == 0) \
@@ -409,25 +431,29 @@ void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_ha
 		MF = Hash[15];
 
 		INPUT_BLOCK_ADD;
-		XOR_W;
+		A00 ^= 1;
 		APPLY_P;
 		INPUT_BLOCK_SUB;
 		SWAP_BC;
-		INCR_W;
 
 		M0 = 0x80;
 		M1 = M2 = M3 = M4 = M5 = M6 = M7 = M8 = M9 = MA = MB = MC = MD = ME = MF = 0;
 
 		INPUT_BLOCK_ADD;
-		XOR_W;
+		A00 ^= 2;
 		APPLY_P;
 
-		for (uint8_t i = 0; i < 3; i ++)
-		{
-			SWAP_BC;
-			XOR_W;
-			APPLY_P;
-		}
+		SWAP_BC;
+		A00 ^= 2;
+		APPLY_P;
+
+		SWAP_BC;
+		A00 ^= 2;
+		APPLY_P;
+
+		SWAP_BC;
+		A00 ^= 2;
+		APPLY_P_FINAL;
 
 		Hash[0] = B0;
 		Hash[1] = B1;

@@ -9,7 +9,9 @@ typedef unsigned char BitSequence;
 
 #include "cuda_helper.h"
 
+#undef SPH_C32
 #define SPH_C32(x)    (x)
+#undef SPH_T32
 #define SPH_T32(x)    (x)
 
 static __constant__ uint32_t d_alpha_n[32] = {
