@@ -289,7 +289,7 @@ void aes_gpu_init(uint32_t *sharedMemory)
 __device__
 static void aes_round(
 const uint32_t *const __restrict__ sharedMemory,
-	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t k0,
+	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, const uint32_t k0,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
 

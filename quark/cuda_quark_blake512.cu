@@ -139,7 +139,6 @@ void quark_blake512_compress(uint64_t *const __restrict__ h, const uint64_t *con
 		G3(3, 4, 9, 14, 14, block, v, i);
 #endif
 	}
-
 	h[0] ^= v[0] ^ v[8];
 	h[1] ^= v[1] ^ v[9];
 	h[2] ^= v[2] ^ v[10];

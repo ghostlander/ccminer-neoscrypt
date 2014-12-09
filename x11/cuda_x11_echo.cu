@@ -5,32 +5,27 @@
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-__constant__ uint32_t pTarget[8];
-static uint32_t *d_nonce[8];
 
 #include "cuda_x11_aes.cu"
+
+static uint32_t *d_nonce[8];
 
 __device__ __forceinline__ void AES_2ROUND(
 	const uint32_t* __restrict__ sharedMemory,
 	uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3,
-	uint32_t &k0)
+	const uint32_t k0)
 {
-	uint32_t y0, y1, y2, y3;
-	
 	aes_round(sharedMemory,
 		x0, x1, x2, x3,
 		k0,
-		y0, y1, y2, y3);
-
-	aes_round(sharedMemory,
-		y0, y1, y2, y3,
 		x0, x1, x2, x3);
 
-	// hier werden wir ein carry brauchen (oder auch nicht)
-	k0++;
+	aes_round(sharedMemory,
+		x0, x1, x2, x3,
+		x0, x1, x2, x3);
+
+
 }
-
-
 
 __device__ __forceinline__ void cuda_echo_round(
 	const uint32_t *const __restrict__ sharedMemory, uint32_t *const __restrict__  hash)
@@ -115,7 +110,7 @@ __device__ __forceinline__ void cuda_echo_round(
 	for (int idx = 0; idx < 16; idx+= 4)
 	{
 		AES_2ROUND(sharedMemory,
-			h[idx + 0], h[idx + 1], h[idx + 2], h[idx + 3], k0);
+			h[idx + 0], h[idx + 1], h[idx + 2], h[idx + 3], k0++);
 	}
 	k0 += 4;
 
@@ -226,16 +221,16 @@ __device__ __forceinline__ void cuda_echo_round(
 		{
 			AES_2ROUND(sharedMemory,
 				W[idx + 0], W[idx + 1], W[idx + 2], W[idx + 3],
-				k0);
+				k0++);
 			AES_2ROUND(sharedMemory,
 				W[idx + 4], W[idx + 5], W[idx + 6], W[idx + 7],
-				k0);
+				k0++);
 			AES_2ROUND(sharedMemory,
 				W[idx + 8], W[idx + 9], W[idx + 10], W[idx + 11],
-				k0);
+				k0++);
 			AES_2ROUND(sharedMemory,
 				W[idx + 12], W[idx + 13], W[idx + 14], W[idx + 15],
-				k0);
+				k0++);
 
 		}
 
@@ -382,14 +377,9 @@ __host__ void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNou
     x11_echo512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 //    MyStreamSynchronize(NULL, order, thr_id);
 }
-__host__ void x11_echo512_cpu_setTarget(const void *ptarget)
-{
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
-}
 
 __host__ void x11_echo512_cpu_free(int32_t thr_id)
 {
-	cudaFree(pTarget);
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
@@ -398,7 +388,7 @@ __global__ __launch_bounds__(128, 6)
 #else
 __global__ __launch_bounds__(128, 8)
 #endif
-void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce)
+void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce, uint32_t target)
 {
 	__shared__ uint32_t sharedMemory[1024];
 	echo_gpu_init(sharedMemory);
@@ -477,7 +467,6 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			0xb3dbe7af
 			//58-61
 		};
-		uint32_t k0;
 
 
 #pragma unroll 16
@@ -487,15 +476,14 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		}
 		uint32_t backup = h[7];
 
-		k0 = 512 + 8;
-
-//#pragma unroll 4
-		for (int idx = 0; idx < 16; idx += 4)
-		{
-			AES_2ROUND(sharedMemory,
-				h[idx + 0], h[idx + 1], h[idx + 2], h[idx + 3], k0);
-		}
-		k0 += 4;
+		AES_2ROUND(sharedMemory,
+				h[0 + 0], h[0 + 1], h[0 + 2], h[0 + 3], 512 + 8);
+		AES_2ROUND(sharedMemory,
+				h[4 + 0], h[4 + 1], h[4 + 2], h[4 + 3], 512 + 9);
+		AES_2ROUND(sharedMemory,
+				h[8 + 0], h[8 + 1], h[8 + 2], h[8 + 3], 512 + 10);
+		AES_2ROUND(sharedMemory,
+				h[12 + 0], h[12 + 1], h[12 + 2], h[12 + 3], 512 + 11);
 
 		uint32_t W[64];
 
@@ -595,6 +583,8 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 
 		}
 
+		uint32_t k0 = 512 + 16;
+
 		for (int k = 1; k < 9; k++)
 		{
 
@@ -604,16 +594,16 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			{
 				AES_2ROUND(sharedMemory,
 					W[idx + 0], W[idx + 1], W[idx + 2], W[idx + 3],
-					k0);
+					k0++);
 				AES_2ROUND(sharedMemory,
 					W[idx + 4], W[idx + 5], W[idx + 6], W[idx + 7],
-					k0);
+					k0++);
 				AES_2ROUND(sharedMemory,
 					W[idx + 8], W[idx + 9], W[idx + 10], W[idx + 11],
-					k0);
+					k0++);
 				AES_2ROUND(sharedMemory,
 					W[idx + 12], W[idx + 13], W[idx + 14], W[idx + 15],
-					k0);
+					k0++);
 
 			}
 
@@ -647,12 +637,12 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			}
 
 			// Mix Columns
-#pragma unroll 4
-			for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
-			{
-#pragma unroll 8
-				for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
+#pragma unroll
+				for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
 				{
+#pragma unroll
+					for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
+					{
 
 					uint32_t a = W[idx + i];
 					uint32_t b = W[idx + i + 4];
@@ -680,71 +670,43 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 			}
 		}
 
-		// Big Sub Words
-#pragma unroll 8
-		for (int idx = 0; idx < 64; idx += 16)
-		{
-			AES_2ROUND(sharedMemory,
-				W[idx + 0], W[idx + 1], W[idx + 2], W[idx + 3],
-				k0);
-			AES_2ROUND(sharedMemory,
-				W[idx + 4], W[idx + 5], W[idx + 6], W[idx + 7],
-				k0);
-			AES_2ROUND(sharedMemory,
-				W[idx + 8], W[idx + 9], W[idx + 10], W[idx + 11],
-				k0);
-			AES_2ROUND(sharedMemory,
-				W[idx + 12], W[idx + 13], W[idx + 14], W[idx + 15],
-				k0);
+		//3, 11, 23, 31, 35, 43, 55, 63
 
-		}
+		AES_2ROUND(sharedMemory,
+			W[0 + 0], W[0 + 1], W[0 + 2], W[0 + 3],
+			512+(9*16));
+		AES_2ROUND(sharedMemory,
+			W[0 + 8], W[0 + 9], W[0 + 10], W[0 + 11],
+			512 + (9 * 16)+2);
+		AES_2ROUND(sharedMemory,
+			W[16 + 4], W[16 + 5], W[16 + 6], W[16 + 7],
+			512 + (9 * 16)+5);
+		AES_2ROUND(sharedMemory,
+			W[16 + 12], W[16 + 13], W[16 + 14], W[16 + 15],
+			512 + (9 * 16) + 7);
+		AES_2ROUND(sharedMemory,
+			W[32 + 0], W[32 + 1], W[32 + 2], W[32 + 3],
+			512 + (9 * 16) + 8);
+		AES_2ROUND(sharedMemory,
+			W[32 + 8], W[32 + 9], W[32 + 10], W[32 + 11],
+			512 + (9 * 16) + 10);
+		AES_2ROUND(sharedMemory,
+			W[48 + 4], W[48 + 5], W[48 + 6], W[48 + 7],
+			512 + (9 * 16) + 13);
 
-		#pragma unroll 4
-		for (int i = 0; i < 4; i++)
-		{
-			uint32_t t;
+		AES_2ROUND(sharedMemory,
+			W[60], W[61], W[62], W[63],
+			512 + (9 * 16) + 15);
 
-			/// 1, 5, 9, 13
-			t = W[4 + i];
-			W[4 + i] = W[20 + i];
-			W[20 + i] = W[36 + i];
-			W[36 + i] = W[52 + i];
-			W[52 + i] = t;
-
-			// 2, 6, 10, 14
-			t = W[8 + i];
-			W[8 + i] = W[40 + i];
-			W[40 + i] = t;
-			t = W[24 + i];
-			W[24 + i] = W[56 + i];
-			W[56 + i] = t;
-
-			// 15, 11, 7, 3
-			t = W[60 + i];
-			W[60 + i] = W[44 + i];
-			W[44 + i] = W[28 + i];
-			W[28 + i] = W[12 + i];
-			W[12 + i] = t;
-		}
-
-		// Mix Columns
-		uint32_t c = W[11];
-
-		uint32_t bc = W[7] ^ c;
-		uint32_t cd = c ^ W[15];
-
+		uint32_t bc = W[23] ^ W[43];
+		uint32_t cd = W[43] ^ W[63];
 		uint32_t t2 = (bc & 0x80808080);
 
-		W[7] = (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[3] ^ cd;
-
-		c = W[43];
-
-		bc = W[39] ^ c;
-
+		uint32_t test = (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[3] ^ cd;
+		bc = W[55] ^ W[11];
 		t2 = (bc & 0x80808080);
-
-		W[7] ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ c ^ W[47] ^ backup;
-		if (W[7] <= pTarget[7])
+		test ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ W[11] ^ W[31] ^ backup;
+		if (test <= target)
 		{
 			if (d_nonce[0] != 0xffffffff)
 			{
@@ -754,7 +716,7 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		}
 	}
 }
-__host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, int order)
 {
 	const int threadsperblock = 128;
 
@@ -764,7 +726,7 @@ __host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
 	size_t shared_size = 4096;
-	x11_echo512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
+	x11_echo512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 //	MyStreamSynchronize(NULL, order, thr_id);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
