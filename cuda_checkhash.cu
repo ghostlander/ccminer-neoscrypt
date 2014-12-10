@@ -49,6 +49,12 @@ void cuda_check_cpu_setTarget(const void *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
 }
 
+__host__ void  cuda_check_cpu_free(int32_t thr_id)
+{
+	cudaFree(pTarget);
+}
+
+
 __host__
 uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {

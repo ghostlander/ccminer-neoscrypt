@@ -430,7 +430,6 @@ static const uint32_t mixtab0_cpu[] = {
 		x19 ^= x05; \
 		x20 ^= x06; \
 	}
-
 #define SMIX(x0, x1, x2, x3) { \
 		uint32_t c0 = 0; \
 		uint32_t c1 = 0; \
@@ -441,49 +440,49 @@ static const uint32_t mixtab0_cpu[] = {
 		uint32_t r2 = 0; \
 		uint32_t r3 = 0; \
 		uint32_t tmp; \
-		tmp = mixtab0(x0 >> 24); \
+		tmp = mixtab0(__byte_perm(x0, 0, 0x4443)); \
 		c0 ^= tmp; \
-		tmp = mixtab1((x0 >> 16) & 0xFF); \
+		tmp = mixtab1(__byte_perm(x0, 0, 0x4442)); \
 		c0 ^= tmp; \
 		r1 ^= tmp; \
-		tmp = mixtab2((x0 >>  8) & 0xFF); \
+		tmp = mixtab2(__byte_perm(x0, 0, 0x4441)); \
 		c0 ^= tmp; \
 		r2 ^= tmp; \
-		tmp = mixtab3(x0 & 0xFF); \
+		tmp = mixtab3(__byte_perm(x0, 0, 0x4440)); \
 		c0 ^= tmp; \
 		r3 ^= tmp; \
-		tmp = mixtab0(x1 >> 24); \
+		tmp = mixtab0(__byte_perm(x1, 0, 0x4443)); \
 		c1 ^= tmp; \
 		r0 ^= tmp; \
-		tmp = mixtab1((x1 >> 16) & 0xFF); \
+		tmp = mixtab1(__byte_perm(x1, 0, 0x4442)); \
 		c1 ^= tmp; \
-		tmp = mixtab2((x1 >>  8) & 0xFF); \
+		tmp = mixtab2(__byte_perm(x1, 0, 0x4441)); \
 		c1 ^= tmp; \
 		r2 ^= tmp; \
-		tmp = mixtab3(x1 & 0xFF); \
+		tmp = mixtab3(__byte_perm(x1, 0, 0x4440)); \
 		c1 ^= tmp; \
 		r3 ^= tmp; \
-		tmp = mixtab0(x2 >> 24); \
+		tmp = mixtab0(__byte_perm(x2, 0, 0x4443)); \
 		c2 ^= tmp; \
 		r0 ^= tmp; \
-		tmp = mixtab1((x2 >> 16) & 0xFF); \
+		tmp = mixtab1(__byte_perm(x2, 0, 0x4442)); \
 		c2 ^= tmp; \
 		r1 ^= tmp; \
-		tmp = mixtab2((x2 >>  8) & 0xFF); \
+		tmp = mixtab2(__byte_perm(x2, 0, 0x4441)); \
 		c2 ^= tmp; \
-		tmp = mixtab3(x2 & 0xFF); \
+		tmp = mixtab3(__byte_perm(x2, 0, 0x4440)); \
 		c2 ^= tmp; \
 		r3 ^= tmp; \
-		tmp = mixtab0(x3 >> 24); \
+		tmp = mixtab0(__byte_perm(x3, 0, 0x4443)); \
 		c3 ^= tmp; \
 		r0 ^= tmp; \
-		tmp = mixtab1((x3 >> 16) & 0xFF); \
+		tmp = mixtab1(__byte_perm(x3, 0, 0x4442)); \
 		c3 ^= tmp; \
 		r1 ^= tmp; \
-		tmp = mixtab2((x3 >>  8) & 0xFF); \
+		tmp = mixtab2(__byte_perm(x3, 0, 0x4441)); \
 		c3 ^= tmp; \
 		r2 ^= tmp; \
-		tmp = mixtab3(x3 & 0xFF); \
+		tmp = mixtab3(__byte_perm(x3, 0, 0x4440)); \
 		c3 ^= tmp; \
 		x0 = ((c0 ^ r0) & SPH_C32(0xFF000000)) \
 			| ((c1 ^ r1) & SPH_C32(0x00FF0000)) \
@@ -559,7 +558,7 @@ static const uint32_t mixtab0_cpu[] = {
 	}
 
 //__launch_bounds__(128, 6)
-__global__ __launch_bounds__(288, 3)
+__global__ __launch_bounds__(128,8)
 void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	extern __shared__ char mixtabs[];
@@ -569,12 +568,19 @@ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		if (threadIdx.x < 128) 
+		{
 		*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (128 + threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x+128);
 		*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (384 + threadIdx.x)) = tex1Dfetch(mixTab1Tex , threadIdx.x+128);
 		*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (640 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x+128);
 		*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (896 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x+128);
+		}
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
+		
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 
@@ -664,7 +670,7 @@ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 	}
 }
 
-__global__ __launch_bounds__(128, 5)
+__global__ __launch_bounds__(128, 7)
 void x13_fugue512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_nonce)
 {
 	extern __shared__ char mixtabs[];
@@ -814,7 +820,7 @@ __host__ void  x13_fugue512_cpu_free(int32_t thr_id)
 
 __host__ void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const int threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -826,7 +832,7 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
 	x13_fugue512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 }
 __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {

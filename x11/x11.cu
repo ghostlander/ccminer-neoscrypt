@@ -54,6 +54,7 @@ extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t star
                                           uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);
 extern void x11_simd512_cpu_free(int32_t thr_id);
 extern void x11_echo512_cpu_free(int32_t thr_id);
+extern void  cuda_check_cpu_free(int32_t thr_id);
 
 // X11 Hashfunktion
 extern "C" void x11hash(void *output, const void *input)
@@ -137,7 +138,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	if (opt_benchmark)
 	{
-		((uint32_t*)ptarget)[7] = 0xff;
+		((uint32_t*)ptarget)[7] = 0xf;
 	}
 	if (!init[thr_id])
 	{
@@ -205,6 +206,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				x11_echo512_cpu_free(thr_id);
 				cudaFree(&d_hash[thr_id * 32]);
 				x11_simd512_cpu_free(thr_id);
+				cuda_check_cpu_free(thr_id);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
@@ -221,5 +223,6 @@ error:			applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", 
 	x11_echo512_cpu_free(thr_id);
 	cudaFree(&d_hash[thr_id * 32]);
 	x11_simd512_cpu_free(thr_id);
+	cuda_check_cpu_free(thr_id);
 	return 0;
 }
