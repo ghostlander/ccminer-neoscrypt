@@ -63,6 +63,8 @@ extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 
 extern void x13_fugue512_cpu_setTarget(const void *ptarget);
 extern void  x13_fugue512_cpu_free(int32_t thr_id);
+extern void  cuda_check_cpu_free(int32_t thr_id);
+extern void  x11_simd512_cpu_free(int32_t thr_id);
 
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
@@ -208,7 +210,11 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 				*hashes_done = pdata[19] + throughput - first_nonce;
 				pdata[19] = foundNonce;
 				applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				return 1;
+				x13_fugue512_cpu_free(thr_id);
+				cuda_check_cpu_free(thr_id);
+				x11_simd512_cpu_free(thr_id);
+				x11_simd512_cpu_free(thr_id);
+				cudaFree(&d_hash[thr_id * 32]);				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
@@ -223,6 +229,10 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
+	x13_fugue512_cpu_free(thr_id);
+	cuda_check_cpu_free(thr_id);
+	x11_simd512_cpu_free(thr_id);
+	cudaFree(&d_hash[thr_id * 32]);
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
