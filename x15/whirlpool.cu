@@ -56,7 +56,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 256*256*8;
+	const uint32_t throughput = 256*256*8;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
 	uint32_t Htarg = ptarget[7];

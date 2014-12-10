@@ -59,7 +59,7 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 	// reduce by one the intensity on windows
 	intensity--;
 #endif
-	int throughput = opt_work_size ? opt_work_size : (1 << intensity);
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << intensity);
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)

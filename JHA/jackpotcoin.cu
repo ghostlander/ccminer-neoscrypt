@@ -89,7 +89,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000f;
 
-	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};

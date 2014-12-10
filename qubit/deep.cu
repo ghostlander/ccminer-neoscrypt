@@ -59,7 +59,7 @@ extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
-	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)

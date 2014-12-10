@@ -131,7 +131,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	static bool init[8] = { 0 };
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 19 : 256 * 256 * 10 ;
 
-	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
+	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
