@@ -430,7 +430,6 @@ static const uint32_t mixtab0_cpu[] = {
 		x19 ^= x05; \
 		x20 ^= x06; \
 	}
-
 #define SMIX(x0, x1, x2, x3) { \
 		uint32_t c0 = 0; \
 		uint32_t c1 = 0; \
@@ -559,7 +558,7 @@ static const uint32_t mixtab0_cpu[] = {
 	}
 
 //__launch_bounds__(128, 6)
-__global__ __launch_bounds__(256,4)
+__global__ __launch_bounds__(128,8)
 void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	extern __shared__ char mixtabs[];
@@ -569,12 +568,19 @@ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		if (threadIdx.x < 128) 
+		{
 		*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (128 + threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x+128);
 		*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (384 + threadIdx.x)) = tex1Dfetch(mixTab1Tex , threadIdx.x+128);
 		*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (640 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x+128);
 		*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
+		*((uint32_t*)mixtabs + (896 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x+128);
+		}
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
+		
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 
