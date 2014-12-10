@@ -832,7 +832,7 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
 	x13_fugue512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 }
 __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
