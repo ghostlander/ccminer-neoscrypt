@@ -23,6 +23,7 @@ extern void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t start
 
 extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
+extern void quark_skein512_cpu_init(int thr_id);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void jackpot_compactTest_cpu_init(int thr_id, int threads);
@@ -30,6 +31,8 @@ extern void jackpot_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t st
 											uint32_t *d_nonces1, size_t *nrm1,
 											uint32_t *d_nonces2, size_t *nrm2,
 											int order);
+
+extern uint32_t cuda_check_hash_branch(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
 static uint32_t *d_jackpotNonces[8];
@@ -80,6 +83,8 @@ extern "C" unsigned int jackpothash(void *state, const void *input)
     return round;
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
@@ -92,7 +97,6 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
@@ -102,7 +106,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		jackpot_keccak512_cpu_init(thr_id, throughput);
 		jackpot_compactTest_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
-
+		quark_skein512_cpu_init(thr_id);
 		cuda_check_cpu_init(thr_id, throughput);
 
 		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput*2);
@@ -198,8 +202,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 		}
 
-		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			unsigned int rounds;
@@ -210,13 +213,18 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			// diese jackpothash Funktion gibt die Zahl der Runden zurück
 			rounds = jackpothash(vhash64, endiandata);
 
-			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
-
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
-				//applog(LOG_INFO, "GPU #%d: result for nonce $%08X does validate on CPU (%d rounds)!", thr_id, foundNonce, rounds);
-				return 1;
-			} else {
+				return res;
+			}
+			else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU (%d rounds)!", thr_id, foundNonce, rounds);
 			}
 		}

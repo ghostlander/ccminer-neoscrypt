@@ -29,6 +29,7 @@ extern void quark_groestl512_cpu_init(int thr_id, int threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void quark_doublegroestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
+extern void quark_skein512_cpu_init(int thr_id);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -44,7 +45,9 @@ extern void quark_compactTest_single_false_cpu_hash_64(int thr_id, int threads, 
 											uint32_t *d_nonces1, size_t *nrm1,
 											int order);
 
-// Original Quarkhash Funktion aus einem miner Quelltext
+extern uint32_t cuda_check_hash_branch(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+
+/* CPU Hash */
 extern "C" void animehash(void *state, const void *input)
 {
     sph_blake512_context ctx_blake;
@@ -154,12 +157,13 @@ struct HashPredicate
 };
 */
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0 };
 	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
@@ -173,6 +177,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		quark_groestl512_cpu_init(thr_id, throughput);
+		quark_skein512_cpu_init(thr_id);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		cuda_check_cpu_init(thr_id, throughput);
 		quark_compactTest_cpu_init(thr_id, throughput);
@@ -246,19 +251,24 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		if (foundNonce != UINT32_MAX)
 		{
-			uint32_t vhash64[8];
 			const uint32_t Htarg = ptarget[7];
+			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			animehash(vhash64, endiandata);
 
-			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
-
-				*hashes_done = pdata[19] + throughput - first_nonce;
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				return 1;
+				return res;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}

@@ -25,10 +25,6 @@
 #include "compat.h" // sleep
 #endif
 
-extern char *device_name[8];
-extern int device_map[8];
-extern int device_sm[8];
-
 // CUDA Devices on the System
 int cuda_num_devices()
 {
@@ -74,7 +70,7 @@ void cuda_devicenames()
 		cudaGetDeviceProperties(&props, device_map[i]);
 
 		device_name[i] = strdup(props.name);
-		device_sm[i] = props.major * 100 + props.minor * 10;
+		device_sm[i] = (props.major * 100 + props.minor * 10);
 	}
 }
 
@@ -147,6 +143,18 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 	else
 		result = cudaStreamSynchronize(stream);
 	return result;
+}
+
+int cuda_gpu_clocks(struct cgpu_info *gpu)
+{
+	cudaDeviceProp props;
+	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
+		gpu->gpu_clock = props.clockRate;
+		gpu->gpu_memclock = props.memoryClockRate;
+		gpu->gpu_mem = props.totalGlobalMem;
+		return 0;
+	}
+	return -1;
 }
 
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)

@@ -117,6 +117,14 @@ typedef unsigned char uchar;
 #define UINT32_MAX UINT_MAX
 #endif
 
+static inline bool is_windows(void) {
+#ifdef WIN32
+        return 1;
+#else
+        return 0;
+#endif
+}
+
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define WANT_BUILTIN_BSWAP
 #else
@@ -320,6 +328,10 @@ extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_lyra2(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -378,6 +390,7 @@ struct cgpu_info {
 	uint8_t has_monitoring;
 	float gpu_temp;
 	int gpu_fan;
+	uint16_t gpu_arch;
 	int gpu_clock;
 	int gpu_memclock;
 	size_t gpu_mem;
@@ -385,9 +398,13 @@ struct cgpu_info {
 	double gpu_vddc;
 	int16_t gpu_pstate;
 	int16_t gpu_bus;
-
 	uint16_t gpu_vid;
 	uint16_t gpu_pid;
+
+	int8_t nvml_id;
+	int8_t nvapi_id;
+
+	char gpu_sn[64];
 	char gpu_desc[64];
 };
 
@@ -396,6 +413,32 @@ struct thr_api {
 	pthread_t pth;
 	struct thread_q	*q;
 };
+
+struct stats_data {
+	uint32_t uid;
+	uint32_t tm_stat;
+	uint32_t hashcount;
+	uint32_t height;
+	double difficulty;
+	double hashrate;
+	uint8_t thr_id;
+	uint8_t gpu_id;
+	uint8_t hashfound;
+	uint8_t ignored;
+};
+
+struct hashlog_data {
+	uint32_t tm_sent;
+	uint32_t height;
+	uint32_t njobid;
+	uint32_t nonce;
+	uint32_t scanned_from;
+	uint32_t scanned_to;
+	uint32_t last_from;
+	uint32_t tm_add;
+	uint32_t tm_upd;
+};
+
 /* end of api */
 
 struct thr_info {
@@ -417,7 +460,7 @@ extern bool opt_protocol;
 extern bool opt_tracegpu;
 extern int opt_intensity;
 extern int opt_n_threads;
-extern int num_processors;
+extern int active_gpus;
 extern int opt_timeout;
 extern bool want_longpoll;
 extern bool have_longpoll;
@@ -441,6 +484,10 @@ extern uint32_t opt_work_size;
 extern uint64_t global_hashrate;
 extern double   global_diff;
 
+extern char* device_name[8];
+extern short device_map[8];
+extern long  device_sm[8];
+
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
 #define CL_GRN  "\x1B[32m"
@@ -458,7 +505,11 @@ extern double   global_diff;
 #define CL_CY2  "\x1B[22;36m" /* cyan */
 #define CL_SIL  "\x1B[22;37m" /* gray */
 
+#ifdef WIN32
 #define CL_GRY  "\x1B[01;30m" /* dark gray */
+#else
+#define CL_GRY  "\x1B[90m"    /* dark gray selectable in putty */
+#endif
 #define CL_LRD  "\x1B[01;31m" /* light red */
 #define CL_LGR  "\x1B[01;32m" /* light green */
 #define CL_LYL  "\x1B[01;33m" /* tooltips */
@@ -517,6 +568,11 @@ struct stratum_ctx {
 	struct stratum_job job;
 	pthread_mutex_t work_lock;
 
+	struct timeval tv_submit;
+	uint32_t answer_msec;
+	uint32_t disconnects;
+	time_t tm_connected;
+
 	int srvtime_diff;
 };
 
@@ -541,18 +597,6 @@ struct work {
 	uint32_t scanned_to;
 };
 
-struct stats_data {
-	uint32_t tm_stat;
-	uint32_t hashcount;
-	uint32_t height;
-	double difficulty;
-	double hashrate;
-	uint8_t thr_id;
-	uint8_t gpu_id;
-	uint8_t hashfound;
-	uint8_t ignored;
-};
-
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);
 char *stratum_recv_line(struct stratum_ctx *sctx);
@@ -567,6 +611,7 @@ void hashlog_remember_scan_range(struct work* work);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
 uint64_t hashlog_get_scan_range(char* jobid);
+int  hashlog_get_history(struct hashlog_data *data, int max_records);
 void hashlog_purge_old(void);
 void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
@@ -608,6 +653,7 @@ void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 void keccak256_hash(void *state, const void *input);
 unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
+void lyra2_hash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
 void nist5hash(void *state, const void *input);
 void pentablakehash(void *output, const void *input);

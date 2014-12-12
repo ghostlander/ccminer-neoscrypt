@@ -32,16 +32,16 @@ extern void doomhash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
+static bool init[8] = { 0 };
 
 extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
 	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 22); // 256*256*8*8
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000f;
@@ -52,7 +52,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
-		qubit_luffa512_cpu_init(thr_id, throughput);
+		qubit_luffa512_cpu_init(thr_id, (int) throughput);
 
 		init[thr_id] = true;
 	}
@@ -63,31 +63,31 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	qubit_luffa512_cpufinal_setBlock_80((void*)endiandata,ptarget);
 
 	do {
-		const uint32_t Htarg = ptarget[7];
 		int order = 0;
 
-		uint32_t foundNonce = qubit_luffa512_cpu_finalhash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		if (foundNonce != 0xffffffff)
+		uint32_t foundNonce = qubit_luffa512_cpu_finalhash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], order++);
+		if (foundNonce != UINT32_MAX)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			doomhash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget) )
-			{
-				*hashes_done = pdata[19] + throughput - first_nonce;
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				*hashes_done = min(max_nonce - first_nonce, (uint64_t) pdata[19] - first_nonce + throughput);
 				pdata[19] = foundNonce;
 				return 1;
-			} else {
+			}
+			else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
-
 		if ((uint64_t) pdata[19] + throughput > max_nonce) {
-			pdata[19] = max_nonce;
+			// pdata[19] = max_nonce;
 			break;
 		}
+
 		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);

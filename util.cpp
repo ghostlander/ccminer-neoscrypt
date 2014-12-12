@@ -102,10 +102,8 @@ void applog(int prio, const char *fmt, ...)
 		const char* color = "";
 		char *f;
 		int len;
-		time_t now;
 		struct tm tm, *tm_p;
-
-		time(&now);
+		time_t now = time(NULL);
 
 		pthread_mutex_lock(&applog_lock);
 		tm_p = localtime(&now);
@@ -335,14 +333,15 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 {
 	json_t *val, *err_val, *res_val;
 	int rc;
-	struct data_buffer all_data = {0};
+	struct data_buffer all_data = { 0 };
 	struct upload_buffer upload_data;
 	json_error_t err;
 	struct curl_slist *headers = NULL;
+	char* httpdata;
 	char len_hdr[64], hashrate_hdr[64];
-	char curl_err_str[CURL_ERROR_SIZE];
+	char curl_err_str[CURL_ERROR_SIZE] = { 0 };
 	long timeout = longpoll ? opt_timeout : 30;
-	struct header_info hi = {0};
+	struct header_info hi = { 0 };
 	bool lp_scanning = longpoll_scan && !have_longpoll;
 
 	/* it is assumed that 'curl' is freshly [re]initialized at this pt */
@@ -353,7 +352,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	if (opt_cert)
 		curl_easy_setopt(curl, CURLOPT_CAINFO, opt_cert);
 	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
-	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, all_data_cb);
@@ -406,9 +405,10 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	if (curl_err != NULL)
 		*curl_err = rc;
 	if (rc) {
-		if (!(longpoll && rc == CURLE_OPERATION_TIMEDOUT))
+		if (!(longpoll && rc == CURLE_OPERATION_TIMEDOUT)) {
 			applog(LOG_ERR, "HTTP request failed: %s", curl_err_str);
-		goto err_out;
+			goto err_out;
+		}
 	}
 
 	/* If X-Stratum was found, activate Stratum */
@@ -427,14 +427,27 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 		hi.lp_path = NULL;
 	}
 
-	if (!all_data.buf) {
+	if (!all_data.buf || !all_data.len) {
 		applog(LOG_ERR, "Empty data received in json_rpc_call.");
 		goto err_out;
 	}
 
-	val = JSON_LOADS((const char*)all_data.buf, &err);
+	httpdata = (char*) all_data.buf;
+
+	if (*httpdata != '{' && *httpdata != '[') {
+		long errcode = 0;
+		CURLcode c = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &errcode);
+		if (c == CURLE_OK && errcode == 401) {
+			applog(LOG_ERR, "You are not authorized, check your login and password.");
+			goto err_out;
+		}
+	}
+
+	val = JSON_LOADS(httpdata, &err);
 	if (!val) {
 		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+		if (opt_protocol)
+			applog(LOG_DEBUG, "%s", httpdata);
 		goto err_out;
 	}
 
@@ -453,8 +466,14 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	    (err_val && !json_is_null(err_val))) {
 		char *s;
 
-		if (err_val)
+		if (err_val) {
+			json_t *msg = json_object_get(err_val, "message");
 			s = json_dumps(err_val, JSON_INDENT(3));
+			if (json_is_string(msg)) {
+				free(s);
+				s = strdup(json_string_value(msg));
+			}
+		}
 		else
 			s = strdup("(unknown reason)");
 
@@ -735,9 +754,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx)
 
 	if (!strstr(sctx->sockbuf, "\n")) {
 		bool ret = true;
-		time_t rstart;
-
-		time(&rstart);
+		time_t rstart = time(NULL);
 		if (!socket_full(sctx->sock, 60)) {
 			applog(LOG_ERR, "stratum_recv_line timed out");
 			goto out;
@@ -875,6 +892,7 @@ void stratum_disconnect(struct stratum_ctx *sctx)
 {
 	pthread_mutex_lock(&sctx->sock_lock);
 	if (sctx->curl) {
+		sctx->disconnects++;
 		curl_easy_cleanup(sctx->curl);
 		sctx->curl = NULL;
 		sctx->sockbuf[0] = '\0';
@@ -894,7 +912,6 @@ static const char *get_stratum_session_id(json_t *val)
 	for (i = 0; i < n; i++) {
 		const char *notify;
 		json_t *arr = json_array_get(arr_val, i);
-
 		if (!arr || !json_is_array(arr))
 			break;
 		notify = json_string_value(json_array_get(arr, 0));
@@ -916,7 +933,7 @@ static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, i
 		applog(LOG_ERR, "Failed to get extranonce1");
 		goto out;
 	}
-	xn2_size = json_integer_value(json_array_get(params, pndx+1));
+	xn2_size = (int) json_integer_value(json_array_get(params, pndx+1));
 	if (!xn2_size) {
 		applog(LOG_ERR, "Failed to get extranonce2_size");
 		goto out;
@@ -985,6 +1002,10 @@ start:
 		goto out;
 	}
 
+	if (json_integer_value(json_object_get(val, "id")) != 1) {
+		applog(LOG_WARNING, "Stratum subscribe answer id is not correct!");
+	}
+
 	res_val = json_object_get(val, "result");
 	err_val = json_object_get(val, "error");
 
@@ -1001,7 +1022,14 @@ start:
 		goto out;
 	}
 
-	// session id
+	// sid is param 1, extranonce params are 2 and 3
+	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
+		goto out;
+	}
+
+	ret = true;
+
+	// session id (optional)
 	sid = get_stratum_session_id(res_val);
 	if (opt_debug && sid)
 		applog(LOG_DEBUG, "Stratum session id: %s", sid);
@@ -1012,13 +1040,6 @@ start:
 	sctx->session_id = sid ? strdup(sid) : NULL;
 	sctx->next_diff = 1.0;
 	pthread_mutex_unlock(&sctx->work_lock);
-
-	// sid is param 1, extranonce params are 2 and 3
-	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
-		goto out;
-	}
-
-	ret = true;
 
 out:
 	free(s);
@@ -1066,7 +1087,7 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	}
 
 	if (json_integer_value(json_object_get(val, "id")) != 2) {
-		applog(LOG_WARNING, "Stratum answer id is not correct!");
+		applog(LOG_WARNING, "Stratum authorize answer id is not correct!");
 	}
 	res_val = json_object_get(val, "result");
 	err_val = json_object_get(val, "error");
@@ -1077,6 +1098,7 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 		goto out;
 	}
 
+	sctx->tm_connected = time(NULL);
 	ret = true;
 
 	// subscribe to extranonce (optional)
@@ -1085,7 +1107,8 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	if (!stratum_send_line(sctx, s))
 		goto out;
 
-	if (!socket_full(sctx->sock, 3)) {
+	// reduced timeout to handle pools ignoring this method without answer (like xpool.ca)
+	if (!socket_full(sctx->sock, 1)) {
 		if (opt_debug)
 			applog(LOG_DEBUG, "stratum extranonce subscribe timed out");
 		goto out;
@@ -1097,15 +1120,15 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 		if (!extra) {
 			applog(LOG_WARNING, "JSON decode failed(%d): %s", err.line, err.text);
 		} else {
-			if (json_integer_value(json_object_get(extra, "id")) != 3) 
-			{
-					// we receive a standard method if extranonce is ignored
+			if (json_integer_value(json_object_get(extra, "id")) != 3) {
+				// we receive a standard method if extranonce is ignored
 				if (!stratum_handle_method(sctx, sret))
-						applog(LOG_WARNING, "Stratum extranonce answer id was not correct!");
+					applog(LOG_WARNING, "Stratum extranonce answer id was not correct!");
+			} else {
+				res_val = json_object_get(extra, "result");
+				if (opt_debug && (!res_val || json_is_false(res_val)))
+					applog(LOG_DEBUG, "extranonce subscribe not supported");
 			}
-			res_val = json_object_get(extra, "result");
-			if (opt_debug && (!res_val || json_is_false(res_val)))
-				applog(LOG_DEBUG, "extranonce subscribe not supported");
 			json_decref(extra);
 		}
 		free(sret);
@@ -1282,7 +1305,7 @@ static bool stratum_reconnect(struct stratum_ctx *sctx, json_t *params)
 	if (json_is_string(port_val))
 		port = atoi(json_string_value(port_val));
 	else
-		port = json_integer_value(port_val);
+		port = (int) json_integer_value(port_val);
 	if (!host || !port)
 		return false;
 	
@@ -1572,15 +1595,17 @@ void do_gpu_tests(void)
 	uchar buf[128];
 	uint32_t tgt[8] = { 0 };
 
-	memset(buf, 0, sizeof buf);
-	buf[0] = 1; buf[64] = 2;
-
 	opt_tracegpu = true;
 	work_restart = (struct work_restart*) malloc(sizeof(struct work_restart));
 	work_restart[0].restart = 1;
-	tgt[6] = 0xffff;
+	tgt[7] = 0xffff;
 
+	memset(buf, 0, sizeof buf);
+	// buf[0] = 1; buf[64] = 2; // for endian tests
 	scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
+
+	memset(buf, 0, sizeof buf);
+	scanhash_heavy(0, (uint32_t*)buf, tgt, 1, &done, 1, 84); // HEAVYCOIN_BLKHDR_SZ=84
 
 	free(work_restart);
 	work_restart = NULL;
@@ -1630,16 +1655,20 @@ void print_hash_tests(void)
 	printpfx("heavy", hash);
 
 	memset(hash, 0, sizeof hash);
-	keccak256_hash(&hash[0], &buf[0]);
-	printpfx("keccak", hash);
-
-	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
 	printpfx("jackpot", hash);
 
 	memset(hash, 0, sizeof hash);
+	keccak256_hash(&hash[0], &buf[0]);
+	printpfx("keccak", hash);
+
+	memset(hash, 0, sizeof hash);
 	doomhash(&hash[0], &buf[0]);
 	printpfx("luffa", hash);
+
+	memset(hash, 0, sizeof hash);
+	lyra2_hash(&hash[0], &buf[0]);
+	printpfx("lyra2", hash);
 
 	memset(hash, 0, sizeof hash);
 	myriadhash(&hash[0], &buf[0]);

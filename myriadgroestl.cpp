@@ -32,7 +32,7 @@ extern "C" void myriadhash(void *state, const void *input)
     memcpy(state, hashB, 32);
 }
 
-extern bool opt_benchmark;
+static bool init[8] = { 0 };
 
 extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
@@ -51,7 +51,6 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	// init
-	static bool init[8] = { false, false, false, false, false, false, false, false };
 	if(!init[thr_id])
 	{
 #if BIG_DEBUG
@@ -82,8 +81,8 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			myriadhash(tmpHash, endiandata);
 			if (tmpHash[7] <= Htarg && 
 					fulltest(tmpHash, ptarget)) {
-						*hashes_done = pdata[19] + throughPut - start_nonce;
 						pdata[19] = foundNounce;
+						*hashes_done = foundNounce - start_nonce + 1;
 						free(outputHash);
 				return true;
 			} else {

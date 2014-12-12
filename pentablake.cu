@@ -43,8 +43,6 @@ extern "C" void pentablakehash(void *output, const void *input)
 
 #include "cuda_helper.h"
 
-#define MAXU 0xffffffffU
-
 __constant__
 static uint32_t __align__(32) c_Target[8];
 
@@ -54,7 +52,7 @@ static uint64_t __align__(32) c_data[32];
 static uint32_t *d_hash[8];
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
-static uint32_t extra_results[2] = { MAXU, MAXU };
+static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
@@ -149,7 +147,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 	m[2] = block[2];
 	m[3] = block[3];
 
-	for (int i = 4; i < 16; i++) {
+	for (uint32_t i = 4; i < 16; i++) {
 		m[i] = (T0 == 0x200) ? block[i] : c_Padding[i];
 	}
 
@@ -167,7 +165,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 	v[14] = c_u512[6];
 	v[15] = c_u512[7];
 
-	for (int i = 0; i < 16; i++) {
+	for (uint32_t i = 0; i < 16; i++) {
 		/* column step */
 		G(0, 4, 0x8, 0xC, 0x0);
 		G(1, 5, 0x9, 0xD, 0x2);
@@ -181,7 +179,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 	}
 
 	//#pragma unroll 16
-	for (int i = 0; i < 16; i++) {
+	for (uint32_t i = 0; i < 16; i++) {
 		uint32_t j = i % 8;
 		h[j] ^= v[i];
 	}
@@ -293,13 +291,13 @@ void pentablake_gpu_hash_80(int threads, const uint32_t startNounce, void *outpu
 #if __CUDA_ARCH__ < 300
 		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 		#pragma unroll 8
-		for (int i=0; i < 8; i++) {
+		for (uint32_t i=0; i < 8; i++) {
 			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
 		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-		for (int i=0; i < 8; i++) {
+		for (uint32_t i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64( h[i] );
 		}
 #endif
@@ -387,7 +385,7 @@ __host__
 uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -446,7 +444,7 @@ __host__ static
 uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -486,32 +484,22 @@ void pentablake_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint32_t endiandata[20];
 	int rc = 0;
 	uint32_t throughput = opt_work_size ? opt_work_size : (128 * 2560); // 18.5
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
-	if (extra_results[0] != MAXU) {
-		// possible extra result found in previous call
-		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
-			pdata[19] = extra_results[0];
-			*hashes_done = pdata[19] - first_nonce + 1;
-			extra_results[0] = MAXU;
-			rc = 1;
-			goto exit_scan;
-		}
-	}
-
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000F;
 
 	if (!init[thr_id]) {
-		if (num_processors > 1) {
+		if (active_gpus > 1) {
 			cudaSetDevice(device_map[thr_id]);
 		}
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
@@ -538,61 +526,40 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 		uint32_t foundNonce = pentablake_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		if (foundNonce != MAXU)
+		if (foundNonce != UINT32_MAX)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhashcpu[8];
-			uint32_t Htarg = ptarget[7];
 
 			be32enc(&endiandata[19], foundNonce);
-
 			pentablakehash(vhashcpu, endiandata);
 
-			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget))
-			{
-				pdata[19] = foundNonce;
+			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
 				rc = 1;
-
-				// Rare but possible if the throughput is big
-				be32enc(&endiandata[19], extra_results[0]);
-				pentablakehash(vhashcpu, endiandata);
-				if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (extra_results[0] != UINT32_MAX) {
+					// Rare but possible if the throughput is big
 					applog(LOG_NOTICE, "GPU found more than one result yippee!");
-					rc = 2;
-				} else {
-					extra_results[0] = MAXU;
+					pdata[21] = extra_results[0];
+					extra_results[0] = UINT32_MAX;
+					rc++;
 				}
-
-				goto exit_scan;
+				pdata[19] = foundNonce;
+				return rc;
 			}
 			else if (vhashcpu[7] > Htarg) {
 				applog(LOG_WARNING, "GPU #%d: result for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
-			}
-			else if (vhashcpu[6] > ptarget[6]) {
-				applog(LOG_WARNING, "GPU #%d: hash[6] for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[6], ptarget[6]);
 			}
 			else {
 				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
-		if (pdata[19] + throughput < pdata[19])
-			pdata[19] = max_nonce;
-		else pdata[19] += throughput;
+		pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
-#if 0
-	/* reset the device to allow multiple instances
-	 * could be made in cpu-miner... check later if required */
-	if (opt_n_threads == 1) {
-		CUDA_SAFE_CALL(cudaDeviceReset());
-		init[thr_id] = false;
-	}
-#endif
-
 	cudaDeviceSynchronize();
 	return rc;
 }
