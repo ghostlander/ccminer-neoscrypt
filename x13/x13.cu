@@ -59,11 +59,12 @@ extern void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 extern void x13_fugue512_cpu_init(int thr_id, int threads);
 extern uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+//extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint32_t cuda_check_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash);
 
 extern void x13_fugue512_cpu_setTarget(const void *ptarget);
 extern void  x13_fugue512_cpu_free(int32_t thr_id);
-extern void  cuda_check_cpu_free(int32_t thr_id);
+//extern void  cuda_check_cpu_free(int32_t thr_id);
 extern void  x11_simd512_cpu_free(int32_t thr_id);
 
 
@@ -159,7 +160,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0f;
+		((uint32_t*)ptarget)[7] = 0xfff;
 
 	if (!init[thr_id])
 	{
@@ -199,22 +200,27 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 	//	uint32_t foundNonce = x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			x13hash(vhash64, endiandata);
 			uint32_t Htarg = ptarget[7];
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				*hashes_done = pdata[19] + throughput - first_nonce;
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) 
+			{
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) 
+				{
+					if (opt_benchmark) applog(LOG_INFO, "found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				x13_fugue512_cpu_free(thr_id);
-				cuda_check_cpu_free(thr_id);
-				x11_simd512_cpu_free(thr_id);
-				x11_simd512_cpu_free(thr_id);
-				cudaFree(&d_hash[thr_id * 32]);				return 1;
+				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				return res;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
@@ -229,10 +235,6 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	x13_fugue512_cpu_free(thr_id);
-	cuda_check_cpu_free(thr_id);
-	x11_simd512_cpu_free(thr_id);
-	cudaFree(&d_hash[thr_id * 32]);
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }

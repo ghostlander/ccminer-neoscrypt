@@ -31,13 +31,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
 #include "compat.h"
 #include "miner.h"
-
-#ifdef USE_WRAPNVML
 #include "nvml.h"
-#endif
 
 #ifndef WIN32
 # include <errno.h>
@@ -83,18 +79,11 @@ struct IP4ACCESS {
 static int ips = 1;
 static struct IP4ACCESS *ipaccess = NULL;
 
-// Big enough for largest API request
-//  though a PC with 100s of CPUs may exceed the size ...
-// Current code assumes it can socket send this size also
-#define MYBUFSIZ	16384
+#define MYBUFSIZ       16384
+#define SOCK_REC_BUFSZ 1024
+#define QUEUE          10
 
-#define SOCK_REC_BUFSZ  256
-
-// Socket is on 127.0.0.1
-#define QUEUE	10
-
-#define ALLIP4 "0.0.0.0"
-
+#define ALLIP4         "0.0.0.0"
 static const char *localaddr = "127.0.0.1";
 static const char *UNAVAILABLE = " - API will not be available";
 static char *buffer = NULL;
@@ -103,11 +92,20 @@ static int bye = 0;
 
 extern char *opt_api_allow;
 extern int opt_api_listen; /* port */
-extern uint64_t global_hashrate;
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
-extern int device_map[8];
-extern char *device_name[8];
+extern int num_cpus;
+extern struct stratum_ctx stratum;
+extern char* rpc_user;
+
+// sysinfos.cpp
+extern float cpu_temp(int);
+extern uint32_t cpu_clock(int);
+// cuda.cpp
+int cuda_num_devices();
+int cuda_gpu_clocks(struct cgpu_info *gpu);
+
+char driver_version[32] = { 0 };
 
 /***************************************************************/
 
@@ -117,7 +115,6 @@ static void gpustatus(int thr_id)
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 		int gpuid = cgpu->gpu_id;
 		char buf[512]; *buf = '\0';
-		char pstate[8];
 		char* card;
 
 #ifdef USE_WRAPNVML
@@ -125,9 +122,8 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_bus = gpu_busid(cgpu);
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = gpu_fanpercent(cgpu);
-		cgpu->gpu_pstate = gpu_pstate(cgpu);
 #endif
-		gpu_clocks(cgpu);
+		cuda_gpu_clocks(cgpu);
 
 		// todo: can be 0 if set by algo (auto)
 		if (opt_intensity == 0 && opt_work_size) {
@@ -146,16 +142,12 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(cgpu->gpu_id, 0.0) / 1000.0;
 
-		memset(pstate, 0, sizeof(pstate));
-		if (cgpu->gpu_pstate != -1)
-			snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
-
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
+			"TEMP=%.1f;FAN=%d;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
-			cgpu->gpu_clock, pstate, cgpu->khashes,
+			cgpu->gpu_clock, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
 		// append to buffer for multi gpus
@@ -193,10 +185,42 @@ static char *getsummary(char *params)
 		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
 		"ACCMN=%.3f;DIFF=%.6f;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
-		algo, num_processors, (double)global_hashrate / 1000.0,
+		algo, active_gpus, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
 		accps, global_diff, uptime, (uint32_t) ts);
 	return buffer;
+}
+
+/**
+ * Returns some infos about current pool
+ */
+static char *getpoolnfo(char *params)
+{
+	char *p = buffer;
+	char jobid[128] = { 0 };
+	char nonce[128] = { 0 };
+	*p = '\0';
+
+	if (!stratum.url) {
+		sprintf(p, "|");
+		return p;
+	}
+
+	if (stratum.job.job_id)
+		strncpy(jobid, stratum.job.job_id, sizeof(stratum.job.job_id));
+
+	if (stratum.job.xnonce2) {
+		/* used temporary to be sure all is ok */
+		cbin2hex(nonce, (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
+	}
+
+	snprintf(p, MYBUFSIZ, "URL=%s;USER=%s;H=%u;JOB=%s;DIFF=%.6f;N2SZ=%d;N2=0x%s;PING=%u;DISCO=%u;UPTIME=%u|",
+		stratum.url, rpc_user ? rpc_user : "",
+		stratum.job.height, jobid, stratum.job.diff,
+		(int) stratum.xnonce2_size, nonce, stratum.answer_msec,
+		stratum.disconnects, (uint32_t) (time(NULL) - stratum.tm_connected));
+
+	return p;
 }
 
 /*****************************************************************************/
@@ -227,7 +251,7 @@ static void gpuhwinfos(int gpu_id)
 	gpu_info(cgpu);
 #endif
 
-	gpu_clocks(cgpu);
+	cuda_gpu_clocks(cgpu);
 
 	memset(pstate, 0, sizeof(pstate));
 	if (cgpu->gpu_pstate != -1)
@@ -235,24 +259,39 @@ static void gpuhwinfos(int gpu_id)
 
 	card = device_name[gpu_id];
 
-	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;MEM=%lu;"
+	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%u;MEM=%lu;"
 		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
-		"VID=%hx;PID=%hx;BIOS=%s|",
-		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_mem,
+		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
+		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
-		pstate,	cgpu->gpu_vid, cgpu->gpu_pid, cgpu->gpu_desc);
+		pstate, cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id,
+		cgpu->gpu_sn, cgpu->gpu_desc);
 
 	strcat(buffer, buf);
 }
 
+static const char* os_name()
+{
+#ifdef WIN32
+	return "windows";
+#else
+	return "linux";
+#endif
+}
+
 /**
- * To finish
+ * System and CPU Infos
  */
-static void cpuhwinfos()
+static void syshwinfos()
 {
 	char buf[256];
+
+	int cputc = (int) cpu_temp(0);
+	uint32_t cpuclk = cpu_clock(0);
+
 	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "CPU=|");
+	snprintf(buf, sizeof(buf), "OS=%s;NVDRIVER=%s;CPUS=%d;CPUTEMP=%d;CPUFREQ=%d|",
+		os_name(), driver_version, num_cpus, cputc, cpuclk);
 	strcat(buffer, buf);
 }
 
@@ -262,14 +301,16 @@ static void cpuhwinfos()
 static char *gethwinfos(char *params)
 {
 	*buffer = '\0';
-	for (int i = 0; i < num_processors; i++)
+	for (int i = 0; i < cuda_num_devices(); i++)
 		gpuhwinfos(i);
-	cpuhwinfos();
+	syshwinfos();
 	return buffer;
 }
 
+/*****************************************************************************/
+
 /**
- * Returns the last 20 scans stats (not the same as shares)
+ * Returns the last 50 scans stats
  * optional param thread id (default all)
  */
 static char *gethistory(char *params)
@@ -277,14 +318,33 @@ static char *gethistory(char *params)
 	struct stats_data data[50];
 	int thrid = params ? atoi(params) : -1;
 	char *p = buffer;
-	*buffer = '\0';
 	int records = stats_get_history(thrid, data, ARRAY_SIZE(data));
+	*buffer = '\0';
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
 		p += sprintf(p, "GPU=%d;H=%u;KHS=%.2f;DIFF=%.6f;"
-				"COUNT=%u;FOUND=%u;TS=%u|",
+				"COUNT=%u;FOUND=%u;ID=%u;TS=%u|",
 			data[i].gpu_id, data[i].height, data[i].hashrate, data[i].difficulty,
-			data[i].hashcount, data[i].hashfound, (uint32_t)ts);
+			data[i].hashcount, data[i].hashfound, data[i].uid, (uint32_t)ts);
+	}
+	return buffer;
+}
+
+/**
+ * Returns the job scans ranges (debug purpose)
+ */
+static char *getscanlog(char *params)
+{
+	struct hashlog_data data[50];
+	char *p = buffer;
+	int records = hashlog_get_history(data, ARRAY_SIZE(data));
+	*buffer = '\0';
+	for (int i = 0; i < records; i++) {
+		time_t ts = data[i].tm_upd;
+		p += sprintf(p, "H=%u;JOB=%u;N=%u;FROM=0x%x;SCANTO=0x%x;"
+				"COUNT=0x%x;FOUND=%u;TS=%u|",
+			data[i].height, data[i].njobid, data[i].nonce, data[i].scanned_from, data[i].scanned_to,
+			(data[i].scanned_to - data[i].scanned_from), data[i].tm_sent ? 1 : 0, (uint32_t)ts);
 	}
 	return buffer;
 }
@@ -308,6 +368,8 @@ static char *getmeminfo(char *params)
 	return buffer;
 }
 
+/*****************************************************************************/
+
 static char *gethelp(char *params);
 struct CMDS {
 	const char *name;
@@ -315,9 +377,11 @@ struct CMDS {
 } cmds[] = {
 	{ "summary", getsummary },
 	{ "threads", getthreads },
+	{ "pool",    getpoolnfo },
 	{ "histo",   gethistory },
-	{ "meminfo", getmeminfo },
 	{ "hwinfo",  gethwinfos },
+	{ "meminfo", getmeminfo },
+	{ "scanlog", getscanlog },
 	/* keep it the last */
 	{ "help",    gethelp },
 };
@@ -329,9 +393,11 @@ static char *gethelp(char *params)
 	char * p = buffer;
 	for (int i = 0; i < CMDMAX-1; i++)
 		p += sprintf(p, "%s\n", cmds[i].name);
+	sprintf(p, "|");
 	return buffer;
 }
 
+/*****************************************************************************/
 
 static int send_result(SOCKETTYPE c, char *result)
 {
@@ -343,6 +409,150 @@ static int send_result(SOCKETTYPE c, char *result)
 		n = send(c, result, strlen(result) + 1, 0);
 	}
 	return n;
+}
+
+/* ---- Base64 Encoding/Decoding Table --- */
+static const char table64[]=
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static size_t base64_encode(const uchar *indata, size_t insize, char *outptr, size_t outlen)
+{
+	uchar ibuf[3];
+	uchar obuf[4];
+	int i, inputparts, inlen = (int) insize;
+	size_t len = 0;
+	char *output, *outbuf;
+
+	memset(outptr, 0, outlen);
+
+	outbuf = output = (char*)calloc(1, inlen * 4 / 3 + 4);
+	if (outbuf == NULL) {
+		return -1;
+	}
+
+	while (inlen > 0) {
+		for (i = inputparts = 0; i < 3; i++) {
+			if (inlen  > 0) {
+				inputparts++;
+				ibuf[i] = (uchar) *indata;
+				indata++; inlen--;
+			}
+			else
+				ibuf[i] = 0;
+		}
+
+		obuf[0] = (uchar)  ((ibuf[0] & 0xFC) >> 2);
+		obuf[1] = (uchar) (((ibuf[0] & 0x03) << 4) | ((ibuf[1] & 0xF0) >> 4));
+		obuf[2] = (uchar) (((ibuf[1] & 0x0F) << 2) | ((ibuf[2] & 0xC0) >> 6));
+		obuf[3] = (uchar)   (ibuf[2] & 0x3F);
+
+		switch(inputparts) {
+		case 1: /* only one byte read */
+			snprintf(output, 5, "%c%c==",
+				table64[obuf[0]],
+				table64[obuf[1]]);
+			break;
+		case 2: /* two bytes read */
+			snprintf(output, 5, "%c%c%c=",
+				table64[obuf[0]],
+				table64[obuf[1]],
+				table64[obuf[2]]);
+			break;
+		default:
+			snprintf(output, 5, "%c%c%c%c",
+				table64[obuf[0]],
+				table64[obuf[1]],
+				table64[obuf[2]],
+				table64[obuf[3]] );
+			break;
+		}
+		if ((len+4) > outlen)
+			break;
+		output += 4; len += 4;
+	}
+	len = snprintf(outptr, len, "%s", outbuf);
+	// todo: seems to be missing on linux
+	if (strlen(outptr) == 27)
+		strcat(outptr, "=");
+	free(outbuf);
+
+	return len;
+}
+
+#include "compat/curl-for-windows/openssl/openssl/crypto/sha/sha.h"
+
+/* websocket handshake (tested in Chrome) */
+static int websocket_handshake(SOCKETTYPE c, char *result, char *clientkey)
+{
+	char answer[256];
+	char inpkey[128] = { 0 };
+	char seckey[64];
+	uchar sha1[20];
+	SHA_CTX ctx;
+
+	if (opt_protocol)
+		applog(LOG_DEBUG, "clientkey: %s", clientkey);
+
+	sprintf(inpkey, "%s258EAFA5-E914-47DA-95CA-C5AB0DC85B11", clientkey);
+
+	// SHA-1 test from rfc, returns in base64 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+	//sprintf(inpkey, "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+
+	SHA1_Init(&ctx);
+	SHA1_Update(&ctx, inpkey, strlen(inpkey));
+	SHA1_Final(sha1, &ctx);
+
+	base64_encode(sha1, 20, seckey, sizeof(seckey));
+
+	sprintf(answer,
+		"HTTP/1.1 101 Switching Protocol\r\n"
+		"Upgrade: WebSocket\r\nConnection: Upgrade\r\n"
+		"Sec-WebSocket-Accept: %s\r\n"
+		"Sec-WebSocket-Protocol: text\r\n"
+		"\r\n", seckey);
+
+	// data result as tcp frame
+
+	uchar hd[10] = { 0 };
+	hd[0] = 129; // 0x1 text frame (FIN + opcode)
+	uint64_t datalen = (uint64_t) strlen(result);
+	uint8_t frames = 2;
+	if (datalen <= 125) {
+		hd[1] = (uchar) (datalen);
+	} else if (datalen <= 65535) {
+		hd[1] = (uchar) 126;
+		hd[2] = (uchar) (datalen >> 8);
+		hd[3] = (uchar) (datalen);
+		frames = 4;
+	} else {
+		hd[1] = (uchar) 127;
+		hd[2] = (uchar) (datalen >> 56);
+		hd[3] = (uchar) (datalen >> 48);
+		hd[4] = (uchar) (datalen >> 40);
+		hd[5] = (uchar) (datalen >> 32);
+		hd[6] = (uchar) (datalen >> 24);
+		hd[7] = (uchar) (datalen >> 16);
+		hd[8] = (uchar) (datalen >> 8);
+		hd[9] = (uchar) (datalen);
+		frames = 10;
+	}
+
+	size_t handlen = strlen(answer);
+	uchar *data = (uchar*) calloc(1, handlen + frames + (size_t) datalen + 1);
+	if (data == NULL)
+		return -1;
+	else {
+		uchar *p = data;
+		// HTTP header 101
+		memcpy(p, answer, handlen);
+		p += handlen;
+		// WebSocket Frame - Header + Data
+		memcpy(p, hd, frames);
+		memcpy(p + frames, result, (size_t)datalen);
+		send(c, (const char*)data, strlen(answer) + frames + (size_t)datalen + 1, 0);
+		free(data);
+	}
+	return 0;
 }
 
 /*
@@ -583,6 +793,7 @@ static void api()
 
 		if (addrok) {
 			bool fail;
+			char *wskey = NULL;
 			n = recv(c, &buf[0], SOCK_REC_BUFSZ, 0);
 
 			fail = SOCKETFAIL(n);
@@ -600,16 +811,42 @@ static void api()
 			//	applog(LOG_DEBUG, "API: recv command: (%d) '%s'+char(%x)", n, buf, buf[n-1]);
 
 			if (!fail) {
+				char *msg = NULL;
+				/* Websocket requests compat. */
+				if ((msg = strstr(buf, "GET /")) && strlen(msg) > 5) {
+					char cmd[256] = { 0 };
+					sscanf(&msg[5], "%s\n", cmd);
+					params = strchr(cmd, '/');
+					if (params)
+						*(params++) = '|';
+					params = strchr(cmd, '/');
+					if (params)
+						*(params++) = '\0';
+					wskey = strstr(msg, "Sec-WebSocket-Key");
+					if (wskey) {
+						char *eol = strchr(wskey, '\r');
+						if (eol) *eol = '\0';
+						wskey = strchr(wskey, ':');
+						wskey++;
+						while ((*wskey) == ' ') wskey++; // ltrim
+					}
+					n = sprintf(buf, "%s", cmd);
+				}
+
 				params = strchr(buf, '|');
 				if (params != NULL)
 					*(params++) = '\0';
 
 				if (opt_debug && opt_protocol && n > 0)
-					applog(LOG_DEBUG, "API: exec command %s(%s)", buf, params);
+					applog(LOG_DEBUG, "API: exec command %s(%s)", buf, params ? params : "");
 
 				for (i = 0; i < CMDMAX; i++) {
-					if (strcmp(buf, cmds[i].name) == 0) {
+					if (strcmp(buf, cmds[i].name) == 0 && strlen(buf)) {
 						result = (cmds[i].func)(params);
+						if (wskey) {
+							websocket_handshake(c, result, wskey);
+							break;
+						}
 						send_result(c, result);
 						break;
 					}

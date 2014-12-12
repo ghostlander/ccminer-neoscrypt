@@ -374,6 +374,151 @@ __device__ __forceinline__ void Compression512(const uint64_t *const __restrict_
 	hash[14] = ROTL64(((SHR(XH64, 5) ^ SHL(q[18], 5) ^ msg[2]) + (XL64    ^ q[26] ^ q[2])), 15) + (XH64     ^     q[30] ^ msg[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
 	hash[15] = ROTL16(((SHR(XH64, 1) ^ SHL(q[19], 5) ^ msg[3]) + (XL64    ^ q[27] ^ q[3]))) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
+__device__ __forceinline__ void Compression512_second(const uint64_t *const __restrict__ msg, uint64_t *const __restrict__ hash)
+{
+	// Compression ref. implementation
+	uint64_t tmp;
+	uint64_t q[32];
+
+	tmp = (msg[5] ^ 0xaaaaaaaaaaaaaaa5ull) - (msg[7] ^ 0xaaaaaaaaaaaaaaa7ull) + (msg[10] ^ 0xaaaaaaaaaaaaaaaaull) + (msg[13] ^ 0xaaaaaaaaaaaaaaadull) + (msg[14] ^ 0xaaaaaaaaaaaaaaaeull);
+	q[0] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + 0xaaaaaaaaaaaaaaa1ull;
+	tmp = (msg[6] ^ 0xaaaaaaaaaaaaaaa6ull) - (msg[8] ^ 0xaaaaaaaaaaaaaaa8ull) + (msg[11] ^ 0xaaaaaaaaaaaaaaabull) + (msg[14] ^ 0xaaaaaaaaaaaaaaaeull) - (msg[15] ^ 0xaaaaaaaaaaaaaaafull);
+	q[1] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + 0xaaaaaaaaaaaaaaa2ull;
+	tmp = (msg[0] ^ 0xaaaaaaaaaaaaaaa0ull) + (msg[7] ^ 0xaaaaaaaaaaaaaaa7ull) + (msg[9] ^ 0xaaaaaaaaaaaaaaa9ull) - (msg[12] ^ 0xaaaaaaaaaaaaaaacull) + (msg[15] ^ 0xaaaaaaaaaaaaaaafull);
+	q[2] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + 0xaaaaaaaaaaaaaaa3ull;
+	tmp = (msg[0] ^ 0xaaaaaaaaaaaaaaa0ull) - (msg[1] ^ 0xaaaaaaaaaaaaaaa1ull) + (msg[8] ^ 0xaaaaaaaaaaaaaaa8ull) - (msg[10] ^ 0xaaaaaaaaaaaaaaaaull) + (msg[13] ^ 0xaaaaaaaaaaaaaaadull);
+	q[3] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + 0xaaaaaaaaaaaaaaa4ull;
+	tmp = (msg[1] ^ 0xaaaaaaaaaaaaaaa1ull) + (msg[2] ^ 0xaaaaaaaaaaaaaaa2ull) + (msg[9] ^ 0xaaaaaaaaaaaaaaa9ull) - (msg[11] ^ 0xaaaaaaaaaaaaaaabull) - (msg[14] ^ 0xaaaaaaaaaaaaaaaeull);
+	q[4] = (SHR(tmp, 1) ^ tmp) + 0xaaaaaaaaaaaaaaa5ull;
+	tmp = (msg[3] ^ 0xaaaaaaaaaaaaaaa3ull) - (msg[2] ^ 0xaaaaaaaaaaaaaaa2ull) + (msg[10] ^ 0xaaaaaaaaaaaaaaaaull) - (msg[12] ^ 0xaaaaaaaaaaaaaaacull) + (msg[15] ^ 0xaaaaaaaaaaaaaaafull);
+	q[5] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + 0xaaaaaaaaaaaaaaa6ull;
+	tmp = (msg[4] ^ 0xaaaaaaaaaaaaaaa4ull) - (msg[0] ^ 0xaaaaaaaaaaaaaaa0ull) - (msg[3] ^ 0xaaaaaaaaaaaaaaa3ull) - (msg[11] ^ 0xaaaaaaaaaaaaaaabull) + (msg[13] ^ 0xaaaaaaaaaaaaaaadull);
+	q[6] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + 0xaaaaaaaaaaaaaaa7ull;
+	tmp = (msg[1] ^ 0xaaaaaaaaaaaaaaa1ull) - (msg[4] ^ 0xaaaaaaaaaaaaaaa4ull) - (msg[5] ^ 0xaaaaaaaaaaaaaaa5ull) - (msg[12] ^ 0xaaaaaaaaaaaaaaacull) - (msg[14] ^ 0xaaaaaaaaaaaaaaaeull);
+	q[7] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + 0xaaaaaaaaaaaaaaa8ull;
+	tmp = (msg[2] ^ 0xaaaaaaaaaaaaaaa2ull) - (msg[5] ^ 0xaaaaaaaaaaaaaaa5ull) - (msg[6] ^ 0xaaaaaaaaaaaaaaa6ull) + (msg[13] ^ 0xaaaaaaaaaaaaaaadull) - (msg[15] ^ 0xaaaaaaaaaaaaaaafull);
+	q[8] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + 0xaaaaaaaaaaaaaaa9ull;
+	tmp = (msg[0] ^ 0xaaaaaaaaaaaaaaa0ull) - (msg[3] ^ 0xaaaaaaaaaaaaaaa3ull) + (msg[6] ^ 0xaaaaaaaaaaaaaaa6ull) - (msg[7] ^ 0xaaaaaaaaaaaaaaa7ull) + (msg[14] ^ 0xaaaaaaaaaaaaaaaeull);
+	q[9] = (SHR(tmp, 1) ^ tmp) + 0xaaaaaaaaaaaaaaaaull;
+	tmp = (msg[8] ^ 0xaaaaaaaaaaaaaaa8ull) - (msg[1] ^ 0xaaaaaaaaaaaaaaa1ull) - (msg[4] ^ 0xaaaaaaaaaaaaaaa4ull) - (msg[7] ^ 0xaaaaaaaaaaaaaaa7ull) + (msg[15] ^ 0xaaaaaaaaaaaaaaafull);
+	q[10] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + 0xaaaaaaaaaaaaaaabull;
+	tmp = (msg[8] ^ 0xaaaaaaaaaaaaaaa8ull) - (msg[0] ^ 0xaaaaaaaaaaaaaaa0ull) - (msg[2] ^ 0xaaaaaaaaaaaaaaa2ull) - (msg[5] ^ 0xaaaaaaaaaaaaaaa5ull) + (msg[9] ^ 0xaaaaaaaaaaaaaaa9ull);
+	q[11] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + 0xaaaaaaaaaaaaaaacull;
+	tmp = (msg[1] ^ 0xaaaaaaaaaaaaaaa1ull) + (msg[3] ^ 0xaaaaaaaaaaaaaaa3ull) - (msg[6] ^ 0xaaaaaaaaaaaaaaa6ull) - (msg[9] ^ 0xaaaaaaaaaaaaaaa9ull) + (msg[10] ^ 0xaaaaaaaaaaaaaaaaull);
+	q[12] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + 0xaaaaaaaaaaaaaaadull;
+	tmp = (msg[2] ^ 0xaaaaaaaaaaaaaaa2ull) + (msg[4] ^ 0xaaaaaaaaaaaaaaa4ull) + (msg[7] ^ 0xaaaaaaaaaaaaaaa7ull) + (msg[10] ^ 0xaaaaaaaaaaaaaaaaull) + (msg[11] ^ 0xaaaaaaaaaaaaaaabull);
+	q[13] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + 0xaaaaaaaaaaaaaaaeull;
+	tmp = (msg[3] ^ 0xaaaaaaaaaaaaaaa3ull) - (msg[5] ^ 0xaaaaaaaaaaaaaaa5ull) + (msg[8] ^ 0xaaaaaaaaaaaaaaa8ull) - (msg[11] ^ 0xaaaaaaaaaaaaaaabull) - (msg[12] ^ 0xaaaaaaaaaaaaaaacull);
+	q[14] = (SHR(tmp, 1) ^ tmp) + 0xaaaaaaaaaaaaaaafull;
+	tmp = (msg[12] ^ 0xaaaaaaaaaaaaaaacull) - (msg[4] ^ 0xaaaaaaaaaaaaaaa4ull) - (msg[6] ^ 0xaaaaaaaaaaaaaaa6ull) - (msg[9] ^ 0xaaaaaaaaaaaaaaa9ull) + (msg[13] ^ 0xaaaaaaaaaaaaaaadull);
+	q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + 0xaaaaaaaaaaaaaaa0ull;
+	q[0 + 16] =
+		(SHR(q[0], 1) ^ SHL(q[0], 2) ^ ROTL64(q[0], 13) ^ ROTL64(q[0], 43)) +
+		(SHR(q[0 + 1], 2) ^ SHL(q[0 + 1], 1) ^ ROTL64(q[0 + 1], 19) ^ ROTL64(q[0 + 1], 53)) +
+		(SHR(q[0 + 2], 2) ^ SHL(q[0 + 2], 2) ^ ROTL64(q[0 + 2], 28) ^ ROTL64(q[0 + 2], 59)) +
+		(SHR(q[0 + 3], 1) ^ SHL(q[0 + 3], 3) ^ ROTL64(q[0 + 3], 4) ^ ROTL64(q[0 + 3], 37)) +
+		(SHR(q[0 + 4], 1) ^ SHL(q[0 + 4], 2) ^ ROTL64(q[0 + 4], 13) ^ ROTL64(q[0 + 4], 43)) +
+		(SHR(q[0 + 5], 2) ^ SHL(q[0 + 5], 1) ^ ROTL64(q[0 + 5], 19) ^ ROTL64(q[0 + 5], 53)) +
+		(SHR(q[0 + 6], 2) ^ SHL(q[0 + 6], 2) ^ ROTL64(q[0 + 6], 28) ^ ROTL64(q[0 + 6], 59)) +
+		(SHR(q[0 + 7], 1) ^ SHL(q[0 + 7], 3) ^ ROTL64(q[0 + 7], 4) ^ ROTL64(q[0 + 7], 37)) +
+		(SHR(q[0 + 8], 1) ^ SHL(q[0 + 8], 2) ^ ROTL64(q[0 + 8], 13) ^ ROTL64(q[0 + 8], 43)) +
+		(SHR(q[0 + 9], 2) ^ SHL(q[0 + 9], 1) ^ ROTL64(q[0 + 9], 19) ^ ROTL64(q[0 + 9], 53)) +
+		(SHR(q[0 + 10], 2) ^ SHL(q[0 + 10], 2) ^ ROTL64(q[0 + 10], 28) ^ ROTL64(q[0 + 10], 59)) +
+		(SHR(q[0 + 11], 1) ^ SHL(q[0 + 11], 3) ^ ROTL64(q[0 + 11], 4) ^ ROTL64(q[0 + 11], 37)) +
+		(SHR(q[0 + 12], 1) ^ SHL(q[0 + 12], 2) ^ ROTL64(q[0 + 12], 13) ^ ROTL64(q[0 + 12], 43)) +
+		(SHR(q[0 + 13], 2) ^ SHL(q[0 + 13], 1) ^ ROTL64(q[0 + 13], 19) ^ ROTL64(q[0 + 13], 53)) +
+		(SHR(q[0 + 14], 2) ^ SHL(q[0 + 14], 2) ^ ROTL64(q[0 + 14], 28) ^ ROTL64(q[0 + 14], 59)) +
+		(SHR(q[0 + 15], 1) ^ SHL(q[0 + 15], 3) ^ ROTL64(q[0 + 15], 4) ^ ROTL64(q[0 + 15], 37)) +
+		((((0 + 16)*(0x0555555555555555ull)) + ROTL64(msg[0], 0 + 1) +
+		ROTL64(msg[0 + 3], 0 + 4) - ROTL64(msg[0 + 10], 0 + 11)) ^ 0xaaaaaaaaaaaaaaa7ull);
+	q[1 + 16] =
+		(SHR(q[1], 1) ^ SHL(q[1], 2) ^ ROTL64(q[1], 13) ^ ROTL64(q[1], 43)) +
+		(SHR(q[1 + 1], 2) ^ SHL(q[1 + 1], 1) ^ ROTL64(q[1 + 1], 19) ^ ROTL64(q[1 + 1], 53)) +
+		(SHR(q[1 + 2], 2) ^ SHL(q[1 + 2], 2) ^ ROTL64(q[1 + 2], 28) ^ ROTL64(q[1 + 2], 59)) +
+		(SHR(q[1 + 3], 1) ^ SHL(q[1 + 3], 3) ^ ROTL64(q[1 + 3], 4) ^ ROTL64(q[1 + 3], 37)) +
+		(SHR(q[1 + 4], 1) ^ SHL(q[1 + 4], 2) ^ ROTL64(q[1 + 4], 13) ^ ROTL64(q[1 + 4], 43)) +
+		(SHR(q[1 + 5], 2) ^ SHL(q[1 + 5], 1) ^ ROTL64(q[1 + 5], 19) ^ ROTL64(q[1 + 5], 53)) +
+		(SHR(q[1 + 6], 2) ^ SHL(q[1 + 6], 2) ^ ROTL64(q[1 + 6], 28) ^ ROTL64(q[1 + 6], 59)) +
+		(SHR(q[1 + 7], 1) ^ SHL(q[1 + 7], 3) ^ ROTL64(q[1 + 7], 4) ^ ROTL64(q[1 + 7], 37)) +
+		(SHR(q[1 + 8], 1) ^ SHL(q[1 + 8], 2) ^ ROTL64(q[1 + 8], 13) ^ ROTL64(q[1 + 8], 43)) +
+		(SHR(q[1 + 9], 2) ^ SHL(q[1 + 9], 1) ^ ROTL64(q[1 + 9], 19) ^ ROTL64(q[1 + 9], 53)) +
+		(SHR(q[1 + 10], 2) ^ SHL(q[1 + 10], 2) ^ ROTL64(q[1 + 10], 28) ^ ROTL64(q[1 + 10], 59)) +
+		(SHR(q[1 + 11], 1) ^ SHL(q[1 + 11], 3) ^ ROTL64(q[1 + 11], 4) ^ ROTL64(q[1 + 11], 37)) +
+		(SHR(q[1 + 12], 1) ^ SHL(q[1 + 12], 2) ^ ROTL64(q[1 + 12], 13) ^ ROTL64(q[1 + 12], 43)) +
+		(SHR(q[1 + 13], 2) ^ SHL(q[1 + 13], 1) ^ ROTL64(q[1 + 13], 19) ^ ROTL64(q[1 + 13], 53)) +
+		(SHR(q[1 + 14], 2) ^ SHL(q[1 + 14], 2) ^ ROTL64(q[1 + 14], 28) ^ ROTL64(q[1 + 14], 59)) +
+		(SHR(q[1 + 15], 1) ^ SHL(q[1 + 15], 3) ^ ROTL64(q[1 + 15], 4) ^ ROTL64(q[1 + 15], 37)) +
+		((((1 + 16)*(0x0555555555555555ull)) + ROTL64(msg[1], 1 + 1) +
+		ROTL64(msg[1 + 3], 1 + 4) - ROTL64(msg[1 + 10], 1 + 11)) ^ 0xaaaaaaaaaaaaaaa8ull);
+
+
+	q[2 + 16] = CONST_EXP2(2) +
+		((((2 + 16)*(0x0555555555555555ull)) + ROTL64(msg[2], 2 + 1) +
+		ROTL64(msg[2 + 3], 2 + 4) - ROTL64(msg[2 + 10], 2 + 11)) ^ 0xaaaaaaaaaaaaaaa9ull);
+	q[3 + 16] = CONST_EXP2(3) +
+		((((3 + 16)*(0x0555555555555555ull)) + ROTL64(msg[3], 3 + 1) +
+		ROTL64(msg[3 + 3], 3 + 4) - ROTL64(msg[3 + 10], 3 + 11)) ^ 0xaaaaaaaaaaaaaaaaull);
+	q[4 + 16] = CONST_EXP2(4) +
+		((((4 + 16)*(0x0555555555555555ull)) + ROTL64(msg[4], 4 + 1) +
+		ROTL64(msg[4 + 3], 4 + 4) - ROTL64(msg[4 + 10], 4 + 11)) ^ 0xaaaaaaaaaaaaaaabull);
+	q[5 + 16] = CONST_EXP2(5) +
+		((((5 + 16)*(0x0555555555555555ull)) + ROTL64(msg[5], 5 + 1) +
+		ROTL64(msg[5 + 3], 5 + 4) - ROTL64(msg[5 + 10], 16)) ^ 0xaaaaaaaaaaaaaaacull);
+
+	q[6 + 16] = CONST_EXP2(6) +
+		((((6 + 16)*(0x0555555555555555ull)) + ROTL64(msg[6], 6 + 1) +
+		ROTL64(msg[6 + 3], 6 + 4) - ROTL64(msg[6 - 6], (6 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaadull);
+	q[7 + 16] = CONST_EXP2(7) +
+		((((7 + 16)*(0x0555555555555555ull)) + ROTL64(msg[7], 7 + 1) +
+		ROTL64(msg[7 + 3], 7 + 4) - ROTL64(msg[7 - 6], (7 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaaeull);
+	q[8 + 16] = CONST_EXP2(8) +
+		((((8 + 16)*(0x0555555555555555ull)) + ROTL64(msg[8], 8 + 1) +
+		ROTL64(msg[8 + 3], 8 + 4) - ROTL64(msg[8 - 6], (8 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaafull);
+
+	q[9 + 16] = CONST_EXP2(9) +
+		((((9 + 16)*(0x0555555555555555ull)) + ROTL64(msg[9], 9 + 1) +
+		ROTL64(msg[9 + 3], 9 + 4) - ROTL64(msg[9 - 6], (9 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa0ull);
+	q[10 + 16] = CONST_EXP2(10) +
+		((((10 + 16)*(0x0555555555555555ull)) + ROTL64(msg[10], 10 + 1) +
+		ROTL64(msg[10 + 3], 10 + 4) - ROTL64(msg[10 - 6], (10 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa1ull);
+	q[11 + 16] = CONST_EXP2(11) +
+		((((11 + 16)*(0x0555555555555555ull)) + ROTL64(msg[11], 11 + 1) +
+		ROTL64(msg[11 + 3], 11 + 4) - ROTL64(msg[11 - 6], (11 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa2ull);
+	q[12 + 16] = CONST_EXP2(12) +
+		((((12 + 16)*(0x0555555555555555ull)) + ROTL64(msg[12], 12 + 1) +
+		ROTL64(msg[12 + 3], 12 + 4) - ROTL64(msg[12 - 6], (12 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa3ull);
+
+	q[13 + 16] = CONST_EXP2(13) +
+		((((13 + 16)*(0x0555555555555555ull)) + ROTL64(msg[13], 13 + 1) +
+		ROTL64(msg[13 - 13], (13 - 13) + 1) - ROTL64(msg[13 - 6], (13 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa4ull);
+	q[14 + 16] = CONST_EXP2(14) +
+		((((14 + 16)*(0x0555555555555555ull)) + ROTL64(msg[14], 14 + 1) +
+		ROTL64(msg[14 - 13], (14 - 13) + 1) - ROTL64(msg[14 - 6], (14 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa5ull);
+	q[15 + 16] = CONST_EXP2(15) +
+		((((15 + 16)*(0x0555555555555555ull)) + ROTL64(msg[15], 16) +
+		ROTL64(msg[15 - 13], (15 - 13) + 1) - ROTL64(msg[15 - 6], (15 - 6) + 1)) ^ 0xaaaaaaaaaaaaaaa6ull);
+
+	uint64_t XL64 = q[16] ^ q[17] ^ q[18] ^ q[19] ^ q[20] ^ q[21] ^ q[22] ^ q[23];
+	uint64_t XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
+
+	//    hash[0] =                       ;
+	//    hash[1] =                       ;
+	//    hash[2] =                       ;
+	//    hash[3] =                       ;
+	//    hash[4] =                       ;
+	//    hash[5] =                       ;
+	//    hash[6] =                       ;
+	//    hash[7] =                       ;
+
+	hash[8] = ROTL64(((SHR(XH64, 3) ^ q[20] ^ msg[4]) + (XL64    ^ q[28] ^ q[4])), 9) + (XH64     ^     q[24] ^ msg[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
+	hash[9] = ROTL64(((SHL(XH64, 6) ^ SHR(q[21], 6) ^ msg[5]) + (XL64    ^ q[29] ^ q[5])), 10) + (XH64     ^     q[25] ^ msg[9]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
+	hash[10] = ROTL64(((SHR(XH64, 4) ^ SHL(q[22], 6) ^ msg[6]) + (XL64    ^ q[30] ^ q[6])), 11) + (XH64     ^     q[26] ^ msg[10]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
+	hash[11] = ROTL64(((SHR(XH64, 11) ^ SHL(q[23], 2) ^ msg[7]) + (XL64    ^ q[31] ^ q[7])), 12) + (XH64     ^     q[27] ^ msg[11]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
+	hash[12] = ROTL64(((SHL(XH64, 5) ^ SHR(q[16], 5) ^ msg[0]) + (XL64    ^ q[24] ^ q[0])), 13) + (XH64     ^     q[28] ^ msg[12]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
+	hash[13] = ROTL64(((SHR(XH64, 7) ^ SHL(q[17], 8) ^ msg[1]) + (XL64    ^ q[25] ^ q[1])), 14) + (XH64     ^     q[29] ^ msg[13]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
+	hash[14] = ROTL64(((SHR(XH64, 5) ^ SHL(q[18], 5) ^ msg[2]) + (XL64    ^ q[26] ^ q[2])), 15) + (XH64     ^     q[30] ^ msg[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
+	hash[15] = ROTL16(((SHR(XH64, 1) ^ SHL(q[19], 5) ^ msg[3]) + (XL64    ^ q[27] ^ q[3]))) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
+}
 
 #if __CUDA_ARCH__ > 500
 __global__ __launch_bounds__(128, 4)
@@ -402,11 +547,7 @@ void quark_bmw512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
         Compression512_64_first(message, h);
 
         // Final
-#pragma unroll 16
-        for(int i=0;i<16;i++)
-            message[i] = 0xaaaaaaaaaaaaaaa0ull + (uint64_t)i;
-
-        Compression512(h, message);
+        Compression512_second(h, message);
 
         // fertig
         uint64_t *outpHash = &g_hash[8 * hashPosition];
@@ -441,11 +582,8 @@ void quark_bmw512_gpu_hash_80(int threads, uint32_t startNounce, uint64_t *g_has
         Compression512(message, h);
 
         // Final
-#pragma unroll 16
-        for(int i=0;i<16;i++)
-            message[i] = 0xaaaaaaaaaaaaaaa0ull + (uint64_t)i;
 
-        Compression512(h, message);
+        Compression512_second(h, message);
 
         // fertig
         uint64_t *outpHash = &g_hash[8 * thread];

@@ -13,18 +13,18 @@
 
 #include <stdint.h>
 
-extern int device_map[8];
-extern int device_sm[8];
+extern "C" short device_map[8];
+extern "C"  long device_sm[8];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, int threads);
 extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
-extern uint32_t cuda_check_hash_fast(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, int order);
+extern uint32_t cuda_check_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash);
+extern uint32_t cuda_check_hash_suppl(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce);
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
-
 extern __device__ __device_builtin__ void __syncthreads(void);
+extern __device__ __device_builtin__ void __threadfence(void);
 
 #ifndef __CUDA_ARCH__
 // define blockDim and threadIdx for host
@@ -355,7 +355,7 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 		"setp.lt.u32 p, %2, 32;\n\t"
 		"@!p mov.b64 %0, {vl,vh};\n\t"
 		"@p  mov.b64 %0, {vh,vl};\n\t"
-		"}"
+	"}"
 		: "=l"(res) : "l"(x) , "r"(offset)
 	);
 	return res;
@@ -377,6 +377,100 @@ uint64_t SWAPDWORDS(uint64_t value)
 	return ROTL64(value, 32);
 #endif
 }
+
+/* lyra2 - int2 operators */
+
+__device__ __forceinline__
+void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x) {
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(lo), "=r"(hi) : "l"(x));
+}
+
+static __device__ __forceinline__ uint64_t devectorize(uint2 v) { return MAKE_ULONGLONG(v.x, v.y); }
+static __device__ __forceinline__ uint2 vectorize(uint64_t v) {
+	uint2 result;
+	LOHI(result.x, result.y, v);
+	return result;
+}
+
+static __device__ __forceinline__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }
+static __device__ __forceinline__ uint2 operator& (uint2 a, uint2 b) { return make_uint2(a.x & b.x, a.y & b.y); }
+static __device__ __forceinline__ uint2 operator| (uint2 a, uint2 b) { return make_uint2(a.x | b.x, a.y | b.y); }
+static __device__ __forceinline__ uint2 operator~ (uint2 a) { return make_uint2(~a.x, ~a.y); }
+static __device__ __forceinline__ void operator^= (uint2 &a, uint2 b) { a = a ^ b; }
+static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
+{
+	uint2 result;
+	asm("{\n\t"
+		"add.cc.u32 %0,%2,%4; \n\t"
+		"addc.u32 %1,%3,%5;   \n\t"
+	"}\n\t"
+		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
+	return result;
+}
+static __device__ __forceinline__ void operator+= (uint2 &a, uint2 b) { a = a + b; }
+
+/**
+ * basic multiplication between 64bit no carry outside that range (ie mul.lo.b64(a*b))
+ * (what does uint64 "*" operator)
+ */
+static __device__ __forceinline__ uint2 operator* (uint2 a, uint2 b)
+{
+	uint2 result;
+	asm("{\n\t"
+		"mul.lo.u32        %0,%2,%4;  \n\t"
+		"mul.hi.u32        %1,%2,%4;  \n\t"
+		"mad.lo.cc.u32    %1,%3,%4,%1; \n\t"
+		"madc.lo.u32      %1,%3,%5,%1; \n\t"
+	"}\n\t"
+		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
+	return result;
+}
+
+// uint2 method
+#if  __CUDA_ARCH__ >= 350
+__device__ __inline__ uint2 ROR2(const uint2 a, const int offset) {
+	uint2 result;
+	if (offset < 32) {
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	else {
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	}
+	return result;
+}
+#else
+__device__ __inline__ uint2 ROR2(const uint2 v, const int n) {
+	uint2 result;
+	result.x = (((v.x) >> (n)) | ((v.x) << (64 - (n))));
+	result.y = (((v.y) >> (n)) | ((v.y) << (64 - (n))));
+	return result;
+}
+#endif
+
+#if  __CUDA_ARCH__ >= 350
+__inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
+	uint2 result;
+	if (offset >= 32) {
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	else {
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	}
+	return result;
+}
+#else
+__inline__ __device__ uint2 ROL2(const uint2 v, const int n) {
+	uint2 result;
+	result.x = (((v.x) << (n)) | ((v.x) >> (64 - (n))));
+	result.y = (((v.y) << (n)) | ((v.y) >> (64 - (n))));
+	return result;
+}
+#endif
 
 __device__ __forceinline__
 uint64_t ROTR16(uint64_t x)
@@ -406,36 +500,35 @@ uint64_t ROTL16(uint64_t x)
 __device__ __forceinline__ bool cuda_hashisbelowtarget(const uint32_t *const __restrict__ hash, const uint32_t *const __restrict__ target)
 {
 	if (hash[7] > target[7])
-		 return false;
+		return false;
 	if (hash[7] < target[7])
-		 return true;
+		return true;
 	if (hash[6] > target[6])
-		 return false;
+		return false;
 	if (hash[6] < target[6])
-		 return true;
+		return true;
 	if (hash[5] > target[5])
-		 return false;
+		return false;
 	if (hash[5] < target[5])
-		 return true;
+		return true;
 	if (hash[4] > target[4])
-		 return false;
+		return false;
 	if (hash[4] < target[4])
-		 return true;
+		return true;
 	if (hash[3] > target[3])
-		 return false;
+		return false;
 	if (hash[3] < target[3])
-		 return true;
+		return true;
 	if (hash[2] > target[2])
-		 return false;
+		return false;
 	if (hash[2] < target[2])
-		 return true;
+		return true;
 	if (hash[1] > target[1])
-		 return false;
+		return false;
 	if (hash[1] < target[1])
-		 return true;
+		return true;
 	if (hash[0] > target[0])
-		 return false;
+		return false;
 	return true;
 }
-
 #endif // #ifndef CUDA_HELPER_H

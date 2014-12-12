@@ -67,12 +67,13 @@ extern "C" void fresh_hash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
 
 	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
@@ -120,17 +121,23 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 		print_hash((unsigned char*)buf); printf("\n");
 #endif
 
-		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		if (foundNonce != 0xffffffff)
+		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			fresh_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				*hashes_done = pdata[19] + throughput - first_nonce;
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				return 1;
+				return res;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
@@ -140,9 +147,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		if (pdata[19] + throughput < pdata[19])
-			pdata[19] = max_nonce;
-		else pdata[19] += throughput;
+		pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 

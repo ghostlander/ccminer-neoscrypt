@@ -41,7 +41,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v120</PlatformToolset>
     <CLRSupport>false</CLRSupport>
@@ -173,8 +172,8 @@
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>true</Keep>
-      <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
+      <Keep>false</Keep>
+      <CodeGeneration>compute_50,sm_50;</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
@@ -210,12 +209,13 @@
       <AdditionalLibraryDirectories>compat\pthreads\x64;compat\curl-for-windows\out\x64\Release\lib;compat\nvapi\amd64;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:LIBCMT %(AdditionalOptions)</AdditionalOptions>
       <LinkStatus>false</LinkStatus>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>true</Keep>
+      <Keep>false</Keep>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
       <Include>
       </Include>
@@ -228,9 +228,13 @@
     <ClCompile Include="compat\getopt\getopt_long.c" />
     <ClCompile Include="compat\gettimeofday.c" />
     <ClCompile Include="compat\jansson\dump.c" />
+    <ClCompile Include="compat\jansson\error.c" />
     <ClCompile Include="compat\jansson\hashtable.c" />
     <ClCompile Include="compat\jansson\load.c" />
+    <ClCompile Include="compat\jansson\memory.c" />
+    <ClCompile Include="compat\jansson\pack_unpack.c" />
     <ClCompile Include="compat\jansson\strbuffer.c" />
+    <ClCompile Include="compat\jansson\strconv.c" />
     <ClCompile Include="compat\jansson\utf.c" />
     <ClCompile Include="compat\jansson\value.c" />
     <ClCompile Include="compat\winansi.c" />
@@ -245,6 +249,7 @@
     <ClCompile Include="stats.cpp" />
     <ClCompile Include="nvml.cpp" />
     <ClCompile Include="api.cpp" />
+    <ClCompile Include="sysinfos.cpp" />
     <ClCompile Include="crc32.c" />
     <ClCompile Include="hefty1.c" />
     <ClCompile Include="myriadgroestl.cpp" />
@@ -252,6 +257,8 @@
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
       <AdditionalOptions>/Tp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <ClCompile Include="lyra2\Lyra2.c" />
+    <ClCompile Include="lyra2\Sponge.c" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
     <ClCompile Include="sph\bmw.c" />
@@ -283,6 +290,7 @@
     <ClInclude Include="compat.h" />
     <ClInclude Include="compat\getopt\getopt.h" />
     <ClInclude Include="compat\inttypes.h" />
+    <ClInclude Include="compat\jansson\jansson_config.h" />
     <ClInclude Include="compat\nvapi\nvapi.h" />
     <ClInclude Include="compat\nvapi\nvapi_ccminer.h" />
     <ClInclude Include="compat\nvapi\nvapi_lite_common.h" />
@@ -300,12 +308,7 @@
     <ClInclude Include="cuda_groestlcoin.h" />
     <ClInclude Include="cuda_helper.h" />
     <ClInclude Include="elist.h" />
-    <ClInclude Include="heavy\cuda_blake512.h" />
-    <ClInclude Include="heavy\cuda_combine.h" />
-    <ClInclude Include="heavy\cuda_groestl512.h" />
-    <ClInclude Include="heavy\cuda_hefty1.h" />
-    <ClInclude Include="heavy\cuda_keccak512.h" />
-    <ClInclude Include="heavy\cuda_sha256.h" />
+    <ClInclude Include="heavy\heavy.h" />
     <ClInclude Include="hefty1.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="nvml.h" />
@@ -330,11 +333,13 @@
     <ClInclude Include="uint256.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lyra2\Lyra2.h" />
+    <ClInclude Include="lyra2\Sponge.h" />
+  </ItemGroup>
+  <ItemGroup>
     <CudaCompile Include="cuda.cpp" />
     <CudaCompile Include="bitslice_transformations_quad.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
-    </CudaCompile>
-    <CudaCompile Include="cuda_fugue256.cu">
     </CudaCompile>
     <CudaCompile Include="cuda_groestlcoin.cu">
     </CudaCompile>
@@ -352,6 +357,7 @@
     <CudaCompile Include="heavy\cuda_groestl512.cu">
     </CudaCompile>
     <CudaCompile Include="heavy\cuda_hefty1.cu">
+      <MaxRegCount>80</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="heavy\cuda_keccak512.cu">
     </CudaCompile>
@@ -360,25 +366,29 @@
     <CudaCompile Include="heavy\heavy.cu">
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes -O2" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
     </CudaCompile>
     <CudaCompile Include="JHA\jackpotcoin.cu">
     </CudaCompile>
-    <CudaCompile Include="blake32.cu">
+    <CudaCompile Include="Algo256\blake256.cu">
       <MaxRegCount>64</MaxRegCount>
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-O2 -dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
-    <CudaCompile Include="keccak\cuda_keccak256.cu">
+    <CudaCompile Include="Algo256\keccak256.cu" />
+    <CudaCompile Include="Algo256\cuda_blake256.cu" />
+    <CudaCompile Include="Algo256\cuda_fugue256.cu" />
+    <CudaCompile Include="Algo256\cuda_groestl256.cu" />
+    <CudaCompile Include="Algo256\cuda_keccak256.cu">
       <MaxRegCount>92</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="keccak\keccak256.cu" />
+    <CudaCompile Include="Algo256\cuda_skein256.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-O2 -dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
     <CudaCompile Include="quark\animecoin.cu">
@@ -397,7 +407,7 @@
       <CInterleavedPTX>false</CInterleavedPTX>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_compactionTest.cu">
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes -O2" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_groestl512.cu">
@@ -417,6 +427,8 @@
     </CudaCompile>
     <CudaCompile Include="qubit\qubit_luffa512.cu">
     </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2RE.cu" />
+    <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="x11\cuda_x11_aes.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>
@@ -424,7 +436,9 @@
     <CudaCompile Include="x11\cuda_x11_echo.cu">
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_luffa512.cu" />
-    <CudaCompile Include="x11\cuda_x11_luffa512_Cubehash.cu" />
+    <CudaCompile Include="x11\cuda_x11_luffa512_Cubehash.cu">
+      <MaxRegCount>80</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_shavite512.cu">
       <MaxRegCount>128</MaxRegCount>
     </CudaCompile>
@@ -440,8 +454,7 @@
     <CudaCompile Include="x11\x11.cu">
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_hamsi512.cu">
-      <MaxRegCount>80</MaxRegCount>
-      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">80</MaxRegCount>
+      <MaxRegCount>72</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_fugue512.cu">
     </CudaCompile>

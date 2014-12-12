@@ -39,9 +39,12 @@ extern void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 extern void quark_groestl512_cpu_init(int thr_id, int threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
+extern void quark_skein512_cpu_init(int thr_id);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void cuda_jh512Keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x11_luffaCubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
@@ -156,26 +159,27 @@ extern "C" void x15hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0 };
 	uint32_t endiandata[20];
 
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 16 : 256 * 256 * 9;
-	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
+	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x05;
+		((uint32_t*)ptarget)[7] = 0x00FF;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
 
 		quark_groestl512_cpu_init(thr_id, throughput);
+		quark_skein512_cpu_init(thr_id);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
@@ -201,7 +205,8 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		cuda_jh512Keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
@@ -211,22 +216,25 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		/* Scan with GPU */
-		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		if (foundNonce != 0xffffffff)
+		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (foundNonce != UINT32_MAX)
 		{
-			/* check now with the CPU to confirm */
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			uint32_t Htarg = ptarget[7];
+			/* check now with the CPU to confirm */
 			be32enc(&endiandata[19], foundNonce);
 			x15hash(vhash64, endiandata);
+
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				*hashes_done = pdata[19] + throughput - first_nonce;
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				x15_whirlpool_cpu_free(thr_id);
-				if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				return 1;
+				return res;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
@@ -235,9 +243,8 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-		if (pdata[19] + throughput < pdata[19])
-			 pdata[19] = max_nonce;
-		else pdata[19] += throughput;
+
+		pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 

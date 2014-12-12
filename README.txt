@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.0-tpruvot (SP-MOD) (28 Nov 2014)
+ccMiner release 1.5.1-tpruvot (SP-MOD) (11 DEC 2014)  - "Vertcoin Lyra2"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -42,6 +42,7 @@ Keccak (Maxcoin)
 Deep, Doom and Qubit
 Pentablake (Blake 512 x5)
 S3 (OneCoin)
+Lyra2RE (new VertCoin algo)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL Only) implementations.
@@ -72,6 +73,7 @@ its command line interface and options.
                           jackpot     use to mine Jackpotcoin
                           keccak      use to mine Maxcoin
                           luffa       use to mine Doomcoin
+                          lyra2       use to mine Vertcoin
                           mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
                           nist5       use to mine TalkCoin
@@ -94,7 +96,7 @@ its command line interface and options.
                         Decimals are allowed for fine tuning
   -f, --diff            Divide difficulty by this factor (std is 1)
   -v, --vote            Heavycoin block vote (default: 512)
-  -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
+  -o, --url=URL         URL of mining server
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
   -p, --pass=PASSWORD   password for mining server
@@ -125,23 +127,23 @@ its command line interface and options.
 
 
 Example for Heavycoin Mining on heavycoinpool.com with a single gpu in your system
-    ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 8
+    ccminer -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 8
 
 
 Example for Heavycoin Mining on hvc.1gh.com with a dual gpu in your system
-    ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 8
+    ccminer -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333/ -u <<WALLET>> -p x -v 8
 
 
 Example for Fuguecoin solo-mining with 4 gpu's in your system and a Fuguecoin-wallet running on localhost
-    ccminer.exe -q -s 1 -t 4 -a fugue256 -o http://localhost:9089 -u <<myusername>> -p <<mypassword>>
+    ccminer -q -s 1 -t 4 -a fugue256 -o http://localhost:9089/ -u <<myusername>> -p <<mypassword>>
 
 
 Example for Fuguecoin pool mining on dwarfpool.com with all your GPUs
-    ccminer.exe -q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340 -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
+    ccminer -q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340/ -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
 
 
 Example for Groestlcoin solo mining
-    ccminer.exe -q -s 1 -a groestl -o http://127.0.0.1:1441 -u USERNAME -p PASSWORD
+    ccminer -q -s 1 -a groestl -o http://127.0.0.1:1441/ -u USERNAME -p PASSWORD
 
 
 For solo-mining you typically use -o http://127.0.0.1:xxxx where xxxx represents
@@ -149,6 +151,19 @@ the rpcport number specified in your wallet's .conf file and you have to pass th
 and password with -O (or -u -p) as specified in the wallet config.
 
 The wallet must also be started with the -server option and/or with the server=1 flag in the .conf file
+
+
+>>> API and Monitoring <<<
+
+With the -b parameter you can open your ccminer to your network, use -b 0.0.0.0:4068 if required.
+On windows, setting 0.0.0.0 will ask firewall permissions on the first launch. Its normal.
+
+Default API feature is only enabled for localhost queries by default, on port 4068.
+
+You can test this api on linux with "telnet <miner-ip> 4068" and type "help" to list the commands.
+Default api format is delimited text. If required a php json wrapper is present in api/ folder.
+
+I plan to add a json format later, if requests are formatted in json too..
 
 
 >>> Additional Notes <<<
@@ -160,9 +175,23 @@ features.
 
 >>> RELEASE HISTORY <<<
 
- v1.5.0
-		x11: sp simd optimisation (+40KHs)
-		x11: sp echo optimisation (+10KHs)
+  Dec. 2014	  Merged optimized kernals from the SP-Hash fork.
+
+  Dec. 2014       v1.5.1 (not released yet!)
+                  Add lyra2 algo for Vertcoin (Release is 16 Dec 2014)
+                  Multiple shares support (2 for the moment)
+                  X11 optimisations (From klaust and sp-hash)
+                  HTML5 WebSocket api compatibility (see api/websocket.htm)
+
+  Nov. 27th 2014  v1.5.0
+                  Upgrade compat jansson to 2.6 (for windows)
+                  Add pool mining.set_extranonce support
+                  Allow intermediate intensity with decimals
+                  Update prebuilt x86 openssl lib to 1.0.1i
+                  Fix heavy algo on linux (broken since 1.4)
+                  Some internal changes to use the C++ compiler
+                  New API 1.2 with some new commands (read only)
+                  Add some of sp x11/x15 optimisations (and tsiv x13)
 
   Nov. 15th 2014  v1.4.9
                   Support of nvml and nvapi(windows) to monitor gpus
@@ -280,12 +309,12 @@ features.
 
 Notable contributors to this application are:
 
-Christian Buchner, Christian H. (Germany): CUDA implementation 
+Christian Buchner, Christian H. (Germany): Initial CUDA implementation
 
-djm34, tsiv : Recent CUDA algos
+djm34, tsiv, sp for cuda algos implementation and optimisation
 
 Tanguy Pruvot : 750Ti tuning, blake, colors, general code cleanup/opts
-                linux Config/Makefile and vstudio stuff...
+                API monitoring, linux Config/Makefile and vstudio stuff...
 
 and also many thanks to anyone else who contributed to the original
 cpuminer application (Jeff Garzik, pooler), it's original HVC-fork

@@ -9,7 +9,7 @@
 #define THF 4
 
 // aus cpu-miner.c
-extern int device_map[8];
+extern short device_map[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
