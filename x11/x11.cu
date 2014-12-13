@@ -168,6 +168,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	cuda_check_cpu_setTarget(ptarget);
 
+	bool lastloop = false;
 	do {
 		int order = 0;
 		uint32_t foundNonce;
@@ -213,10 +214,19 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-
-		pdata[19] += throughput;
-
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
+		}
+		else
+			break;
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

@@ -514,6 +514,7 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 
 	pentablake_cpu_setBlock_80(endiandata, ptarget);
 
+	bool lastloop = false;
 	do {
 		int order = 0;
 
@@ -555,9 +556,19 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 			}
 		}
 
-		pdata[19] += throughput;
-
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
+		}
+		else
+			break;
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	cudaDeviceSynchronize();

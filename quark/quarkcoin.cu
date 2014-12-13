@@ -169,6 +169,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
+	bool lastloop = false;
 	do {
 		int order = 0;
 		size_t nrm1=0, nrm2=0, nrm3=0;
@@ -241,9 +242,19 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		pdata[19] += throughput;
-
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
+		}
+		else
+			break;
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

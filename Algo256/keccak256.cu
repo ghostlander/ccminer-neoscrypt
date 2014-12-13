@@ -62,6 +62,8 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	}
 
 	keccak256_setBlock_80((void*)endiandata, ptarget);
+
+	bool lastloop = false;
 	do {
 		int order = 0;
 
@@ -83,12 +85,18 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > max_nonce) {
-			break;
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
 		}
-
-		pdata[19] += throughput;
-
+		else
+			break;
 	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce;
