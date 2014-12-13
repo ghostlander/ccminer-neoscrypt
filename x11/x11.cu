@@ -40,6 +40,8 @@ extern void quark_keccak512_cpu_init(int thr_id, int threads);
 extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void cuda_jh512Keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+//extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+//extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x11_luffaCubehash512_cpu_init(int thr_id, int threads);
 extern void x11_luffaCubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -139,7 +141,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x5;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
@@ -176,6 +178,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		cuda_jh512Keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+//		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+//		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
@@ -197,8 +201,10 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				if (secNonce != 0) {
 					pdata[21] = secNonce;
 					res++;
+					if (opt_benchmark)  applog(LOG_INFO, "Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				}
 				pdata[19] = foundNonce;
+				if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else if (vhash64[7] > Htarg) {

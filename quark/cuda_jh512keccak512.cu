@@ -8,6 +8,12 @@ typedef struct {
     uint32_t buffer[16];                  /*the 512-bit message block to be hashed;*/
 } hashState;
 
+#ifdef _MSC_VER
+#define UINT2(x,y) { x, y }
+#else
+#define UINT2(x,y) (uint2) { x, y }
+#endif
+
 /*42 round constants, each round constant is 32-byte (256-bit)*/
 __constant__ uint32_t c_INIT_bitslice[8][4] = {
 	{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
@@ -350,14 +356,9 @@ __constant__ uint64_t c_keccak_round_constants[24] = {
 };
 
 static __device__ __forceinline__ void
-keccak_block(uint64_t *s, const uint32_t *in) {
+keccak_block_35(uint2 *s) {
 	size_t i;
-	uint64_t t[5], u[5], v, w;
-
-	/* absorb input */
-#pragma unroll 9
-	for (i = 0; i < 72 / 8; i++, in += 2)
-		s[i] ^= U32TO64_LE(in);
+	uint2 t[5], u[5], v, w;
 
 	for (i = 0; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -368,11 +369,11 @@ keccak_block(uint64_t *s, const uint32_t *in) {
 		t[4] = s[4] ^ s[9] ^ s[14] ^ s[19] ^ s[24];
 
 		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
-		u[0] = t[4] ^ ROTL64(t[1], 1);
-		u[1] = t[0] ^ ROTL64(t[2], 1);
-		u[2] = t[1] ^ ROTL64(t[3], 1);
-		u[3] = t[2] ^ ROTL64(t[4], 1);
-		u[4] = t[3] ^ ROTL64(t[0], 1);
+		u[0] = t[4] ^ ROL2(t[1], 1);
+		u[1] = t[0] ^ ROL2(t[2], 1);
+		u[2] = t[1] ^ ROL2(t[3], 1);
+		u[3] = t[2] ^ ROL2(t[4], 1);
+		u[4] = t[3] ^ ROL2(t[0], 1);
 
 		/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
 		s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
@@ -383,30 +384,30 @@ keccak_block(uint64_t *s, const uint32_t *in) {
 
 		/* rho pi: b[..] = rotl(a[..], ..) */
 		v = s[1];
-		s[1] = ROTL64(s[6], 44);
-		s[6] = ROTL64(s[9], 20);
-		s[9] = ROTL64(s[22], 61);
-		s[22] = ROTL64(s[14], 39);
-		s[14] = ROTL64(s[20], 18);
-		s[20] = ROTL64(s[2], 62);
-		s[2] = ROTL64(s[12], 43);
-		s[12] = ROTL64(s[13], 25);
-		s[13] = ROTL64(s[19], 8);
-		s[19] = ROTL64(s[23], 56);
-		s[23] = ROTL64(s[15], 41);
-		s[15] = ROTL64(s[4], 27);
-		s[4] = ROTL64(s[24], 14);
-		s[24] = ROTL64(s[21], 2);
-		s[21] = ROTL64(s[8], 55);
-		s[8] = ROTL64(s[16], 45);
-		s[16] = ROTL64(s[5], 36);
-		s[5] = ROTL64(s[3], 28);
-		s[3] = ROTL64(s[18], 21);
-		s[18] = ROTL64(s[17], 15);
-		s[17] = ROTL64(s[11], 10);
-		s[11] = ROTL64(s[7], 6);
-		s[7] = ROTL64(s[10], 3);
-		s[10] = ROTL64(v, 1);
+		s[1] = ROL2(s[6], 44);
+		s[6] = ROL2(s[9], 20);
+		s[9] = ROL2(s[22], 61);
+		s[22] = ROL2(s[14], 39);
+		s[14] = ROL2(s[20], 18);
+		s[20] = ROL2(s[2], 62);
+		s[2] = ROL2(s[12], 43);
+		s[12] = ROL2(s[13], 25);
+		s[13] = ROL2(s[19], 8);
+		s[19] = ROL2(s[23], 56);
+		s[23] = ROL2(s[15], 41);
+		s[15] = ROL2(s[4], 27);
+		s[4] = ROL2(s[24], 14);
+		s[24] = ROL2(s[21], 2);
+		s[21] = ROL2(s[8], 55);
+		s[8] = ROL2(s[16], 45);
+		s[16] = ROL2(s[5], 36);
+		s[5] = ROL2(s[3], 28);
+		s[3] = ROL2(s[18], 21);
+		s[18] = ROL2(s[17], 15);
+		s[17] = ROL2(s[11], 10);
+		s[11] = ROL2(s[7], 6);
+		s[7] = ROL2(s[10], 3);
+		s[10] = ROL2(v, 1);
 
 		/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
 		v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
@@ -416,7 +417,7 @@ keccak_block(uint64_t *s, const uint32_t *in) {
 		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 		/* iota: a[0,0] ^= round constant */
-		s[0] ^= c_keccak_round_constants[i];
+		s[0] ^= vectorize(c_keccak_round_constants[i]);
 	}
 }
 
@@ -438,24 +439,26 @@ void quark_jh512Keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint32_
 
 		JHHash(message, message);
 
-		message[16] = 0x01;
-		message[17] = 0x80000000;
-
-		// State initialisieren
-		uint64_t keccak_gpu_state[25]=
+		uint2 keccak_gpu_state[25];
+#pragma unroll
+		for (int i = 0; i<8; i++)
 		{
-			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-		};
-		keccak_block(keccak_gpu_state, message);
+			keccak_gpu_state[i].x = message[(i*2)];
+			keccak_gpu_state[i].y = message[(i*2)+1];
+		}
+		keccak_gpu_state[8] = vectorize(0x8000000000000001ULL);
 
-		U64TO32_LE((&Hash[0]), keccak_gpu_state[0]);
-		U64TO32_LE((&Hash[2]), keccak_gpu_state[1]);
-		U64TO32_LE((&Hash[4]), keccak_gpu_state[2]);
-		U64TO32_LE((&Hash[6]), keccak_gpu_state[3]);
-		U64TO32_LE((&Hash[8]), keccak_gpu_state[4]);
-		U64TO32_LE((&Hash[10]), keccak_gpu_state[5]);
-		U64TO32_LE((&Hash[12]), keccak_gpu_state[6]);
-		U64TO32_LE((&Hash[14]), keccak_gpu_state[7]);
+#pragma unroll
+		for (int i = 9; i<25; i++)
+		{
+			keccak_gpu_state[i] = UINT2(0, 0);
+		}
+		keccak_block_35(keccak_gpu_state);
+
+		uint64_t *outputhash = (uint64_t *)Hash;
+#pragma unroll 16
+		for (int i = 0; i<8; i++)
+			outputhash[i] = devectorize(keccak_gpu_state[i]);
 	}
 }
 
