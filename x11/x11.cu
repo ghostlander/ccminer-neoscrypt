@@ -193,7 +193,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[19], foundNonce);
 			x11hash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			{
 				int res = 1;
 				// check if there was some other ones...
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
@@ -207,11 +208,9 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
-			else if (vhash64[7] > Htarg) {
-				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
-			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+			else
+			{
+					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
