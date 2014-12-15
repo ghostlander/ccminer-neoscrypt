@@ -275,7 +275,7 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 
 #define TFBIG_KINIT(k0, k1, k2, k3, k4, k5, k6, k7, k8, t0, t1, t2) { \
 		k8 = ((k0 ^ k1) ^ (k2 ^ k3)) ^ ((k4 ^ k5) ^ (k6 ^ k7)) \
-			^ SPH_C64(0x1BD11BDAA9FC1A22); \
+			^ vectorize(SPH_C64(0x1BD11BDAA9FC1A22)); \
 		t2 = t0 ^ t1; \
 	}
 
@@ -287,12 +287,12 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 		w4 = (w4 + SKBI(k, s, 4)); \
 		w5 = (w5 + SKBI(k, s, 5) + SKBT(t, s, 0)); \
 		w6 = (w6 + SKBI(k, s, 6) + SKBT(t, s, 1)); \
-		w7 = (w7 + SKBI(k, s, 7) + (uint64_t)s); \
+		w7 = (w7 + SKBI(k, s, 7) + vectorize(s)); \
 	}
 
 #define TFBIG_MIX(x0, x1, rc) { \
 		x0 = x0 + x1; \
-		x1 = ROTL64(x1, rc) ^ x0; \
+		x1 = ROL2(x1, rc) ^ x0; \
 	}
 
 #define TFBIG_MIX8(w0, w1, w2, w3, w4, w5, w6, w7, rc0, rc1, rc2, rc3) { \
@@ -324,9 +324,9 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 	if (thread < threads)
 	{
 		// Skein
-		uint64_t p[8];
-		uint64_t h0, h1, h2, h3, h4, h5, h6, h7, h8;
-		uint64_t t0, t1, t2;
+		uint2 p[8];
+		uint2 h0, h1, h2, h3, h4, h5, h6, h7, h8;
+		uint2 t0, t1, t2;
 
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
@@ -334,22 +334,22 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 		uint64_t *inpHash = &g_hash[8 * hashPosition];
 
 		// Initialisierung
-		h0 = 0x4903ADFF749C51CEull;
-		h1 = 0x0D95DE399746DF03ull;
-		h2 = 0x8FD1934127C79BCEull;
-		h3 = 0x9A255629FF352CB1ull;
-		h4 = 0x5DB62599DF6CA7B0ull;
-		h5 = 0xEABE394CA9D5C3F4ull;
-		h6 = 0x991112C71A75B523ull;
-		h7 = 0xAE18A40B660FCC33ull;
+		h0 = vectorize(0x4903ADFF749C51CEull);
+		h1 = vectorize(0x0D95DE399746DF03ull);
+		h2 = vectorize(0x8FD1934127C79BCEull);
+		h3 = vectorize(0x9A255629FF352CB1ull);
+		h4 = vectorize(0x5DB62599DF6CA7B0ull);
+		h5 = vectorize(0xEABE394CA9D5C3F4ull);
+		h6 = vectorize(0x991112C71A75B523ull);
+		h7 = vectorize(0xAE18A40B660FCC33ull);
 
 		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg		
 #pragma unroll 8
 		for(int i=0;i<8;i++)
-			p[i] = inpHash[i];
+			p[i] = vectorize(inpHash[i]);
 
-		t0 = 64; // ptr
-		t1 = 480ull << 55; // etype
+		t0 = vectorize(64); // ptr
+		t1 = vectorize(480ull << 55); // etype
 		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e(0);
 		TFBIG_4o(1);
@@ -371,22 +371,22 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 		TFBIG_4o(17);
 		TFBIG_ADDKEY(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
 
-		h0 = inpHash[0] ^ p[0];
-		h1 = inpHash[1] ^ p[1];
-		h2 = inpHash[2] ^ p[2];
-		h3 = inpHash[3] ^ p[3];
-		h4 = inpHash[4] ^ p[4];
-		h5 = inpHash[5] ^ p[5];
-		h6 = inpHash[6] ^ p[6];
-		h7 = inpHash[7] ^ p[7];
+		h0 = vectorize(inpHash[0]) ^ p[0];
+		h1 = vectorize(inpHash[1]) ^ p[1];
+		h2 = vectorize(inpHash[2]) ^ p[2];
+		h3 = vectorize(inpHash[3]) ^ p[3];
+		h4 = vectorize(inpHash[4]) ^ p[4];
+		h5 = vectorize(inpHash[5]) ^ p[5];
+		h6 = vectorize(inpHash[6]) ^ p[6];
+		h7 = vectorize(inpHash[7]) ^ p[7];
 
 		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
 #pragma unroll 8
 		for(int i=0;i<8;i++)
-			p[i] = 0;
+			p[i] = make_uint2(0,0);
 
-		t0 = 8; // ptr
-		t1 = 510ull << 55; // etype
+		t0 = vectorize(8); // ptr
+		t1 = vectorize(510ull << 55); // etype
 		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e(0);
 		TFBIG_4o(1);
@@ -413,10 +413,11 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 
 #pragma unroll 8
 		for(int i=0;i<8;i++)
-			outpHash[i] = p[i];
+			outpHash[i] = devectorize(p[i]);
 	}
 }
 
+/*
 __global__ 
 void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
@@ -520,6 +521,7 @@ void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNoun
 		}
 	}
 }
+*/
 
 __host__ void quark_skein512_cpu_init(int thr_id)
 {
@@ -553,6 +555,7 @@ void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, u
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
 
+/*
 __host__
 uint32_t quark_skein512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
@@ -570,3 +573,4 @@ uint32_t quark_skein512_cpu_hash_64_final(int thr_id, int threads, uint32_t star
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
 }
+*/
