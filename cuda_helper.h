@@ -408,6 +408,19 @@ static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
 	return result;
 }
+
+
+static __device__ __forceinline__ uint2 operator- (uint2 a, uint2 b)
+{
+	uint2 result;
+	asm("{\n\t"
+		"sub.cc.u32 %0,%2,%4; \n\t"
+		"subc.u32 %1,%3,%5;   \n\t"
+		"}\n\t"
+		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
+	return result;
+}
+
 static __device__ __forceinline__ void operator+= (uint2 &a, uint2 b) { a = a + b; }
 
 /**
@@ -472,6 +485,8 @@ __inline__ __device__ uint2 ROL2(const uint2 v, const int n) {
 }
 #endif
 
+
+
 __device__ __forceinline__
 uint64_t ROTR16(uint64_t x)
 {
@@ -497,6 +512,11 @@ uint64_t ROTL16(uint64_t x)
 #endif
 }
 
+__device__ __forceinline__
+uint2 SWAPINT2(uint2 x)
+{
+	return(make_uint2(x.y, x.x));
+}
 __device__ __forceinline__ bool cuda_hashisbelowtarget(const uint32_t *const __restrict__ hash, const uint32_t *const __restrict__ target)
 {
 	if (hash[7] > target[7])
@@ -531,4 +551,52 @@ __device__ __forceinline__ bool cuda_hashisbelowtarget(const uint32_t *const __r
 		return false;
 	return true;
 }
+
+__device__ __forceinline__
+uint2 SWAPDWORDS2(uint2 value)
+{
+	return make_uint2(value.y, value.x);
+}
+
+static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
+{
+	uint2 result;
+	if (offset<32) {
+		asm("{\n\t"
+			"shf.l.clamp.b32 %1,%2,%3,%4; \n\t"
+			"shl.b32 %0,%2,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	}
+	else {
+		asm("{\n\t"
+			"shf.l.clamp.b32 %1,%2,%3,%4; \n\t"
+			"shl.b32 %0,%2,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	return result;
+}
+static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
+{
+	uint2 result;
+	if (offset<32) {
+		asm("{\n\t"
+			"shf.r.clamp.b32 %0,%2,%3,%4; \n\t"
+			"shr.b32 %1,%3,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	}
+	else {
+		asm("{\n\t"
+			"shf.l.clamp.b32 %0,%2,%3,%4; \n\t"
+			"shl.b32 %1,%3,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	return result;
+}
+
 #endif // #ifndef CUDA_HELPER_H
+
+
