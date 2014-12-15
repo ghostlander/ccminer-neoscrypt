@@ -13,7 +13,11 @@ extern "C" {
 #define UINT2(x,y) (uint2) { x, y }
 #endif
 
-static const uint64_t host_keccak_round_constants[24] = {
+uint32_t *d_nounce[8];
+uint32_t *d_KNonce[8];
+
+__constant__ uint32_t pTarget[8];
+__constant__ uint64_t keccak_round_constants[24] = {
 	0x0000000000000001ull, 0x0000000000008082ull,
 	0x800000000000808aull, 0x8000000080008000ull,
 	0x000000000000808bull, 0x0000000080000001ull,
@@ -27,23 +31,70 @@ static const uint64_t host_keccak_round_constants[24] = {
 	0x8000000080008081ull, 0x8000000000008080ull,
 	0x0000000080000001ull, 0x8000000080008008ull
 };
-
-uint32_t *d_nounce[8];
-uint32_t *d_KNonce[8];
-
-__constant__ uint32_t pTarget[8];
-__constant__ uint64_t keccak_round_constants[24];
 __constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + padding?)
 
 #if __CUDA_ARCH__ >= 350
 __device__ __forceinline__
-static void keccak_blockv35(uint2 *s, const uint64_t *keccak_round_constants)
+static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 {
 	size_t i;
-	uint2 t[5], u[5], v, w;
+	uint2 t1, t[5], u[5], v, w;
 
-	#pragma unroll
-	for (i = 0; i < 24; i++) {
+	t1 = s[1] ^ s[16];
+
+	/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+	u[0] = s[4] ^ ROL2(t1, 1);
+	u[1] = s[0] ^ ROL2(s[2], 1);
+	u[2] = t1 ^ ROL2(s[3], 1);
+	u[3] = s[2] ^ ROL2(s[4], 1);
+	u[4] = s[3] ^ ROL2(s[0], 1);
+
+	/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+	s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+	s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+	s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+	s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+	s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+	/* rho pi: b[..] = rotl(a[..], ..) */
+	v = s[1];
+	s[1] = ROL2(s[6], 44);
+	s[6] = ROL2(s[9], 20);
+	s[9] = ROL2(s[22], 61);
+	s[22] = ROL2(s[14], 39);
+	s[14] = ROL2(s[20], 18);
+	s[20] = ROL2(s[2], 62);
+	s[2] = ROL2(s[12], 43);
+	s[12] = ROL2(s[13], 25);
+	s[13] = ROL2(s[19], 8);
+	s[19] = ROL2(s[23], 56);
+	s[23] = ROL2(s[15], 41);
+	s[15] = ROL2(s[4], 27);
+	s[4] = ROL2(s[24], 14);
+	s[24] = ROL2(s[21], 2);
+	s[21] = ROL2(s[8], 55);
+	s[8] = ROL2(s[16], 45);
+	s[16] = ROL2(s[5], 36);
+	s[5] = ROL2(s[3], 28);
+	s[3] = ROL2(s[18], 21);
+	s[18] = ROL2(s[17], 15);
+	s[17] = ROL2(s[11], 10);
+	s[11] = ROL2(s[7], 6);
+	s[7] = ROL2(s[10], 3);
+	s[10] = ROL2(v, 1);
+
+	/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+	v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+	v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+	v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+	v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+	/* iota: a[0,0] ^= round constant */
+	s[0] ^= vectorize(keccak_round_constants[0]);
+
+#pragma unroll
+	for (i = 1; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
 		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
 		t[1] = s[1] ^ s[6] ^ s[11] ^ s[16] ^ s[21];
@@ -106,14 +157,322 @@ static void keccak_blockv35(uint2 *s, const uint64_t *keccak_round_constants)
 #else
 
 __device__ __forceinline__
-static void keccak_blockv30(uint64_t *s, const uint64_t *keccak_round_constants)
+static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constants)
+{
+	size_t i;
+	uint64_t t1, t[5], u[5], v, w;
+
+	/* absorb input */
+	/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
+	t1 = s[1] ^ s[16];
+
+	/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+	u[0] = s[4] ^ ROTL64(t1, 1);
+	u[1] = s[0] ^ ROTL64(s[2], 1);
+	u[2] = t1 ^ ROTL64(s[3], 1);
+	u[3] = s[2] ^ ROTL64(s[4], 1);
+	u[4] = s[3] ^ ROTL64(s[0], 1);
+
+	/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+	s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+	s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+	s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+	s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+	s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+	/* rho pi: b[..] = rotl(a[..], ..) */
+	v = s[1];
+	s[1] = ROTL64(s[6], 44);
+	s[6] = ROTL64(s[9], 20);
+	s[9] = ROTL64(s[22], 61);
+	s[22] = ROTL64(s[14], 39);
+	s[14] = ROTL64(s[20], 18);
+	s[20] = ROTL64(s[2], 62);
+	s[2] = ROTL64(s[12], 43);
+	s[12] = ROTL64(s[13], 25);
+	s[13] = ROTL64(s[19], 8);
+	s[19] = ROTL64(s[23], 56);
+	s[23] = ROTL64(s[15], 41);
+	s[15] = ROTL64(s[4], 27);
+	s[4] = ROTL64(s[24], 14);
+	s[24] = ROTL64(s[21], 2);
+	s[21] = ROTL64(s[8], 55);
+	s[8] = ROTL64(s[16], 45);
+	s[16] = ROTL64(s[5], 36);
+	s[5] = ROTL64(s[3], 28);
+	s[3] = ROTL64(s[18], 21);
+	s[18] = ROTL64(s[17], 15);
+	s[17] = ROTL64(s[11], 10);
+	s[11] = ROTL64(s[7], 6);
+	s[7] = ROTL64(s[10], 3);
+	s[10] = ROTL64(v, 1);
+
+	/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+	v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+	v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+	v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+	v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+	/* iota: a[0,0] ^= round constant */
+	s[0] ^= keccak_round_constants[0];
+
+	for (i = 1; i < 24; i++) {
+		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
+		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
+		t[1] = s[1] ^ s[6] ^ s[11] ^ s[16] ^ s[21];
+		t[2] = s[2] ^ s[7] ^ s[12] ^ s[17] ^ s[22];
+		t[3] = s[3] ^ s[8] ^ s[13] ^ s[18] ^ s[23];
+		t[4] = s[4] ^ s[9] ^ s[14] ^ s[19] ^ s[24];
+
+		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+		u[0] = t[4] ^ ROTL64(t[1], 1);
+		u[1] = t[0] ^ ROTL64(t[2], 1);
+		u[2] = t[1] ^ ROTL64(t[3], 1);
+		u[3] = t[2] ^ ROTL64(t[4], 1);
+		u[4] = t[3] ^ ROTL64(t[0], 1);
+
+		/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+		s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+		s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+		s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+		s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+		s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+		/* rho pi: b[..] = rotl(a[..], ..) */
+		v = s[1];
+		s[1] = ROTL64(s[6], 44);
+		s[6] = ROTL64(s[9], 20);
+		s[9] = ROTL64(s[22], 61);
+		s[22] = ROTL64(s[14], 39);
+		s[14] = ROTL64(s[20], 18);
+		s[20] = ROTL64(s[2], 62);
+		s[2] = ROTL64(s[12], 43);
+		s[12] = ROTL64(s[13], 25);
+		s[13] = ROTL64(s[19], 8);
+		s[19] = ROTL64(s[23], 56);
+		s[23] = ROTL64(s[15], 41);
+		s[15] = ROTL64(s[4], 27);
+		s[4] = ROTL64(s[24], 14);
+		s[24] = ROTL64(s[21], 2);
+		s[21] = ROTL64(s[8], 55);
+		s[8] = ROTL64(s[16], 45);
+		s[16] = ROTL64(s[5], 36);
+		s[5] = ROTL64(s[3], 28);
+		s[3] = ROTL64(s[18], 21);
+		s[18] = ROTL64(s[17], 15);
+		s[17] = ROTL64(s[11], 10);
+		s[11] = ROTL64(s[7], 6);
+		s[7] = ROTL64(s[10], 3);
+		s[10] = ROTL64(v, 1);
+
+		/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+		v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+		v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+		v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+		v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+		/* iota: a[0,0] ^= round constant */
+		s[0] ^= keccak_round_constants[i];
+	}
+}
+#endif
+
+#if __CUDA_ARCH__ >= 350
+__device__ __forceinline__
+static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
+{
+	size_t i;
+	uint2 t[5], u[5], v, w;
+
+	/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
+	t[0] = s[0] ^ s[5] ^ s[10];
+	t[1] = s[1] ^ s[6] ^ s[16];
+	t[2] = s[2] ^ s[7];
+	t[3] = s[3] ^ s[8];
+	t[4] = s[4] ^ s[9];
+
+	/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+	u[0] = t[4] ^ ROL2(t[1], 1);
+	u[1] = t[0] ^ ROL2(t[2], 1);
+	u[2] = t[1] ^ ROL2(t[3], 1);
+	u[3] = t[2] ^ ROL2(t[4], 1);
+	u[4] = t[3] ^ ROL2(t[0], 1);
+
+	/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+	s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+	s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+	s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+	s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+	s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+	/* rho pi: b[..] = rotl(a[..], ..) */
+	v = s[1];
+	s[1] = ROL2(s[6], 44);
+	s[6] = ROL2(s[9], 20);
+	s[9] = ROL2(s[22], 61);
+	s[22] = ROL2(s[14], 39);
+	s[14] = ROL2(s[20], 18);
+	s[20] = ROL2(s[2], 62);
+	s[2] = ROL2(s[12], 43);
+	s[12] = ROL2(s[13], 25);
+	s[13] = ROL2(s[19], 8);
+	s[19] = ROL2(s[23], 56);
+	s[23] = ROL2(s[15], 41);
+	s[15] = ROL2(s[4], 27);
+	s[4] = ROL2(s[24], 14);
+	s[24] = ROL2(s[21], 2);
+	s[21] = ROL2(s[8], 55);
+	s[8] = ROL2(s[16], 45);
+	s[16] = ROL2(s[5], 36);
+	s[5] = ROL2(s[3], 28);
+	s[3] = ROL2(s[18], 21);
+	s[18] = ROL2(s[17], 15);
+	s[17] = ROL2(s[11], 10);
+	s[11] = ROL2(s[7], 6);
+	s[7] = ROL2(s[10], 3);
+	s[10] = ROL2(v, 1);
+
+	/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+	v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+	v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+	v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+	v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+	/* iota: a[0,0] ^= round constant */
+	s[0] ^= vectorize(keccak_round_constants[0]);
+
+	#pragma unroll
+	for (i = 1; i < 24; i++) {
+		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
+		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
+		t[1] = s[1] ^ s[6] ^ s[11] ^ s[16] ^ s[21];
+		t[2] = s[2] ^ s[7] ^ s[12] ^ s[17] ^ s[22];
+		t[3] = s[3] ^ s[8] ^ s[13] ^ s[18] ^ s[23];
+		t[4] = s[4] ^ s[9] ^ s[14] ^ s[19] ^ s[24];
+
+		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+		u[0] = t[4] ^ ROL2(t[1], 1);
+		u[1] = t[0] ^ ROL2(t[2], 1);
+		u[2] = t[1] ^ ROL2(t[3], 1);
+		u[3] = t[2] ^ ROL2(t[4], 1);
+		u[4] = t[3] ^ ROL2(t[0], 1);
+
+		/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+		s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+		s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+		s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+		s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+		s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+		/* rho pi: b[..] = rotl(a[..], ..) */
+		v = s[1];
+		s[1] = ROL2(s[6], 44);
+		s[6] = ROL2(s[9], 20);
+		s[9] = ROL2(s[22], 61);
+		s[22] = ROL2(s[14], 39);
+		s[14] = ROL2(s[20], 18);
+		s[20] = ROL2(s[2], 62);
+		s[2] = ROL2(s[12], 43);
+		s[12] = ROL2(s[13], 25);
+		s[13] = ROL2(s[19], 8);
+		s[19] = ROL2(s[23], 56);
+		s[23] = ROL2(s[15], 41);
+		s[15] = ROL2(s[4], 27);
+		s[4] = ROL2(s[24], 14);
+		s[24] = ROL2(s[21], 2);
+		s[21] = ROL2(s[8], 55);
+		s[8] = ROL2(s[16], 45);
+		s[16] = ROL2(s[5], 36);
+		s[5] = ROL2(s[3], 28);
+		s[3] = ROL2(s[18], 21);
+		s[18] = ROL2(s[17], 15);
+		s[17] = ROL2(s[11], 10);
+		s[11] = ROL2(s[7], 6);
+		s[7] = ROL2(s[10], 3);
+		s[10] = ROL2(v, 1);
+
+		/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+		v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+		v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+		v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+		v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+		/* iota: a[0,0] ^= round constant */
+		s[0] ^= vectorize(keccak_round_constants[i]);
+	}
+}
+#else
+
+__device__ __forceinline__
+static void keccak_blockv30_80(uint64_t *s, const uint64_t *keccak_round_constants)
 {
 	size_t i;
 	uint64_t t[5], u[5], v, w;
 
 	/* absorb input */
+	/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
+	t[0] = s[0] ^ s[5] ^ s[10];
+	t[1] = s[1] ^ s[6] ^ s[16];
+	t[2] = s[2] ^ s[7];
+	t[3] = s[3] ^ s[8] ;
+	t[4] = s[4] ^ s[9];
 
-	for (i = 0; i < 24; i++) {
+	/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+	u[0] = t[4] ^ ROTL64(t[1], 1);
+	u[1] = t[0] ^ ROTL64(t[2], 1);
+	u[2] = t[1] ^ ROTL64(t[3], 1);
+	u[3] = t[2] ^ ROTL64(t[4], 1);
+	u[4] = t[3] ^ ROTL64(t[0], 1);
+
+	/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+	s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+	s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+	s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+	s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+	s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+	/* rho pi: b[..] = rotl(a[..], ..) */
+	v = s[1];
+	s[1] = ROTL64(s[6], 44);
+	s[6] = ROTL64(s[9], 20);
+	s[9] = ROTL64(s[22], 61);
+	s[22] = ROTL64(s[14], 39);
+	s[14] = ROTL64(s[20], 18);
+	s[20] = ROTL64(s[2], 62);
+	s[2] = ROTL64(s[12], 43);
+	s[12] = ROTL64(s[13], 25);
+	s[13] = ROTL64(s[19], 8);
+	s[19] = ROTL64(s[23], 56);
+	s[23] = ROTL64(s[15], 41);
+	s[15] = ROTL64(s[4], 27);
+	s[4] = ROTL64(s[24], 14);
+	s[24] = ROTL64(s[21], 2);
+	s[21] = ROTL64(s[8], 55);
+	s[8] = ROTL64(s[16], 45);
+	s[16] = ROTL64(s[5], 36);
+	s[5] = ROTL64(s[3], 28);
+	s[3] = ROTL64(s[18], 21);
+	s[18] = ROTL64(s[17], 15);
+	s[17] = ROTL64(s[11], 10);
+	s[11] = ROTL64(s[7], 6);
+	s[7] = ROTL64(s[10], 3);
+	s[10] = ROTL64(v, 1);
+
+	/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+	v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+	v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+	v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+	v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+	/* iota: a[0,0] ^= round constant */
+	s[0] ^= keccak_round_constants[0];
+
+	for (i = 1; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
 		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
 		t[1] = s[1] ^ s[6] ^ s[11] ^ s[16] ^ s[21];
@@ -196,7 +555,7 @@ void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash, 
 		keccak_gpu_state[10] = UINT2(1, 0);
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
 
-		keccak_blockv35(keccak_gpu_state,keccak_round_constants);
+		keccak_blockv35_80(keccak_gpu_state,keccak_round_constants);
 		if (devectorize(keccak_gpu_state[3]) <= ((uint64_t*)pTarget)[3]) {resNounce[0] = nounce;}
 #else
 		uint64_t keccak_gpu_state[25];
@@ -209,7 +568,7 @@ void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash, 
 		keccak_gpu_state[10] = 0x0000000000000001;
 		keccak_gpu_state[16] = 0x8000000000000000;
 
-		keccak_blockv30(keccak_gpu_state, keccak_round_constants);
+		keccak_blockv30_80(keccak_gpu_state, keccak_round_constants);
 		if (keccak_gpu_state[3] <= ((uint64_t*)pTarget)[3]) { resNounce[0] = nounce; }
 #endif
 	}
@@ -252,7 +611,7 @@ void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHa
 		}
 		keccak_gpu_state[4]  = UINT2(1, 0);
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
-		keccak_blockv35(keccak_gpu_state, keccak_round_constants);
+		keccak_blockv35_32(keccak_gpu_state, keccak_round_constants);
 
 		#pragma unroll 4
 		for (int i=0; i<4; i++)
@@ -269,7 +628,7 @@ void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHa
 		keccak_gpu_state[4]  = 0x0000000000000001;
 		keccak_gpu_state[16] = 0x8000000000000000;
 
-		keccak_blockv30(keccak_gpu_state, keccak_round_constants);
+		keccak_blockv30_32(keccak_gpu_state, keccak_round_constants);
 		#pragma unroll 4
 		for (int i = 0; i<4; i++)
 			outputHash[i*threads + thread] = keccak_gpu_state[i];
@@ -301,8 +660,6 @@ void keccak256_setBlock_80(void *pdata,const void *pTargetIn)
 __host__
 void keccak256_cpu_init(int thr_id, int threads)
 {
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(keccak_round_constants, host_keccak_round_constants,
-				sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMallocHost(&d_nounce[thr_id], 1*sizeof(uint32_t)));
 }

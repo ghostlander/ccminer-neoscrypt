@@ -136,8 +136,8 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
 {
     const uint32_t first_nonce = pdata[19];
     // CUDA will process thousands of threads.
-    int throughput = opt_work_size ? opt_work_size : (1 << 19) - 256; // 256*2048
-    throughput = min(throughput, (int)(max_nonce - first_nonce));
+    uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 128*4096
+    throughput = min(throughput, max_nonce - first_nonce);
 
     int rc = 0;
     uint32_t *hash = NULL;

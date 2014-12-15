@@ -135,9 +135,9 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 19 : 256 * 256 * 10;
-	int throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
+	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	throughput = min(throughput, max_nonce - first_nonce);
 
 
 	if (opt_benchmark)
@@ -168,6 +168,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	cuda_check_cpu_setTarget(ptarget);
 
+	bool lastloop = false;
 	do {
 		int order = 0;
 		uint32_t foundNonce;
@@ -193,7 +194,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[19], foundNonce);
 			x11hash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			{
 				int res = 1;
 				// check if there was some other ones...
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
@@ -207,17 +209,24 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
-			else if (vhash64[7] > Htarg) {
-				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
-			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+			else
+			{
+					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-
-		pdata[19] += throughput;
-
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
+		}
+		else
+			break;
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

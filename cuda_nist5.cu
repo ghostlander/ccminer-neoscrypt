@@ -73,7 +73,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00FF;
 
-	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
 	throughput = min(throughput, (int) (max_nonce - first_nonce));
 
 	if (!init[thr_id])
@@ -97,6 +97,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
+	bool lastloop = false;
 	do {
 		int order = 0;
 
@@ -131,9 +132,19 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		pdata[19] += throughput;
-
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
+		}
+		else
+			break;
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

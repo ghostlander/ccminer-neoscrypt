@@ -57,8 +57,8 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
@@ -78,6 +78,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 
 	whirlpool512_setBlock_80((void*)endiandata, ptarget);
 
+	bool lastloop = false;
 	do {
 		uint32_t foundNonce;
 		int order = 0;
@@ -112,9 +113,19 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-		pdata[19] += throughput;
-
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if (!lastloop)
+		{
+			if (max_nonce - throughput <= pdata[19])
+			{
+				pdata[19] = max_nonce;
+				lastloop = true;
+			}
+			else
+				pdata[19] += throughput;
+		}
+		else
+			break;
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
