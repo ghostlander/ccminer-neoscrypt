@@ -8,7 +8,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 #include "cuda_x11_aes.cu"
 
-static uint32_t *d_nonce[8];
+static uint2 *d_nonce[8];
 
 __device__ __forceinline__ void AES_2ROUND(
 	const uint32_t* __restrict__ sharedMemory,
@@ -360,7 +360,7 @@ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash
 // Setup-Funktionen
 __host__ void x11_echo512_cpu_init(int thr_id, int threads)
 {
-	cudaMalloc(&d_nonce[thr_id], sizeof(uint32_t));
+	cudaMalloc(&d_nonce[thr_id], sizeof(uint2));
 }
 
 __host__ void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -388,7 +388,7 @@ __global__ __launch_bounds__(128, 6)
 #else
 __global__ __launch_bounds__(128, 8)
 #endif
-void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *d_nonce, uint32_t target)
+void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *d_nonce, uint32_t target)
 {
 	__shared__ uint32_t sharedMemory[1024];
 	echo_gpu_init(sharedMemory);
@@ -708,27 +708,29 @@ void x11_echo512_gpu_hash_64_final(int threads, uint32_t startNounce, uint64_t *
 		test ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ W[11] ^ W[31] ^ backup;
 		if (test <= target)
 		{
-			if (d_nonce[0] != 0xffffffff)
+			if (d_nonce[0].x == 0xffffffff)
 			{
-				if (d_nonce[0] < nounce)  d_nonce[0] = nounce;
+				d_nonce[0].x = nounce;
+			} else
+			{
+				d_nonce[0].y = nounce;
 			}
-			else d_nonce[0] = nounce;
 		}
 	}
 }
-__host__ uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, int order)
+__host__ uint2 x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, int order)
 {
 	const int threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
+	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
 
 	size_t shared_size = 4096;
 	x11_echo512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 //	MyStreamSynchronize(NULL, order, thr_id);
-	uint32_t res;
-	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	uint2 res;
+	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
 	return res;
 }
