@@ -150,7 +150,7 @@ uint64_t Tone(const uint64_t* sharedMemory, uint64_t r[8], uint64_t W[80], uint3
 	return result;
 }
 
-__global__
+__global__ __launch_bounds__(256,2)
 void x17_sha512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
