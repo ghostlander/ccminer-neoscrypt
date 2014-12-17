@@ -442,7 +442,8 @@ static __device__ __forceinline__ uint2 operator* (uint2 a, uint2 b)
 
 // uint2 method
 #if  __CUDA_ARCH__ >= 350
-__device__ __inline__ uint2 ROR2(const uint2 a, const int offset) {
+__device__ __inline__ uint2 ROR2(const uint2 a, const int offset) 
+{
 	uint2 result;
 	if (offset < 32) {
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
@@ -455,10 +456,19 @@ __device__ __inline__ uint2 ROR2(const uint2 a, const int offset) {
 	return result;
 }
 #else
-__device__ __inline__ uint2 ROR2(const uint2 v, const int n) {
+__device__ __inline__ uint2 ROR2(const uint2 v, const int n) 
+{
 	uint2 result;
-	result.x = (((v.x) >> (n)) | ((v.x) << (64 - (n))));
-	result.y = (((v.y) >> (n)) | ((v.y) << (64 - (n))));
+	if (n <= 32) 
+	{
+		result.y = ((v.y >> (n)) | (v.x << (32 - n)));
+		result.x = ((v.x >> (n)) | (v.y << (32 - n)));
+	}
+	else 
+	{
+		result.y = ((v.x >> (n - 32)) | (v.y << (32 - n)));
+		result.x = ((v.y >> (n - 32)) | (v.x << (32 - n)));
+	}
 	return result;
 }
 #endif
@@ -477,15 +487,22 @@ __inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
 	return result;
 }
 #else
-__inline__ __device__ uint2 ROL2(const uint2 v, const int n) {
-	uint2 result;
-	result.x = (((v.x) << (n)) | ((v.x) >> (64 - (n))));
-	result.y = (((v.y) << (n)) | ((v.y) >> (64 - (n))));
-	return result;
+__inline__ __device__ uint2 ROL2(const uint2 v, const int n)
+{
+		uint2 result;
+		if (n <= 32) 
+		{
+			result.y = ((v.y << (n)) | (v.x >> (32 - n)));
+			result.x = ((v.x << (n)) | (v.y >> (32 - n)));
+		}
+		else 
+		{
+			result.y = ((v.x << (n - 32)) | (v.y >> (64 - n)));
+			result.x = ((v.y << (n - 32)) | (v.x >> (64 - n)));
+		}
+		return result;
 }
 #endif
-
-
 
 __device__ __forceinline__
 uint64_t ROTR16(uint64_t x)
@@ -561,7 +578,9 @@ uint2 SWAPDWORDS2(uint2 value)
 static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
 {
 	uint2 result;
-	if (offset<32) {
+#if __CUDA_ARCH__ > 300
+	if (offset<32) 
+	{
 		asm("{\n\t"
 			"shf.l.clamp.b32 %1,%2,%3,%4; \n\t"
 			"shl.b32 %0,%2,%4; \n\t"
@@ -576,9 +595,23 @@ static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
 			: "=r"(result.x), "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
 	}
 	return result;
+#else
+	if (offset<=32) 
+	{
+		a.y = (a.y << offset) | (a.x >> (32 - offset));
+		a.x = (a.x << offset);
+	}
+	else
+	{
+		a.y = 0;
+		a.x = (a.y << (offset-32));
+	}
+	return a;
+#endif
 }
 static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
 {
+	#if __CUDA_ARCH__ > 300
 	uint2 result;
 	if (offset<32) {
 		asm("{\n\t"
@@ -595,6 +628,19 @@ static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
 			: "=r"(result.x), "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
 	}
 	return result;
+	#else
+	if (offset<=32) 
+	{
+		a.y = (a.y >> offset) | (a.x << (32 - offset));
+		a.x = (a.x >> offset);
+	}
+	else
+	{
+		a.x = 0;
+		a.y = (a.y >> (offset - 32));
+	}
+	return a;
+	#endif
 }
 
 #endif // #ifndef CUDA_HELPER_H

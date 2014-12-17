@@ -113,25 +113,14 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-
-		if (!lastloop)
-		{
-			if (max_nonce - throughput <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughput;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
