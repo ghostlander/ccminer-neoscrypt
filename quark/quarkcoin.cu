@@ -169,7 +169,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
-	bool lastloop = false;
 	do {
 		int order = 0;
 		size_t nrm1=0, nrm2=0, nrm3=0;

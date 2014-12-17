@@ -92,7 +92,6 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	blake256_cpu_setBlock_80(pdata);
 	groestl256_setTarget(ptarget);
 
-	bool lastloop = false;
 	do {
 		int order = 0;
 		uint32_t foundNonce;

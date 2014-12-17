@@ -428,7 +428,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	crcsum = crc32_u32t(pdata, 64);
 #endif /* PRECALC64 */
 
-	bool lastloop = false;
 	do {
 		uint32_t foundNonce =
 #if PRECALC64
@@ -479,19 +478,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			}
 		}
 
-		if (!lastloop)
-		{
-			if (max_nonce - throughput <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughput;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce;
 
