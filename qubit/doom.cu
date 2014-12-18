@@ -12,11 +12,11 @@ extern "C" {
 
 static uint32_t *d_hash[8];
 
-extern void qubit_luffa512_cpu_init(int thr_id, int threads);
+extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
-extern void qubit_luffa512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 extern void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget);
-extern uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 extern void doomhash(void *state, const void *input)
 {

@@ -15,14 +15,14 @@ extern "C" {
 
 static uint32_t *d_hash[8];
 
-extern void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 extern void x11_shavite512_setBlock_80(void *pdata);
 
-extern int  x11_simd512_cpu_init(int thr_id, int threads);
-extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
+extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_skein512_cpu_init(int thr_id);
-extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 /* CPU HASH */
 extern "C" void s3hash(void *output, const void *input)

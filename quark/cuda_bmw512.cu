@@ -246,9 +246,9 @@ __device__ void Compression512(uint2 *msg, uint2 *hash)
 }
 
 __global__ __launch_bounds__(256, 2)
-void quark_bmw512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
         uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -312,9 +312,9 @@ void quark_bmw512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 }
 
 __global__ __launch_bounds__(256, 2)
-void quark_bmw512_gpu_hash_80(int threads, uint32_t startNounce, uint64_t *g_hash)
+void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
         uint32_t nounce = startNounce + thread;
@@ -367,7 +367,7 @@ void quark_bmw512_gpu_hash_80(int threads, uint32_t startNounce, uint64_t *g_has
 }
 
 // Setup-Funktionen
-__host__ void quark_bmw512_cpu_init(int thr_id, int threads)
+__host__ void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
 {
 }
 
@@ -389,9 +389,9 @@ __host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
 
-__host__ void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 32;
+    const uint32_t threadsperblock = 32;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -404,9 +404,9 @@ __host__ void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
     MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_bmw512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order)
+__host__ void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 128;
+    const uint32_t threadsperblock = 128;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);

@@ -285,9 +285,9 @@ static __device__ __forceinline__ void round_lyra_v30(uint64_t *s)
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void lyra2_gpu_hash_32_v30(int threads, uint32_t startNounce, uint64_t *outputHash)
+void lyra2_gpu_hash_32_v30(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t state[16];
@@ -361,9 +361,9 @@ void lyra2_gpu_hash_32_v30(int threads, uint32_t startNounce, uint64_t *outputHa
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
+void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint2 state[16];
@@ -436,9 +436,9 @@ void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 }
 #if 0
 __global__ __launch_bounds__(TPB, 1)
-void lyra2_gpu_hash_32_test(int threads, uint32_t startNounce, uint64_t *outputHash)
+void lyra2_gpu_hash_32_test(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint2 state[16];
@@ -511,15 +511,15 @@ void lyra2_gpu_hash_32_test(int threads, uint32_t startNounce, uint64_t *outputH
 #endif
 
 __host__
-void lyra2_cpu_init(int thr_id, int threads)
+void lyra2_cpu_init(int thr_id, uint32_t threads)
 {
 	//not used
 }
 
 __host__
-void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

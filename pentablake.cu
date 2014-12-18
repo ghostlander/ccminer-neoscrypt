@@ -266,9 +266,9 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint64_t T0)
 }
 
 __global__
-void pentablake_gpu_hash_80(int threads, const uint32_t startNounce, void *outputHash)
+void pentablake_gpu_hash_80(uint32_t threads, const uint32_t startNounce, void *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t h[8];
@@ -306,9 +306,9 @@ void pentablake_gpu_hash_80(int threads, const uint32_t startNounce, void *outpu
 }
 
 __host__
-void pentablake_cpu_hash_80(int thr_id, int threads, const uint32_t startNounce, uint32_t *d_outputHash, int order)
+void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -322,9 +322,9 @@ void pentablake_cpu_hash_80(int thr_id, int threads, const uint32_t startNounce,
 
 
 __global__
-void pentablake_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash)
+void pentablake_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads)
 	{
@@ -365,9 +365,9 @@ void pentablake_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash)
 }
 
 __host__
-void pentablake_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -384,7 +384,7 @@ void pentablake_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint3
 __host__
 uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -443,7 +443,7 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 __host__ static
 uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
