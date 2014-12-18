@@ -1304,13 +1304,13 @@ void shavite_gpu_init(uint32_t *sharedMemory)
 	}
 }
 __global__ __launch_bounds__(TPB, 8)
-void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector)
+void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector)
 {
 	__shared__  uint32_t sharedMemory[1024];
 
 	shavite_gpu_init(sharedMemory);
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -2563,7 +2563,7 @@ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *con
 
 
 __global__ __launch_bounds__(TPB, 8)
-void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -2579,7 +2579,7 @@ void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
 	}
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		const uint32_t nounce = startNounce + thread;
@@ -2614,9 +2614,9 @@ void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 	} //thread < threads
 }
 
-__host__ void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -2628,9 +2628,9 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t start
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+__host__ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

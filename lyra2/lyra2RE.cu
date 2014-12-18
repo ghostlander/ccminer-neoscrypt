@@ -11,20 +11,20 @@ extern "C" {
 
 static _ALIGN(64) uint64_t *d_hash[8];
 
-extern void blake256_cpu_init(int thr_id, int threads);
+extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
-extern void keccak256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void keccak256_cpu_init(int thr_id, int threads);
-extern void skein256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void skein256_cpu_init(int thr_id, int threads);
+extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void keccak256_cpu_init(int thr_id, uint32_t threads);
+extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
-extern void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void lyra2_cpu_init(int thr_id, int threads);
+extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void lyra2_cpu_init(int thr_id, uint32_t threads);
 
 extern void groestl256_setTarget(const void *ptarget);
-extern uint32_t groestl256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
-extern void groestl256_cpu_init(int thr_id, int threads);
+extern uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
+extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 
 extern "C" void lyra2_hash(void *state, const void *input)
 {

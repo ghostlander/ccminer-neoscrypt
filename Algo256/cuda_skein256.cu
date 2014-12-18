@@ -98,9 +98,9 @@ void Round_8_512v35(uint2 *ks, uint2 *ts,
 
 
 __global__ __launch_bounds__(256,3)
-void skein256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
+void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint2 h[9];
@@ -176,15 +176,15 @@ void skein256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHas
 }
 
 __host__
-void skein256_cpu_init(int thr_id, int threads)
+void skein256_cpu_init(int thr_id, uint32_t threads)
 {
 	//empty
 }
 
 __host__
-void skein256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
