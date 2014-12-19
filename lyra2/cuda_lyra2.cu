@@ -173,8 +173,6 @@ static __device__ __forceinline__ void round_lyra_v35(uint2 *s)
 __device__ __forceinline__ void reduceDuplexRowSetup(const int rowIn, const int rowInOut, const int rowOut, uint2 state[16], uint2 Matrix[96][8])
 { 
 	for (int i = 0; i < 8; i++)
-void lyra2_gpu_hash_32_v30(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	{
 		#pragma unroll
 		for (int j = 0; j < 12; j++)
@@ -277,8 +275,6 @@ void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputH
 
 	} //thread
 }
-void lyra2_gpu_hash_32_test(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 __host__
 void lyra2_cpu_init(int thr_id, uint32_t threads)
