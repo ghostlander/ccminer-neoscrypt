@@ -489,20 +489,14 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 
         int hashPosition = nounce - startNounce;
         uint32_t *Hash = &g_hash[16 * hashPosition];
-		uint32_t message[18] = 
-		{
-			Hash[0], Hash[1], Hash[2], Hash[3], Hash[4], Hash[5], Hash[6], Hash[7], Hash[8], Hash[9], Hash[10], Hash[11], Hash[12], Hash[13], Hash[14], Hash[15], Hash[16], Hash[17]
-		};
-
-
-		JHHash(message, message);
+		JHHash(Hash, Hash);
 
 		uint2 keccak_gpu_state[25];
 #pragma unroll
 		for (int i = 0; i<8; i++)
 		{
-			keccak_gpu_state[i].x = message[(i*2)];
-			keccak_gpu_state[i].y = message[(i*2)+1];
+			keccak_gpu_state[i].x = Hash[(i * 2)];
+			keccak_gpu_state[i].y = Hash[(i * 2) + 1];
 		}
 		keccak_gpu_state[8] = vectorize(0x8000000000000001ULL);
 
