@@ -577,8 +577,8 @@ uint2 SWAPDWORDS2(uint2 value)
 
 static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
 {
-	uint2 result;
 #if __CUDA_ARCH__ > 300
+	uint2 result;
 	if (offset<32) 
 	{
 		asm("{\n\t"

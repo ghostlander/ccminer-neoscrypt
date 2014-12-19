@@ -17,8 +17,8 @@ static __device__ uint64_t cuda_swab32ll(uint64_t x) {
 
 __constant__ static uint32_t  c_data[20];
 
-__constant__ static uint32_t sigma[16][16];
-static uint32_t  c_sigma[16][16] = {
+__constant__ static uint8_t sigma[16][16];
+static uint8_t  c_sigma[16][16] = {
 	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 	{ 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
 	{ 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -59,8 +59,8 @@ static const uint32_t  c_u256[16] = {
 };
 
 #define GS2(a,b,c,d,x) { \
-	const uint32_t idx1 = sigma[r][x]; \
-	const uint32_t idx2 = sigma[r][x+1]; \
+	const uint8_t idx1 = sigma[r][x]; \
+	const uint8_t idx2 = sigma[r][x+1]; \
 	v[a] += (m[idx1] ^ u256[idx2]) + v[b]; \
 	v[d] = SPH_ROTL32(v[d] ^ v[a], 16); \
 	v[c] += v[d]; \
@@ -75,8 +75,8 @@ static const uint32_t  c_u256[16] = {
 //#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
 #define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 #define hostGS(a,b,c,d,x) { \
-	const uint32_t idx1 = c_sigma[r][x]; \
-	const uint32_t idx2 = c_sigma[r][x+1]; \
+	const uint8_t idx1 = c_sigma[r][x]; \
+	const uint8_t idx2 = c_sigma[r][x+1]; \
 	v[a] += (m[idx1] ^ c_u256[idx2]) + v[b]; \
 	v[d] = ROTR32(v[d] ^ v[a], 16); \
 	v[c] += v[d]; \
@@ -88,20 +88,13 @@ static const uint32_t  c_u256[16] = {
 	v[b] = ROTR32(v[b] ^ v[c], 7); \
 	}
 
-/* Second part (64-80) msg never change, store it */
-__device__ __constant__ static const uint32_t  c_Padding[16] = {
-	0, 0, 0, 0,
-	0x80000000, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 1, 0, 640,
-};
 
 __host__ __forceinline__
 static void blake256_compress1st(uint32_t *h, const uint32_t *block, const uint32_t T0)
 {
 	uint32_t m[16];
 	uint32_t v[16];
-
+	
 	for (int i = 0; i < 16; i++) {
 		m[i] = block[i];
 	}
@@ -132,27 +125,27 @@ static void blake256_compress1st(uint32_t *h, const uint32_t *block, const uint3
 		hostGS(3, 4, 0x9, 0xE, 0xE);
 	}
 
-	for (int i = 0; i < 16; i++) {
-		int j = i & 7;
-		h[j] ^= v[i];
-	}
+	h[0] ^= v[0] ^ v[8];
+	h[1] ^= v[1] ^ v[9];
+	h[2] ^= v[2] ^ v[10];
+	h[3] ^= v[3] ^ v[11];
+	h[4] ^= v[4] ^ v[12];
+	h[5] ^= v[5] ^ v[13];
+	h[6] ^= v[6] ^ v[14];
+	h[7] ^= v[7] ^ v[15];
 }
 
 __device__ __forceinline__
 static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint32_t T0)
 {
-	uint32_t m[16];
 	uint32_t v[16];
-
-	m[0] = block[0];
-	m[1] = block[1];
-	m[2] = block[2];
-	m[3] = block[3];
-
-	#pragma unroll
-	for (int i = 4; i < 16; i++) {
-		m[i] = c_Padding[i];
-	}
+	uint32_t m[16]=
+	{
+		block[0], block[1], block[2], block[3],
+		0x80000000, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 1, 0, 640
+	};
 
 	#pragma unroll 8
 	for (int i = 0; i < 8; i++)
@@ -162,13 +155,11 @@ static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint3
 	v[9] =  u256[1];
 	v[10] = u256[2];
 	v[11] = u256[3];
-
 	v[12] = u256[4] ^ T0;
 	v[13] = u256[5] ^ T0;
 	v[14] = u256[6];
 	v[15] = u256[7];
 
-	#pragma unroll 14
 	for (int r = 0; r < 14; r++) {
 		/* column step */
 		GS2(0, 4, 0x8, 0xC, 0x0);
@@ -182,14 +173,17 @@ static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint3
 		GS2(3, 4, 0x9, 0xE, 0xE);
 	}
 
-	#pragma unroll 16
-	for (int i = 0; i < 16; i++) {
-		int j = i & 7;
-		h[j] ^= v[i];
-	}
+	h[0] ^= v[0] ^ v[8];
+	h[1] ^= v[1] ^ v[9];
+	h[2] ^= v[2] ^ v[10];
+	h[3] ^= v[3] ^ v[11];
+	h[4] ^= v[4] ^ v[12];
+	h[5] ^= v[5] ^ v[13];
+	h[6] ^= v[6] ^ v[14];
+	h[7] ^= v[7] ^ v[15];
 }
 
-__global__ __launch_bounds__(256,3)
+__global__ __launch_bounds__(256,4)
 void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint64_t * Hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -218,7 +212,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 __host__
 void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order)
 {
-	const int threadsperblock = 256;
+	const int threadsperblock = 64;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
