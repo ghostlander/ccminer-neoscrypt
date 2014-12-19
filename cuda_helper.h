@@ -603,8 +603,8 @@ static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
 	}
 	else
 	{
-		a.y = 0;
-		a.x = (a.y << (offset-32));
+		a.y = (a.x << (offset-32));
+		a.x = 0;
 	}
 	return a;
 #endif
@@ -631,13 +631,13 @@ static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
 	#else
 	if (offset<=32) 
 	{
-		a.y = (a.y >> offset) | (a.x << (32 - offset));
-		a.x = (a.x >> offset);
+		a.x = (a.x >> offset) | (a.y << (32 - offset));
+		a.y = (a.y >> offset);
 	}
 	else
 	{
-		a.x = 0;
-		a.y = (a.y >> (offset - 32));
+		a.x = (a.y >> (offset - 32));
+		a.y = 0;
 	}
 	return a;
 	#endif
