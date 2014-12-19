@@ -234,10 +234,10 @@ static __constant__ uint2 blake2b_IV[8] = {
 static __device__ __forceinline__
 void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
 {
-	a += b; d ^= a; d = ROR2(d, 32);
-	c += d; b ^= c; b = ROR2(b, 24);
-	a += b; d ^= a; d = ROR2(d, 16);
-	c += d; b ^= c; b = ROR2(b, 63);
+	a += b; d = SWAPINT2(d ^ a);
+	c += d; b = ROR2(b ^ c, 24);
+	a += b; d = ROR2(d ^ a, 16);
+	c += d; b = ROR2(b ^ c, 63);
 }
 
 static __device__ __forceinline__
