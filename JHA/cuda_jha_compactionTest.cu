@@ -329,8 +329,8 @@ __host__ void jackpot_compactTest_cpu_dualCompaction(int thr_id, uint32_t thread
 }
 
 __host__ void jackpot_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
-											uint32_t *d_nonces1, size_t *nrm1,
-											uint32_t *d_nonces2, size_t *nrm2,
+											uint32_t *d_nonces1, uint32_t *nrm1,
+											uint32_t *d_nonces2, uint32_t *nrm2,
 											int order)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
@@ -341,6 +341,6 @@ __host__ void jackpot_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint
 		startNounce, inpHashes, d_validNonceTable);
 
 	cudaStreamSynchronize(NULL); // Das original braucht zwar etwas CPU-Last, ist an dieser Stelle aber evtl besser
-	*nrm1 = (size_t)h_numValid[thr_id][0];
-	*nrm2 = (size_t)h_numValid[thr_id][1];
+	*nrm1 = h_numValid[thr_id][0];
+	*nrm2 = h_numValid[thr_id][1];
 }

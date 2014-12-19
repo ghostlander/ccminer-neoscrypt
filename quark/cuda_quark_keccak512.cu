@@ -159,7 +159,7 @@ keccak_block(uint64_t *s) {
 }
 static __device__ __forceinline__ void
 keccak_block_35(uint2 *s) {
-	size_t i;
+	int i;
 	uint2 t[5], u[5], v, w;
 
 	for (i = 0; i < 24; i++) {

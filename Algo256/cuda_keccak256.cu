@@ -37,7 +37,7 @@ __constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + paddi
 __device__ __forceinline__
 static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint2 t1, t[5], u[5], v, w;
 
 	t1 = s[1] ^ s[16];
@@ -159,7 +159,7 @@ static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 __device__ __forceinline__
 static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint64_t t1, t[5], u[5], v, w;
 
 	/* absorb input */
@@ -283,7 +283,7 @@ static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constan
 __device__ __forceinline__
 static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint2 t[5], u[5], v, w;
 
 	/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -410,7 +410,7 @@ static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
 __device__ __forceinline__
 static void keccak_blockv30_80(uint64_t *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint64_t t[5], u[5], v, w;
 
 	/* absorb input */

@@ -31,7 +31,7 @@ __constant__ uint64_t c_keccak_round_constants[24];
 
 static __device__ __forceinline__ void
 keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_constants) {
-    size_t i;
+    int i;
     uint64_t t[5], u[5], v, w;
 
     /* absorb input */
@@ -131,7 +131,7 @@ __global__ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounc
         uint32_t hash[16];
 
 #pragma unroll 8
-        for (size_t i = 0; i < 64; i += 8) {
+        for (int i = 0; i < 64; i += 8) {
             U64TO32_LE((&hash[i/4]), keccak_gpu_state[i / 8]);
         }
 
