@@ -658,14 +658,12 @@ void x11_simd512_cpu_free(int thr_id)
 __host__
 void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const uint32_t threadsperblock = TPB;
-
-	dim3 block(threadsperblock);
-	dim3 grid8(((threads + threadsperblock-1)/threadsperblock)*8);
+	dim3 block(TPB);
+	dim3 grid8(((threads + TPB-1)/TPB)*8);
 
 	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
 
 	if (device_sm[device_map[thr_id]] >= 500) 
 	{

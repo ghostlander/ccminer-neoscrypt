@@ -285,10 +285,8 @@ void lyra2_cpu_init(int thr_id, uint32_t threads)
 __host__
 void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB - 1) / TPB);
+	dim3 block(TPB);
 
 	lyra2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_outputHash);
 

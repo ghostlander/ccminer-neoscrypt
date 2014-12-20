@@ -2619,8 +2619,8 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	const uint32_t threadsperblock = TPB;
 
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 
 	size_t shared_size = 4096;
 
@@ -2630,11 +2630,10 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 
 __host__ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = TPB;
 
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 
 	size_t shared_size = 4096;
 

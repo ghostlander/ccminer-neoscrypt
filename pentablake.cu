@@ -308,10 +308,8 @@ void pentablake_gpu_hash_80(uint32_t threads, const uint32_t startNounce, void *
 __host__
 void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	pentablake_gpu_hash_80 <<<grid, block, shared_size>>> (threads, startNounce, d_outputHash);
@@ -367,10 +365,8 @@ void pentablake_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_
 __host__
 void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB - 1) / TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	pentablake_gpu_hash_64 <<<grid, block, shared_size>>> (threads, startNounce, (uint64_t*)d_outputHash);
@@ -384,11 +380,10 @@ void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, 
 __host__
 uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const uint32_t threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
@@ -443,11 +438,10 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 __host__ static
 uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
 {
-	const uint32_t threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB - 1) / TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
