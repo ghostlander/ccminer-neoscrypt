@@ -238,13 +238,10 @@ void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *out
 #else
 		groestl256_perm_P(thread, message, NULL);
 #endif
-		state[14] ^= message[14];
 		state[15] ^= message[15];
 
-		uint32_t nonce = startNounce + thread;
-		if (state[15] <= pTarget[7]) {
-			nonceVector[0] = nonce;
-		}
+		if (state[15] <= pTarget[7])
+			nonceVector[0] = startNounce + thread;
 	}
 }
 
