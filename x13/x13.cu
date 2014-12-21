@@ -160,7 +160,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xff;
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{

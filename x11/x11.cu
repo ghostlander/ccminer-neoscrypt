@@ -3,6 +3,9 @@ extern "C"
 
 #define FASTECHO 0			//Fast echo can give hardware errors on low difficulty but accepted on most pools.
 
+#ifdef _DEBUG //Visual Leak Detector for Visual C++ 
+//	#include <vld.h>
+#endif
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"
 #include "sph/sph_groestl.h"
@@ -144,7 +147,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xff;
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{
@@ -194,14 +197,39 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 					pdata[21] = foundNonce.y;
 					res++;
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
-				}			
+				}
 				pdata[19] = foundNonce.x;
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
-			else
+			else //quick echo failed. Do full echo
 			{
+				x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+				uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+				if (foundNonce != UINT32_MAX)
+				{
+					be32enc(&endiandata[19], foundNonce);
+					x11hash(vhash64, endiandata);
+					if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+					{
+						int res = 1;
+						// check if there was some other ones...
+						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+						*hashes_done = pdata[19] - first_nonce + throughput;
+						if (secNonce != 0) {
+							pdata[21] = secNonce;
+							res++;
+							if (opt_benchmark)  applog(LOG_INFO, "Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
+						}
+						pdata[19] = foundNonce;
+						if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+						return res;
+					}
+				}
+				else
+				{
 					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				}
 			}
 		}
 		#else
