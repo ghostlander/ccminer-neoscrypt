@@ -11,7 +11,7 @@ static uint32_t *h_numValid[8];
 static uint32_t *d_partSum[2][8]; // für bis zu vier partielle Summen
 
 // aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+//extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // True/False tester
 typedef uint32_t(*cuda_compactTestFunction_t)(uint32_t *inpHash);
@@ -265,9 +265,6 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t thread
 		quark_compactTest_gpu_SCAN<<<thr3,blockSize2, 32*sizeof(uint32_t)>>>(d_partSum[0][thr_id], (blockSize2>32) ? 32 : blockSize2);
 	}
 
-	// Sync + Anzahl merken
-	cudaStreamSynchronize(NULL);
-
 	if(callThrid)
 		cudaMemcpy(nrm, &(d_partSum[1][thr_id])[thr2-1], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	else
@@ -284,9 +281,6 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t thread
 	// Scatter
 	quark_compactTest_gpu_SCATTER<<<thr1,blockSize,0>>>(d_tempBranch1Nonces[thr_id], d_nonces1, 
 		function, orgThreads, startNounce, inpHashes, d_validNonceTable);
-
-	// Sync
-	cudaStreamSynchronize(NULL);
 }
 
 ////// ACHTUNG: Diese funktion geht aktuell nur mit threads > 65536 (Am besten 256 * 1024 oder 256*2048)
@@ -296,37 +290,6 @@ __host__ void quark_compactTest_cpu_dualCompaction(int thr_id, uint32_t threads,
 {
 	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[0], d_nonces1, h_QuarkTrueFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
 	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[1], d_nonces2, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
-
-	/*
-	// threadsPerBlock ausrechnen
-	int blockSize = 256;
-	int thr1 = threads / blockSize;
-	int thr2 = threads / (blockSize*blockSize);
-
-	// 1
-	quark_compactTest_gpu_SCAN<<<thr1,blockSize, 32*sizeof(uint32_t)>>>(d_tempBranch1Nonces[thr_id], 32, d_partSum1[thr_id], h_QuarkTrueFunction[thr_id], threads, startNounce, inpHashes);
-	quark_compactTest_gpu_SCAN<<<thr2,blockSize, 32*sizeof(uint32_t)>>>(d_partSum1[thr_id], 32, d_partSum2[thr_id]);
-	quark_compactTest_gpu_SCAN<<<1, thr2, 32*sizeof(uint32_t)>>>(d_partSum2[thr_id], (thr2>32) ? 32 : thr2);
-	cudaStreamSynchronize(NULL);
-	cudaMemcpy(&nrm[0], &(d_partSum2[thr_id])[thr2-1], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	quark_compactTest_gpu_ADD<<<thr2-1, blockSize>>>(d_partSum1[thr_id]+blockSize, d_partSum2[thr_id], blockSize*thr2);
-	quark_compactTest_gpu_ADD<<<thr1-1, blockSize>>>(d_tempBranch1Nonces[thr_id]+blockSize, d_partSum1[thr_id], threads);
-
-	// 2
-	quark_compactTest_gpu_SCAN<<<thr1,blockSize, 32*sizeof(uint32_t)>>>(d_tempBranch2Nonces[thr_id], 32, d_partSum1[thr_id], h_QuarkFalseFunction[thr_id], threads, startNounce, inpHashes);
-	quark_compactTest_gpu_SCAN<<<thr2,blockSize, 32*sizeof(uint32_t)>>>(d_partSum1[thr_id], 32, d_partSum2[thr_id]);
-	quark_compactTest_gpu_SCAN<<<1, thr2, 32*sizeof(uint32_t)>>>(d_partSum2[thr_id], (thr2>32) ? 32 : thr2);
-	cudaStreamSynchronize(NULL);
-	cudaMemcpy(&nrm[1], &(d_partSum2[thr_id])[thr2-1], sizeof(uint32_t), cudaMemcpyDeviceToHost);	
-	quark_compactTest_gpu_ADD<<<thr2-1, blockSize>>>(d_partSum1[thr_id]+blockSize, d_partSum2[thr_id], blockSize*thr2);
-	quark_compactTest_gpu_ADD<<<thr1-1, blockSize>>>(d_tempBranch2Nonces[thr_id]+blockSize, d_partSum1[thr_id], threads);
-	
-	// Hier ist noch eine Besonderheit: in d_tempBranch1Nonces sind die element von 1...nrm1 die Interessanten
-	// Schritt 3: Scatter
-	quark_compactTest_gpu_SCATTER<<<thr1,blockSize,0>>>(d_tempBranch1Nonces[thr_id], d_nonces1, h_QuarkTrueFunction[thr_id], threads, startNounce, inpHashes);
-	quark_compactTest_gpu_SCATTER<<<thr1,blockSize,0>>>(d_tempBranch2Nonces[thr_id], d_nonces2, h_QuarkFalseFunction[thr_id], threads, startNounce, inpHashes);
-	cudaStreamSynchronize(NULL);
-	*/
 }
 
 __host__ void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
@@ -341,7 +304,6 @@ __host__ void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32
 		h_numValid[thr_id], d_nonces1, d_nonces2,
 		startNounce, inpHashes, d_validNonceTable);
 
-	cudaStreamSynchronize(NULL); // Das original braucht zwar etwas CPU-Last, ist an dieser Stelle aber evtl besser
 	*nrm1 = h_numValid[thr_id][0];
 	*nrm2 = h_numValid[thr_id][1];
 }
@@ -355,6 +317,5 @@ __host__ void quark_compactTest_single_false_cpu_hash_64(int thr_id, uint32_t th
 
 	quark_compactTest_cpu_singleCompaction(thr_id, threads, h_numValid[thr_id], d_nonces1, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
 
-	cudaStreamSynchronize(NULL); // Das original braucht zwar etwas CPU-Last, ist an dieser Stelle aber evtl besser
 	*nrm1 = h_numValid[thr_id][0];
 }

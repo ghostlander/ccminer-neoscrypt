@@ -35,7 +35,6 @@ extern void quark_skein512_cpu_init(int thr_id);
 extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
 extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
@@ -139,7 +138,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00F;
+		((uint32_t*)ptarget)[7] = 0x0F;
 
 	if (!init[thr_id])
 	{
@@ -235,6 +234,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
+				if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
