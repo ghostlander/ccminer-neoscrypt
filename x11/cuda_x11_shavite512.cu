@@ -2616,8 +2616,6 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 
 __host__ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const uint32_t threadsperblock = TPB;
-
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);

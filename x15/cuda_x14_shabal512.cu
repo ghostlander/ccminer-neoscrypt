@@ -410,7 +410,6 @@ void x14_shabal512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 			C8 = d_C512[8], C9 = d_C512[9], CA = d_C512[10], CB = d_C512[11],
 			CC = d_C512[12], CD = d_C512[13], CE = d_C512[14], CF = d_C512[15];
 		uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF;
-		uint32_t Wlow = 1, Whigh = 0;
 
 		M0 = Hash[0];
 		M1 = Hash[1];
