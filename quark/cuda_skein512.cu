@@ -514,11 +514,9 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const uint32_t threadsperblock = TPB;
-
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
