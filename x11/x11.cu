@@ -224,11 +224,11 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 						pdata[19] = foundNonce;
 						if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 						return res;
+					} else
+					{
+						applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 					}
-				}
-				else
-				{
-					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+
 				}
 			}
 		}
