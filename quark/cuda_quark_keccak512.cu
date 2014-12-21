@@ -223,7 +223,7 @@ keccak_block_35(uint2 *s) {
 	}
 }
 
-__global__  __launch_bounds__(256, 3)
+__global__  __launch_bounds__(256, 2)
 void quark_keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -253,39 +253,6 @@ void quark_keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_
         for(int i=0;i<8;i++)
 			inpHash[i] = devectorize(keccak_gpu_state[i]);
     }
-}
-
-__global__  __launch_bounds__(256, 3)
-void quark_keccak512_gpu_hash30_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
-{
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint64_t *inpHash = &g_hash[8 * hashPosition];
-
-		uint64_t keccak_gpu_state[25];
-#pragma unroll
-		for (int i = 0; i<8; i++)
-		{
-			keccak_gpu_state[i] = inpHash[i];
-		}
-		keccak_gpu_state[8] = 0x8000000000000001ULL;
-
-#pragma unroll
-		for (int i = 9; i<25; i++)
-		{
-			keccak_gpu_state[i] = 0;
-		}
-
-		keccak_block(keccak_gpu_state);
-
-#pragma unroll 16
-		for (int i = 0; i<8; i++)
-			inpHash[i] = keccak_gpu_state[i];
-	}
 }
 
 

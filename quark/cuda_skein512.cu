@@ -3,6 +3,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#define TPB 128 
 
 // aus cpu-miner.c
 extern short device_map[8];
@@ -14,40 +15,6 @@ extern short device_map[8];
 
 __constant__ uint32_t pTarget[8];
 static uint32_t *d_nonce[8];
-
-#if __CUDA_ARCH__ >= 320
-__device__
-uint64_t skein_rotl64(const uint64_t x, const int offset)
-{
-	uint64_t res;
-	if(offset<32)
-	{
-		asm("{\n\t"
-			".reg .u32 tl,th,vl,vh;\n\t"
-			"mov.b64 {tl,th}, %1;\n\t"
-			"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
-			"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
-			"mov.b64 %0, {vh,vl};\n\t"
-			"}"
-			: "=l"(res) : "l"(x) , "r"(offset)
-			);
-	} else
-	{
-		asm("{\n\t"
-			".reg .u32 tl,th,vl,vh;\n\t"
-			"mov.b64 {tl,th}, %1;\n\t"
-			"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
-			"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
-			"mov.b64 %0, {vl,vh};\n\t"
-			"}"
-			: "=l"(res) : "l"(x) , "r"(offset)
-			);
-	}
-	return res;
-}
-#undef ROTL64
-#define ROTL64 skein_rotl64
-#endif
 
 /*
  * M9_ ## s ## _ ## i  evaluates to s+i mod 9 (0 <= s <= 18, 0 <= i <= 7).
@@ -317,7 +284,13 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 		TFBIG_MIX8(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 25, 29, 39, 43); \
 		TFBIG_MIX8(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
 	}
-__global__ 
+
+__global__
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(TPB, 2)
+#else
+__launch_bounds__(TPB, 1)
+#endif
 void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -541,7 +514,7 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 448;
+	const int threadsperblock = TPB;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

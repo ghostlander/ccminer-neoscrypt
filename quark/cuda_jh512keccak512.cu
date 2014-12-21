@@ -355,8 +355,9 @@ __constant__ uint64_t c_keccak_round_constants[24] = {
 	0x0000000080000001ull, 0x8000000080008008ull
 };
 
+
 static __device__ __forceinline__ void
-keccak_block_35(uint2 *s) {
+keccak_block(uint2 *s) {
 	int i;
 	uint2 t[5], u[5], v, w;
 
@@ -505,7 +506,7 @@ void quark_jh512Keccak512_gpu_hash_64(int threads, uint32_t startNounce, uint32_
 		{
 			keccak_gpu_state[i] = UINT2(0, 0);
 		}
-		keccak_block_35(keccak_gpu_state);
+		keccak_block(keccak_gpu_state);
 
 		uint64_t *outputhash = (uint64_t *)Hash;
 #pragma unroll 16
