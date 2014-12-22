@@ -138,7 +138,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0F;
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{
@@ -230,13 +230,23 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[19], foundNonce);
 			quarkhash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) 
+			{
+				int res = 1;
+				// check if there was some other ones...
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) 
+				{
+					pdata[21] = secNonce;
+					res++;
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				}
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
-				if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
-				return 1;
-			} else
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				return res;
+			}
+			else
 			{
 				if (vhash64[7] > Htarg) // don't show message if it is equal but fails fulltest
 					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
