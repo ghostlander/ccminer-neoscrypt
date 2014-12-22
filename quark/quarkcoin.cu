@@ -236,8 +236,10 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 				*hashes_done = foundNonce - first_nonce + 1;
 				if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
-			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+			} else
+			{
+				if (vhash64[7] > Htarg) // don't show message if it is equal but fails fulltest
+					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
