@@ -258,7 +258,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaThreadSynchronize(); /* seems no more required */
+		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
 			extra_results[n] = h_resNonce[thr_id][n+1];
@@ -343,7 +343,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	blake256_gpu_hash_16 <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int) rounds, opt_tracegpu);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaThreadSynchronize(); /* seems no more required */
+		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
 			extra_results[n] = h_resNonce[thr_id][n+1];

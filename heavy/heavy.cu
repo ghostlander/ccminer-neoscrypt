@@ -208,9 +208,9 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
         uint64_t *t;
 
         hefty_cpu_hash(thr_id, throughput, pdata[19]);
-        //cudaThreadSynchronize();
+        //cudaDeviceSynchronize();
         sha256_cpu_hash(thr_id, throughput, pdata[19]);
-        //cudaThreadSynchronize();
+        //cudaDeviceSynchronize();
 
         // Hier ist die längste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
         MyStreamSynchronize(NULL, 1, thr_id);
@@ -223,7 +223,7 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
             goto emptyNonceVector;
 
         keccak512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
-        //cudaThreadSynchronize();
+        //cudaDeviceSynchronize();
 
         ////// Compaction
         t = (uint64_t*) target3;
@@ -233,7 +233,7 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
             goto emptyNonceVector;
 
         blake512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
-        //cudaThreadSynchronize();
+        //cudaDeviceSynchronize();
 
         ////// Compaction
         t = (uint64_t*) target5;
@@ -243,7 +243,7 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
             goto emptyNonceVector;
 
         groestl512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
-        //cudaThreadSynchronize();
+        //cudaDeviceSynchronize();
 
         ////// Compaction
         t = (uint64_t*) target4;

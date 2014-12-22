@@ -468,7 +468,7 @@ uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t 
 	qubit_luffa512_gpu_finalhash_80 <<<grid, block, shared_size>>> (threads, startNounce, d_outputHash, d_resNounce[thr_id]);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], NBN * sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaThreadSynchronize();
+		//cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
 #if NBN > 1
 		extra_results[0] = h_resNounce[thr_id][1];

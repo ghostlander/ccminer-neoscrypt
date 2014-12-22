@@ -590,7 +590,7 @@ uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounc
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(d_nounce[thr_id], d_KNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaThreadSynchronize();
+	cudaDeviceSynchronize();
 	result = *d_nounce[thr_id];
 
 	return result;
