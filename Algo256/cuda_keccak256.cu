@@ -37,7 +37,7 @@ __constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + paddi
 __device__ __forceinline__
 static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint2 t1, t[5], u[5], v, w;
 
 	t1 = s[1] ^ s[16];
@@ -159,7 +159,7 @@ static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 __device__ __forceinline__
 static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint64_t t1, t[5], u[5], v, w;
 
 	/* absorb input */
@@ -283,7 +283,7 @@ static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constan
 __device__ __forceinline__
 static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint2 t[5], u[5], v, w;
 
 	/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -410,7 +410,7 @@ static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
 __device__ __forceinline__
 static void keccak_blockv30_80(uint64_t *s, const uint64_t *keccak_round_constants)
 {
-	size_t i;
+	int i;
 	uint64_t t[5], u[5], v, w;
 
 	/* absorb input */
@@ -535,9 +535,9 @@ static void keccak_blockv30_80(uint64_t *s, const uint64_t *keccak_round_constan
 #endif
 
 __global__ __launch_bounds__(128,5)
-void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
+void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
@@ -575,11 +575,11 @@ void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash, 
 }
 
 __host__
-uint32_t keccak256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
 	uint32_t result = UINT32_MAX;
 	cudaMemset(d_KNonce[thr_id], 0xff, sizeof(uint32_t));
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -590,16 +590,16 @@ uint32_t keccak256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, ui
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(d_nounce[thr_id], d_KNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaThreadSynchronize();
+	cudaDeviceSynchronize();
 	result = *d_nounce[thr_id];
 
 	return result;
 }
 
 __global__ __launch_bounds__(256,3)
-void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
+void keccak256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 #if __CUDA_ARCH__ >= 350 /* tpr: to double check if faster on SM5+ */
@@ -637,9 +637,9 @@ void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHa
 }
 
 __host__
-void keccak256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -658,7 +658,7 @@ void keccak256_setBlock_80(void *pdata,const void *pTargetIn)
 }
 
 __host__
-void keccak256_cpu_init(int thr_id, int threads)
+void keccak256_cpu_init(int thr_id, uint32_t threads)
 {
 	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMallocHost(&d_nounce[thr_id], 1*sizeof(uint32_t)));

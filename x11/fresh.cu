@@ -15,18 +15,18 @@ extern "C" {
 static uint32_t *d_hash[8];
 
 extern void x11_shavite512_setBlock_80(void *pdata);
-extern void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern int  x11_simd512_cpu_init(int thr_id, int threads);
-extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
+extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x11_echo512_cpu_init(int thr_id, int threads);
-extern void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
+extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_compactTest_cpu_init(int thr_id, int threads);
-extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
-											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse,
+extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
+extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes,
+											uint32_t *d_noncesTrue, uint32_t *nrmTrue, uint32_t *d_noncesFalse, uint32_t *nrmFalse,
 											int order);
 
 // CPU Hash
@@ -102,7 +102,6 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	x11_shavite512_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
-	bool lastloop = false;
 	do {
 		uint32_t Htarg = ptarget[7];
 
@@ -119,7 +118,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 #if NULLTEST
 		uint32_t buf[8]; memset(buf, 0, sizeof buf);
 		CUDA_SAFE_CALL(cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost));
-		CUDA_SAFE_CALL(cudaThreadSynchronize());
+		CUDA_SAFE_CALL(cudaDeviceSynchronize());
 		print_hash((unsigned char*)buf); printf("\n");
 #endif
 
@@ -147,19 +146,8 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		if (!lastloop)
-		{
-			if (max_nonce - throughput <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughput;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

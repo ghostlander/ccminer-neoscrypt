@@ -169,9 +169,9 @@ __global__
 #else
 	__launch_bounds__(256, 4)
 #endif
-void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
+void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 #if USE_SHUFFLE
 	const int warpID = threadIdx.x & 0x0F; // 16 warps
@@ -239,9 +239,9 @@ __launch_bounds__(256, 2)
 #else
 __launch_bounds__(256, 4)
 #endif
-void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, uint32_t *outputHash)
+void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t buf[16];
@@ -309,9 +309,9 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 }
 
 
-__host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
+__host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -325,9 +325,9 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t start
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+__host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

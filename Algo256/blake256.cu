@@ -245,11 +245,10 @@ __host__
 uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint64_t highTarget,
 	const uint32_t crcsum, const int8_t rounds)
 {
-	const int threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
@@ -259,7 +258,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaThreadSynchronize(); /* seems no more required */
+		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
 			extra_results[n] = h_resNonce[thr_id][n+1];
@@ -332,11 +331,10 @@ __host__
 static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint64_t highTarget,
 	const int8_t rounds)
 {
-	const int threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
 	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
@@ -345,7 +343,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	blake256_gpu_hash_16 <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int) rounds, opt_tracegpu);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaThreadSynchronize(); /* seems no more required */
+		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
 			extra_results[n] = h_resNonce[thr_id][n+1];
@@ -428,7 +426,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	crcsum = crc32_u32t(pdata, 64);
 #endif /* PRECALC64 */
 
-	bool lastloop = false;
 	do {
 		uint32_t foundNonce =
 #if PRECALC64
@@ -479,19 +476,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			}
 		}
 
-		if (!lastloop)
-		{
-			if (max_nonce - throughput <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughput;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce;
 

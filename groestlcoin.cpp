@@ -87,7 +87,6 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
     // Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
     groestlcoin_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
     
-	bool lastloop = false;
     do {
         // GPU
         uint32_t foundNounce = 0xFFFFFFFF;
@@ -113,19 +112,8 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
             foundNounce = 0xffffffff;
         }
 
-		if (!lastloop)
-		{
-			if (max_nonce - throughPut <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughPut;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughPut;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughPut)));
 
     *hashes_done = pdata[19] - start_nonce + 1;
     free(outputHash);

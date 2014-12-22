@@ -266,9 +266,9 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint64_t T0)
 }
 
 __global__
-void pentablake_gpu_hash_80(int threads, const uint32_t startNounce, void *outputHash)
+void pentablake_gpu_hash_80(uint32_t threads, const uint32_t startNounce, void *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t h[8];
@@ -306,12 +306,10 @@ void pentablake_gpu_hash_80(int threads, const uint32_t startNounce, void *outpu
 }
 
 __host__
-void pentablake_cpu_hash_80(int thr_id, int threads, const uint32_t startNounce, uint32_t *d_outputHash, int order)
+void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	pentablake_gpu_hash_80 <<<grid, block, shared_size>>> (threads, startNounce, d_outputHash);
@@ -322,9 +320,9 @@ void pentablake_cpu_hash_80(int thr_id, int threads, const uint32_t startNounce,
 
 
 __global__
-void pentablake_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash)
+void pentablake_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads)
 	{
@@ -365,12 +363,10 @@ void pentablake_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash)
 }
 
 __host__
-void pentablake_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB - 1) / TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	pentablake_gpu_hash_64 <<<grid, block, shared_size>>> (threads, startNounce, (uint64_t*)d_outputHash);
@@ -384,11 +380,10 @@ void pentablake_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint3
 __host__
 uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const int threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
@@ -398,7 +393,7 @@ uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	pentablake_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id]);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		cudaThreadSynchronize();
+		cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
 		extra_results[0] = h_resNounce[thr_id][1];
 	}
@@ -443,11 +438,10 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 __host__ static
 uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
 {
-	const int threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB - 1) / TPB);
+	dim3 block(TPB);
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
@@ -458,7 +452,7 @@ uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounc
 
 	CUDA_SAFE_CALL(cudaDeviceSynchronize());
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		cudaThreadSynchronize();
+		cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
 		extra_results[0] = h_resNounce[thr_id][1];
 	}
@@ -514,7 +508,6 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 
 	pentablake_cpu_setBlock_80(endiandata, ptarget);
 
-	bool lastloop = false;
 	do {
 		int order = 0;
 
@@ -556,19 +549,8 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 			}
 		}
 
-		if (!lastloop)
-		{
-			if (max_nonce - throughput <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughput;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	cudaDeviceSynchronize();

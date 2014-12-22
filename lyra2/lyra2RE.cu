@@ -11,20 +11,20 @@ extern "C" {
 
 static _ALIGN(64) uint64_t *d_hash[8];
 
-extern void blake256_cpu_init(int thr_id, int threads);
+extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
-extern void keccak256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void keccak256_cpu_init(int thr_id, int threads);
-extern void skein256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void skein256_cpu_init(int thr_id, int threads);
+extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void keccak256_cpu_init(int thr_id, uint32_t threads);
+extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
-extern void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void lyra2_cpu_init(int thr_id, int threads);
+extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void lyra2_cpu_init(int thr_id, uint32_t threads);
 
 extern void groestl256_setTarget(const void *ptarget);
-extern uint32_t groestl256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
-extern void groestl256_cpu_init(int thr_id, int threads);
+extern void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order, uint32_t *resultnonces);
+extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 
 extern "C" void lyra2_hash(void *state, const void *input)
 {
@@ -94,29 +94,43 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 
 	do {
 		int order = 0;
-		uint32_t foundNonce;
+		uint32_t foundNonce[2] = { 0, 0 };
 
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		foundNonce = groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		if (foundNonce != UINT32_MAX)
+		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++, foundNonce);
+		CUDA_SAFE_CALL(cudaGetLastError());
+		if (foundNonce[0] != 0)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], foundNonce[0]);
 			lyra2_hash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			{
+				int res = 1;
+				// check if there was some other ones...
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				pdata[19] = foundNonce;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
-				return 1;
-			} else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				if (foundNonce[1] != 0)
+				{
+					pdata[21] = foundNonce[1];
+					res++;
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce[1], vhash64[7], Htarg);
+				}
+				pdata[19] = foundNonce[0];
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[0], vhash64[7], Htarg);
+				return res;
+			}
+			else
+			{
+				if (vhash64[7] > Htarg) // don't show message if it is equal but fails fulltest
+					applog(LOG_WARNING, "GPU #%d: result does not validate on CPU!", thr_id);
 			}
 		}
+
 		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 

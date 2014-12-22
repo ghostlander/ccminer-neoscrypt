@@ -16,9 +16,9 @@ extern "C"
 
 static uint32_t *d_hash[8];
 
-extern void keccak256_cpu_init(int thr_id, int threads);
+extern void keccak256_cpu_init(int thr_id, uint32_t threads);
 extern void keccak256_setBlock_80(void *pdata,const void *ptarget);
-extern uint32_t keccak256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 // CPU Hash
 extern "C" void keccak256_hash(void *state, const void *input)
@@ -63,7 +63,6 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 
 	keccak256_setBlock_80((void*)endiandata, ptarget);
 
-	bool lastloop = false;
 	do {
 		int order = 0;
 
@@ -85,19 +84,8 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		if (!lastloop)
-		{
-			if (max_nonce - throughput <= pdata[19])
-			{
-				pdata[19] = max_nonce;
-				lastloop = true;
-			}
-			else
-				pdata[19] += throughput;
-		}
-		else
-			break;
-	} while (!work_restart[thr_id].restart);
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;

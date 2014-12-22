@@ -291,9 +291,9 @@ __launch_bounds__(TPB, 2)
 #else
 __launch_bounds__(TPB, 1)
 #endif
-void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
+void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// Skein
@@ -392,9 +392,9 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 
 /*
 __global__ 
-void quark_skein512_gpu_hash_64_final(const int threads,const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce)
+void quark_skein512_gpu_hash_64_final(const uint32_t threads,const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// Skein
@@ -512,13 +512,11 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 }
 
 __host__
-void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = TPB;
-
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
+	dim3 block(TPB);
 
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
@@ -530,9 +528,9 @@ void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, u
 
 /*
 __host__
-uint32_t quark_skein512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+uint32_t quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 448;
+	const uint32_t threadsperblock = 448;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

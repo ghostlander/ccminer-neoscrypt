@@ -386,11 +386,11 @@ static const uint32_t d_C512[] = {
 /***************************************************/
 // GPU Hash Function
 __global__ __launch_bounds__(256, 4)
-void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x14_shabal512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__syncthreads();
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads)
 	{
@@ -410,7 +410,6 @@ void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_ha
 			C8 = d_C512[8], C9 = d_C512[9], CA = d_C512[10], CB = d_C512[11],
 			CC = d_C512[12], CD = d_C512[13], CE = d_C512[14], CF = d_C512[15];
 		uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF;
-		uint32_t Wlow = 1, Whigh = 0;
 
 		M0 = Hash[0];
 		M1 = Hash[1];
@@ -483,9 +482,9 @@ void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_ha
 }
 
 // #include <stdio.h>
-__host__ void x14_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void x14_shabal512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 64;
+	const uint32_t threadsperblock = 64;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

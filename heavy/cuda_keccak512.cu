@@ -68,7 +68,7 @@ __constant__ uint64_t c_keccak_round_constants[24];
 
 __host__ __device__ void
 keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_constants) {
-	size_t i;
+	int i;
 	uint64_t t[5], u[5], v, w;
 
 	/* absorb input */
@@ -137,9 +137,9 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
 }
 
 // Die Hash-Funktion
-template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// bestimme den aktuellen Zähler
@@ -172,7 +172,7 @@ template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(int threads, uint32_
 		uint32_t hash[16];
 
 #pragma unroll 8
-		for (size_t i = 0; i < 64; i += 8) {
+		for (int i = 0; i < 64; i += 8) {
 			U64TO32_LE((&hash[i/4]), keccak_gpu_state[i / 8]);
 		}
 
@@ -186,7 +186,7 @@ template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(int threads, uint32_
 // ---------------------------- END CUDA keccak512 functions ------------------------------------
 
 __host__ 
-void keccak512_cpu_init(int thr_id, int threads)
+void keccak512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol( c_keccak_round_constants,
@@ -252,18 +252,18 @@ void keccak512_cpu_setBlock(void *data, int len)
 }
 
 __host__
-void keccak512_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
+void keccak512_cpu_copyHeftyHash(int thr_id, uint32_t threads, void *heftyHashes, int copy)
 {
 	// Hefty1 Hashes kopieren
 	if (copy)
 		CUDA_SAFE_CALL(cudaMemcpy(heavy_heftyHashes[thr_id], heftyHashes, 8 * sizeof(uint32_t) * threads, cudaMemcpyHostToDevice));
-	//else cudaThreadSynchronize();
+	//else cudaDeviceSynchronize();
 }
 
 __host__
-void keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
+void keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

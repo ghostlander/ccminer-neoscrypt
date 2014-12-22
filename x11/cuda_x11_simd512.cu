@@ -550,9 +550,9 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 
 /***************************************************/
 __global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
+x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x)/8;
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)/8;
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -576,9 +576,9 @@ x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, u
 }
 
 __global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -590,9 +590,9 @@ x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash
 	}
 }
 __global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -605,9 +605,9 @@ x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash
 
 
 __global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -622,9 +622,9 @@ x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t 
 
 
 __global__ void  __launch_bounds__(TPB, 4)
-x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_final_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -637,7 +637,7 @@ x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, ui
 }
 
 __host__ 
-int x11_simd512_cpu_init(int thr_id, int threads)
+int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 {
 	CUDA_SAFE_CALL(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads));
 	CUDA_SAFE_CALL(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads));
@@ -656,16 +656,14 @@ void x11_simd512_cpu_free(int thr_id)
 	cudaFree(&d_temp4[thr_id]);
 }
 __host__
-void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = TPB;
-
-	dim3 block(threadsperblock);
-	dim3 grid8(((threads + threadsperblock-1)/threadsperblock)*8);
+	dim3 block(TPB);
+	dim3 grid8(((threads + TPB-1)/TPB)*8);
 
 	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + TPB-1)/TPB);
 
 	if (device_sm[device_map[thr_id]] >= 500) 
 	{

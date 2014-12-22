@@ -140,10 +140,10 @@ static __constant__ uint2 blake2b_IV[8] = {
 static __device__ __forceinline__
 void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
 {
-	a += b; d ^= a; d = SWAPDWORDS2(d);
-	c += d; b ^= c; b = ROR2(b, 24);
-	a += b; d ^= a; d = ROR2(d, 16);
-	c += d; b ^= c; b = ROR2(b, 63);
+	a += b; d = SWAPINT2(d ^ a);
+	c += d; b = ROR2(b ^ c, 24);
+	a += b; d = ROR2(d ^ a, 16);
+	c += d; b = ROR2(b ^ c, 63);
 }
 
 
@@ -197,9 +197,9 @@ __device__ __forceinline__ void reduceDuplexRowSetup(const int rowIn, const int 
 }
 
 __global__ __launch_bounds__(TPB, 1)
-void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
+void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint2 state[16];
@@ -277,18 +277,16 @@ void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 }
 
 __host__
-void lyra2_cpu_init(int thr_id, int threads)
+void lyra2_cpu_init(int thr_id, uint32_t threads)
 {
 	//not used
 }
 
 __host__
-void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	const int threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
-	dim3 block(threadsperblock);
+	dim3 grid((threads + TPB - 1) / TPB);
+	dim3 block(TPB);
 
 	lyra2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_outputHash);
 

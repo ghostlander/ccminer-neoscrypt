@@ -22,10 +22,10 @@ static cudaDeviceProp props[8];
 #include "bitslice_transformations_quad.cu"
 
 __global__ __launch_bounds__(TPB, THF)
-void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t * __restrict__ g_hash, uint32_t * __restrict__ g_nonceVector)
+void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t * __restrict__ g_hash, uint32_t * __restrict__ g_nonceVector)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
     if (thread < threads)
     {
         // GROESTL
@@ -64,9 +64,9 @@ void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32
 }
 
 __global__ void __launch_bounds__(TPB, THF)
-quark_doublegroestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t * __restrict__ g_hash, uint32_t * __restrict__ g_nonceVector)
+quark_doublegroestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t * __restrict__ g_hash, uint32_t * __restrict__ g_nonceVector)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
     if (thread < threads)
     {
         // GROESTL
@@ -122,22 +122,20 @@ quark_doublegroestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint3
 }
 
 // Setup-Funktionen
-__host__ void quark_groestl512_cpu_init(int thr_id, int threads)
+__host__ void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
 {
     cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
 }
 
-__host__ void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    int threadsperblock = TPB;
-
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     const int factor = THF;
 
     // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
-    dim3 block(threadsperblock);
+    dim3 grid(factor*((threads + TPB-1)/TPB));
+    dim3 block(TPB);
 
     // Größe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
@@ -148,17 +146,15 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t sta
     MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    int threadsperblock = TPB;
-
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     const int factor = THF;
 
     // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
-    dim3 block(threadsperblock);
+    dim3 grid(factor*((threads + TPB-1)/TPB));
+    dim3 block(TPB);
 
     // Größe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
