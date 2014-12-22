@@ -175,7 +175,7 @@ void groestl256_perm_Q(uint32_t thread, uint32_t *a, char *mixtabs)
 }
 
 __global__ __launch_bounds__(256,1)
-void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash, uint32_t *nonceVector)
+void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ outputHash, uint32_t *const __restrict__ nonceVector)
 {
 #if USE_SHARED
 	extern __shared__ char mixtabs[];
@@ -241,7 +241,11 @@ void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *out
 		state[15] ^= message[15];
 
 		if (state[15] <= pTarget[7])
-			nonceVector[0] = startNounce + thread;
+		{
+			uint32_t tmp = atomicExch(&nonceVector[0], startNounce + thread);
+			if(tmp!=0)
+				nonceVector[1] = tmp;
+		}
 	}
 }
 
@@ -269,15 +273,14 @@ void groestl256_cpu_init(int thr_id, uint32_t threads)
 	texDef(t3up2, d_T3up, T3up_cpu, sizeof(uint32_t) * 256);
 	texDef(t3dn2, d_T3dn, T3dn_cpu, sizeof(uint32_t) * 256);
 
-	cudaMalloc(&d_GNonce[thr_id], sizeof(uint32_t));
-	cudaMallocHost(&d_gnounce[thr_id], 1*sizeof(uint32_t));
+	cudaMalloc(&d_GNonce[thr_id], 2*sizeof(uint32_t));
+	cudaMallocHost(&d_gnounce[thr_id], 2*sizeof(uint32_t));
 }
 
 __host__
-uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order, uint32_t *resultnonces)
 {
-	uint32_t result = 0xffffffff;
-	cudaMemset(d_GNonce[thr_id], 0xff, sizeof(uint32_t));
+	cudaMemset(d_GNonce[thr_id], 0, 2*sizeof(uint32_t));
 	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
@@ -290,13 +293,10 @@ uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNoun
 	size_t shared_size = 0;
 #endif
 	groestl256_gpu_hash32<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_GNonce[thr_id]);
-
-	MyStreamSynchronize(NULL, order, thr_id);
-	cudaMemcpy(d_gnounce[thr_id], d_GNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaThreadSynchronize();
-	result = *d_gnounce[thr_id];
-
-	return result;
+	cudaMemcpy(d_gnounce[thr_id], d_GNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaDeviceSynchronize();
+	resultnonces[0] = *(d_gnounce[thr_id]);
+	resultnonces[1] = *(d_gnounce[thr_id] + 1);
 }
 
 __host__
