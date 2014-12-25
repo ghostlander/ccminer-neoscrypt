@@ -11,7 +11,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 static uint2 *d_nonce[8];
 
 __device__ __forceinline__ void AES_2ROUND(
-	const uint32_t* __restrict__ sharedMemory,
+	const uint32_t*const __restrict__ sharedMemory,
 	uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3,
 	const uint32_t k0)
 {
@@ -341,7 +341,7 @@ __global__ __launch_bounds__(128, 6)
 #else
 __global__ __launch_bounds__(128, 7)
 #endif
-void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -388,7 +388,7 @@ __global__ __launch_bounds__(128, 6)
 #else
 __global__ __launch_bounds__(128, 8)
 #endif
-void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *d_nonce, uint32_t target)
+void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ d_nonce, uint32_t target)
 {
 	__shared__ uint32_t sharedMemory[1024];
 	echo_gpu_init(sharedMemory);

@@ -272,7 +272,7 @@ __constant__ __align__(64) uint32_t d_AES3[256] = {
 
 
 __device__ __forceinline__
-void aes_gpu_init(uint32_t *sharedMemory)
+void aes_gpu_init(uint32_t *const sharedMemory)
 {
 	/* each thread startup will fill a uint32 */
 	if (threadIdx.x < 256) {
@@ -289,7 +289,7 @@ void aes_gpu_init(uint32_t *sharedMemory)
 __device__
 static void aes_round(
 const uint32_t *const __restrict__ sharedMemory,
-	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, const uint32_t k0,
+const uint32_t x0, const uint32_t x1, const uint32_t x2, const uint32_t x3, const uint32_t k0,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
 
@@ -323,7 +323,7 @@ const uint32_t *const __restrict__ sharedMemory,
 __device__
 static void aes_round(
 const uint32_t *const __restrict__ sharedMemory,
-	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, 
+const uint32_t x0, const uint32_t x1, const uint32_t x2, const uint32_t x3,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
 	y0 = xor4_32(

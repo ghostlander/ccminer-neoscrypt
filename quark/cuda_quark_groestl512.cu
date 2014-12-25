@@ -22,7 +22,7 @@ static cudaDeviceProp props[8];
 #include "bitslice_transformations_quad.cu"
 
 __global__ __launch_bounds__(TPB, THF)
-void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t * __restrict__ g_hash, uint32_t * __restrict__ g_nonceVector)
+void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
