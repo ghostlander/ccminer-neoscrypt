@@ -308,7 +308,7 @@ void hefty_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *outputHash
 __host__
 void hefty_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaSetDevice(device_map[thr_id]);
+    CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 
     // Kopiere die Hash-Tabellen in den GPU-Speicher
     cudaMemcpyToSymbol( hefty_gpu_constantTable,

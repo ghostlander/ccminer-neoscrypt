@@ -72,7 +72,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 
 		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);

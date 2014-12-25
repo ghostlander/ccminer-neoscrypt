@@ -410,7 +410,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	if (!init[thr_id]) {
 		if (active_gpus > 1)
-			cudaSetDevice(device_map[thr_id]);
+			CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]),0);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		init[thr_id] = true;

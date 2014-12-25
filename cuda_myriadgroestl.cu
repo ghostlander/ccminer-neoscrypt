@@ -296,7 +296,7 @@ __global__ void
 // Setup-Funktionen
 __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaSetDevice(device_map[thr_id]);
+    CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
     
     cudaMemcpyToSymbol( myr_sha256_gpu_hashTable,
                         myr_sha256_cpu_hashTable,
