@@ -2620,9 +2620,7 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
 
-	size_t shared_size = 4096;
-
-	x11_shavite512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
@@ -2633,9 +2631,7 @@ __host__ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t 
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
 
-	size_t shared_size = 4096;
-
-	x11_shavite512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	x11_shavite512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 

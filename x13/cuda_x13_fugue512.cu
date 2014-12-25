@@ -561,10 +561,8 @@ static const uint32_t mixtab0_cpu[] = {
 __global__ __launch_bounds__(128,8)
 void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-	extern __shared__ char mixtabs[];
-
-
-
+	__shared__ uint32_t mixtabs[1024];
+	
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -673,7 +671,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 __global__ __launch_bounds__(128, 7)
 void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_nonce)
 {
-	extern __shared__ char mixtabs[];
+	__shared__ uint32_t mixtabs[1024];
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread< threads)
@@ -826,12 +824,9 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 4 * 256 * sizeof(uint32_t);
-
 	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-	x13_fugue512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x13_fugue512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 //	MyStreamSynchronize(NULL, order, thr_id);
 }
 __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -842,11 +837,9 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, u
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 4 * 256 * sizeof(uint32_t);
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
-	x13_fugue512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
+	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
 //	MyStreamSynchronize(NULL, order, thr_id);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
