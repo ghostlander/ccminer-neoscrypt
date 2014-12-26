@@ -214,7 +214,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 					{
 						int res = 1;
 						// check if there was some other ones...
-						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 						*hashes_done = pdata[19] - first_nonce + throughput;
 						if (secNonce != 0) {
 							pdata[21] = secNonce;
@@ -246,7 +246,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			{
 				int res = 1;
 				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (secNonce != 0) {
 					pdata[21] = secNonce;
