@@ -10,6 +10,8 @@
 #include <device_launch_parameters.h>
 #define __launch_bounds__(max_tpb, min_blocks)
 uint32_t __byte_perm(uint32_t x, uint32_t y, uint32_t z);
+uint32_t atomicExch(uint32_t *x, uint32_t y);
+uint32_t atomicAdd(uint32_t *x, uint32_t y);
 void __syncthreads(void);
 void __threadfence(void);
 #endif

@@ -409,29 +409,13 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 	{
 		uint32_t nounce = startNounce + thread;
 		uint32_t *inpHash = &g_hash[thread<<4];
-		uint32_t h[8];
 
-		#pragma unroll 8
-		for (int i=0; i < 8; i++)
-			h[i] = inpHash[i];
-
-		for (int i = 7; i >= 0; i--) {
-			uint32_t hash = h[i]; // cuda_swab32(h[i]);
-			if (hash > c_Target[i]) {
-				return;
-			}
-			if (hash < c_Target[i]) {
-				break;
-			}
+		if (cuda_hashisbelowtarget(inpHash, c_Target))
+		{
+			uint32_t tmp = atomicExch(resNounce, nounce);
+			if (tmp != 0xffffffffu)
+				resNounce[1] = tmp;
 		}
-
-		/* keep the smallest nounce, + extra one if found */
-		if (resNounce[0] > nounce) {
-			resNounce[1] = resNounce[0];
-			resNounce[0] = nounce;
-		}
-		else
-			resNounce[1] = nounce;
 	}
 }
 
@@ -450,7 +434,6 @@ uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounc
 
 	pentablake_gpu_check_hash <<<grid, block, shared_size>>> (threads, startNounce, d_inputHash, d_resNounce[thr_id]);
 
-	CUDA_SAFE_CALL(cudaDeviceSynchronize());
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
