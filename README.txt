@@ -109,6 +109,8 @@ its command line interface and options.
   -T, --timeout=N       network timeout, in seconds (default: 270)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
+  -N, --statsavg        number of samples used to display hashrate (default: 30)
+      --no-gbt          disable getblocktemplate support (height check in solo)
       --no-longpoll     disable X-Long-Polling support
       --no-stratum      disable X-Stratum support
   -q, --quiet           disable per-thread hashmeter output
@@ -175,13 +177,14 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Dec. 2014	  Merged optimized kernals from the SP-Hash fork.
+                  Intelligent duplicate shares check feature (enabled if needed)
 
-  Dec. 2014       v1.5.1 (not released yet!)
-                  Add lyra2 algo for Vertcoin (Release is 16 Dec 2014)
+  Dec. 16th 2014  v1.5.1
+                  Add lyra2RE algo for Vertcoin based on djm34/vtc code
                   Multiple shares support (2 for the moment)
                   X11 optimisations (From klaust and sp-hash)
                   HTML5 WebSocket api compatibility (see api/websocket.htm)
+                  Solo mode height checks with getblocktemplate rpc calls
 
   Nov. 27th 2014  v1.5.0
                   Upgrade compat jansson to 2.6 (for windows)

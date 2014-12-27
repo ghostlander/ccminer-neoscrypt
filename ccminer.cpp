@@ -193,6 +193,7 @@ bool have_longpoll = false;
 bool want_stratum = true;
 bool have_stratum = false;
 bool allow_gbt = true;
+bool check_dups = false;
 static bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = true;
@@ -311,7 +312,8 @@ Options:\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 5)\n\
-  -N, --statsavg        number of samples used to display hashrate (default: 20)\n\
+  -N, --statsavg        number of samples used to display hashrate (default: 30)\n\
+      --no-gbt          disable getblocktemplate support (height check in solo)\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
   -q, --quiet           disable per-thread hashmeter output\n\
@@ -360,6 +362,7 @@ static struct option const options[] = {
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
 	{ "no-color", 0, NULL, 1002 },
+	{ "no-gbt", 0, NULL, 1011 },
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "pass", 1, NULL, 'p' },
@@ -391,6 +394,8 @@ static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
 
+static bool get_blocktemplate(CURL *curl, struct work *work);
+
 void get_currentalgo(char* buf, int sz)
 {
 	snprintf(buf, sz, "%s", algo_names[opt_algo]);
@@ -403,7 +408,8 @@ void proper_exit(int reason)
 {
 	cuda_devicereset();
 
-	hashlog_purge_all();
+	if (check_dups)
+		hashlog_purge_all();
 	stats_purge_all();
 
 #ifdef WIN32
@@ -543,6 +549,10 @@ static int share_result(int result, const char *reason)
 			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
 			return 0;
 		}
+		if (strncmp(reason, "Duplicate share", 15) == 0) {
+			applog(LOG_WARNING, "enabling duplicates check feature");
+			check_dups = true;
+		}
 	}
 	return 1;
 }
@@ -553,13 +563,24 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
-	/* discard if a new bloc was sent */
-	stale_work = work->height != g_work.height;
+	/* discard if a newer bloc was received */
+	stale_work = work->height && work->height < g_work.height;
 	if (have_stratum && !stale_work) {
 		pthread_mutex_lock(&g_work_lock);
 		if (strlen(work->job_id + 8))
 			stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
 		pthread_mutex_unlock(&g_work_lock);
+	}
+
+	if (!have_stratum && !stale_work && allow_gbt) {
+		struct work wheight = { 0 };
+		if (get_blocktemplate(curl, &wheight)) {
+			if (work->height && work->height < wheight.height) {
+				if (opt_debug)
+					applog(LOG_WARNING, "bloc %u was already solved", work->height, wheight.height);
+				return true;
+			}
+		}
 	}
 
 	if (stale_work) {
@@ -570,7 +591,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	calc_diff(work, 0);
 
 	if (have_stratum) {
-		uint32_t sent;
+		uint32_t sent = 0;
 		uint32_t ntime, nonce;
 		uint16_t nvote;
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
@@ -580,7 +601,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		noncestr = bin2hex((const uchar*)(&nonce), 4);
 
-		sent = hashlog_already_submittted(work->job_id, nonce);
+		if (check_dups)
+			sent = hashlog_already_submittted(work->job_id, nonce);
 		if (sent > 0) {
 			sent = (uint32_t) time(NULL) - sent;
 			if (!opt_quiet) {
@@ -620,7 +642,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			return false;
 		}
 
-		hashlog_remember_submit(work, nonce);
+		if (check_dups)
+			hashlog_remember_submit(work, nonce);
 
 	} else {
 
@@ -651,8 +674,10 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		res = json_object_get(val, "result");
 		reason = json_object_get(val, "reject-reason");
-		if (!share_result(json_is_true(res), reason ? json_string_value(reason) : NULL))
-			hashlog_purge_job(work->job_id);
+		if (!share_result(json_is_true(res), reason ? json_string_value(reason) : NULL)) {
+			if (check_dups)
+				hashlog_purge_job(work->job_id);
+		}
 
 		json_decref(val);
 
@@ -677,9 +702,10 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		json_t *key = json_object_get(val, "height");
 		if (key && json_is_integer(key)) {
 			work->height = (uint32_t) json_integer_value(key);
-			if (!opt_quiet && work->height != g_work.height) {
+			if (!opt_quiet && work->height > g_work.height) {
 				applog(LOG_BLUE, "%s %s block %d", short_url,
 					algo_names[opt_algo], work->height);
+				g_work.height = work->height;
 			}
 		}
 	}
@@ -1026,11 +1052,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
-		//case ALGO_QUBIT:
 			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
 		case ALGO_LYRA2:
+		case ALGO_QUBIT:
 			diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
 			break;
 		default:
@@ -1140,7 +1166,8 @@ static void *miner_thread(void *userdata)
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
 			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
-				hashlog_purge_job(work.job_id);
+				if (check_dups)
+					hashlog_purge_job(work.job_id);
 			}
 		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
@@ -1203,44 +1230,7 @@ static void *miner_thread(void *userdata)
 		max64 = min(UINT32_MAX, max64);
 
 		start_nonce = nonceptr[0];
-#if 0
-		/* do not recompute something already scanned (hashharder workaround) */
-		if (opt_algo == ALGO_BLAKE && opt_n_threads == 1) {
-			union {
-				uint64_t data;
-				uint32_t scanned[2];
-			} range;
 
-			range.data = hashlog_get_scan_range(work.job_id);
-			if (range.data && !opt_benchmark) {
-				bool stall = false;
-				if (range.scanned[0] == 1 && range.scanned[1] == UINT32_MAX) {
-					applog(LOG_WARNING, "detected a rescan of fully scanned job!");
-				} else if (range.scanned[0] > 0 && range.scanned[1] > 0 && range.scanned[1] < 0xFFFFFFF0UL) {
-					/* continue scan the end */
-					start_nonce = range.scanned[1] + 1;
-					//applog(LOG_DEBUG, "scan the next part %x + 1 (%x-%x)", range.scanned[1], range.scanned[0], range.scanned[1]);
-				}
-
-				stall = (start_nonce == work.scanned_from && end_nonce == work.scanned_to);
-				stall |= (start_nonce == work.scanned_from && start_nonce == range.scanned[1] + 1);
-				stall |= (start_nonce > range.scanned[0] && start_nonce < range.scanned[1]);
-
-				if (stall) {
-					if (opt_debug && !opt_quiet)
-						applog(LOG_DEBUG, "job done, wait for a new one...");
-					work_restart[thr_id].restart = 1;
-					hashlog_purge_old();
-					stats_purge_old();
-					// wait a bit for a new job...
-					usleep(500*1000);
-					nonceptr[0] = end_nonce + 1;
-					work_done = true;
-					continue;
-				}
-			}
-		}
-#endif
 		/* never let small ranges at end */
 		if (end_nonce >= UINT32_MAX - 256)
 			end_nonce = UINT32_MAX;
@@ -1443,7 +1433,8 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		hashlog_remember_scan_range(&work);
+		if (check_dups)
+			hashlog_remember_scan_range(&work);
 
 		/* output */
 		if (!opt_quiet && loopcnt) {
@@ -1681,7 +1672,8 @@ static void *stratum_thread(void *userdata)
 					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
 						stratum.job.height);
 				restart_threads();
-				hashlog_purge_old();
+				if (check_dups)
+					hashlog_purge_old();
 				stats_purge_old();
 			} else if (opt_debug && !opt_quiet) {
 					applog(LOG_BLUE, "%s asks job %d for block %d", short_url,
@@ -1735,7 +1727,7 @@ static void show_usage_and_exit(int status)
 
 static void parse_arg(int key, char *arg)
 {
-	char *p;
+	char *p = arg;
 	int v, i;
 	double d;
 
@@ -1762,8 +1754,15 @@ static void parse_arg(int key, char *arg)
 			}
 			opt_api_listen = atoi(p + 1);
 		}
-		else if (arg)
+		else if (arg && strstr(arg, ".")) {
+			/* ip only */
+			free(opt_api_allow);
+			opt_api_allow = strdup(arg);
+		}
+		else if (arg) {
+			/* port or 0 to disable */
 			opt_api_listen = atoi(arg);
+		}
 		break;
 	case 'B':
 		opt_background = true;
@@ -1953,6 +1952,9 @@ static void parse_arg(int key, char *arg)
 		break;
 	case 1007:
 		want_stratum = false;
+		break;
+	case 1011:
+		allow_gbt = false;
 		break;
 	case 'S':
 	case 1008:
