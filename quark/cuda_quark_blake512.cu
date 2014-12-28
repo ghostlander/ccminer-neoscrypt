@@ -316,10 +316,7 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
-	quark_blake512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
+	quark_blake512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
 	MyStreamSynchronize(NULL, order, thr_id);
@@ -332,10 +329,7 @@ __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
-	quark_blake512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	quark_blake512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
 	MyStreamSynchronize(NULL, order, thr_id);

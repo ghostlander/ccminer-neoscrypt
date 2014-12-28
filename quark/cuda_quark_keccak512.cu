@@ -320,9 +320,6 @@ __host__ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
-    quark_keccak512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+    quark_keccak512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
     MyStreamSynchronize(NULL, order, thr_id);
 }

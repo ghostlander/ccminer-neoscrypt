@@ -246,11 +246,8 @@ __host__ void blake512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
 	if (BLOCKSIZE == 80)
-		blake512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash5output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
+		blake512_gpu_hash<80><<<grid, block>>>(threads, startNounce, d_hash5output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 	else if (BLOCKSIZE == 84)
-		blake512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash5output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
+		blake512_gpu_hash<84><<<grid, block>>>(threads, startNounce, d_hash5output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 }

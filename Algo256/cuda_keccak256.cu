@@ -584,9 +584,7 @@ uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounc
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
-
-	keccak256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
+	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(d_nounce[thr_id], d_KNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);

@@ -249,13 +249,12 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
-	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
 	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
-	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
+	blake256_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		//cudaDeviceSynchronize(); /* seems no more required */

@@ -809,11 +809,8 @@ __host__ void groestl512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNo
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
 	if (BLOCKSIZE == 84)
-		groestl512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
+		groestl512_gpu_hash<84><<<grid, block>>>(threads, startNounce, d_hash4output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 	else if (BLOCKSIZE == 80)
-		groestl512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
+		groestl512_gpu_hash<80><<<grid, block>>>(threads, startNounce, d_hash4output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 }

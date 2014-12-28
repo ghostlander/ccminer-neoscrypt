@@ -269,11 +269,8 @@ void keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
 	if (BLOCKSIZE==84)
-		keccak512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash3output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
+		keccak512_gpu_hash<84><<<grid, block>>>(threads, startNounce, d_hash3output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 	else if (BLOCKSIZE==80)
-		keccak512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash3output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
+		keccak512_gpu_hash<80><<<grid, block>>>(threads, startNounce, d_hash3output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 }
