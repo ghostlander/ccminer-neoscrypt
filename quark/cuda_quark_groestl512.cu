@@ -11,8 +11,6 @@
 // aus cpu-miner.c
 extern short device_map[8];
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];
@@ -137,13 +135,9 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
     dim3 grid(factor*((threads + TPB-1)/TPB));
     dim3 block(TPB);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
-    quark_groestl512_gpu_hash_64_quad<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector);
+    quark_groestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 
     // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -156,11 +150,5 @@ __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, u
     dim3 grid(factor*((threads + TPB-1)/TPB));
     dim3 block(TPB);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
-    quark_doublegroestl512_gpu_hash_64_quad<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector);
-
-    // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, order, thr_id);
+    quark_doublegroestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 }

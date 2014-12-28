@@ -530,9 +530,5 @@ __host__ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t 
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
-    jackpot_keccak512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash);
-    MyStreamSynchronize(NULL, order, thr_id);
+    jackpot_keccak512_gpu_hash<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 }

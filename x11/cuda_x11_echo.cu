@@ -3,9 +3,6 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 #include "cuda_x11_aes.cu"
 
 static uint2 *d_nonce[8];
@@ -371,11 +368,7 @@ __host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 4096;
-
-    x11_echo512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-//    MyStreamSynchronize(NULL, order, thr_id);
+    x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
 
 __host__ void x11_echo512_cpu_free(int32_t thr_id)
@@ -727,9 +720,7 @@ __host__ uint2 x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint3
 	dim3 block(threadsperblock);
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
 
-	size_t shared_size = 4096;
-	x11_echo512_gpu_hash_64_final << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
-//	MyStreamSynchronize(NULL, order, thr_id);
+	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 	uint2 res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
 	return res;

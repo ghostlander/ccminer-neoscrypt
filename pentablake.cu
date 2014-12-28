@@ -310,11 +310,9 @@ void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNo
 {
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
-	size_t shared_size = 0;
 
-	pentablake_gpu_hash_80 <<<grid, block, shared_size>>> (threads, startNounce, d_outputHash);
+	pentablake_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
-	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaDeviceSynchronize();
 }
 
@@ -367,11 +365,9 @@ void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, 
 {
 	dim3 grid((threads + TPB - 1) / TPB);
 	dim3 block(TPB);
-	size_t shared_size = 0;
 
-	pentablake_gpu_hash_64 <<<grid, block, shared_size>>> (threads, startNounce, (uint64_t*)d_outputHash);
+	pentablake_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_outputHash);
 
-	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaDeviceSynchronize();
 }
 
@@ -442,13 +438,12 @@ uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounc
 
 	dim3 grid((threads + TPB - 1) / TPB);
 	dim3 block(TPB);
-	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
 	if (cudaMemset(d_resNounce[thr_id], 0xff, 2*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
-	pentablake_gpu_check_hash <<<grid, block, shared_size>>> (threads, startNounce, d_inputHash, d_resNounce[thr_id]);
+	pentablake_gpu_check_hash <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNounce[thr_id]);
 
 	CUDA_SAFE_CALL(cudaDeviceSynchronize());
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {

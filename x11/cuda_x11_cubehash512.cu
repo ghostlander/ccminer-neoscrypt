@@ -1,8 +1,5 @@
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 typedef unsigned char BitSequence;
 
 #define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
@@ -294,10 +291,6 @@ void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNou
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
-    x11_cubehash512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
+    x11_cubehash512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
 

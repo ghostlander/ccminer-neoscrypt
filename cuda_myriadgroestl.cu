@@ -357,20 +357,15 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     const int factor=4;
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
     cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
-    myriadgroestl_gpu_hash_quad<<<grid, block, shared_size>>>(threads, startNounce, d_outputHashes[thr_id]);
+    myriadgroestl_gpu_hash_quad<<<grid, block>>>(threads, startNounce, d_outputHashes[thr_id]);
     dim3 grid2((threads + threadsperblock-1)/threadsperblock);
-    myriadgroestl_gpu_hash_quad2<<<grid2, block, shared_size>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
+    myriadgroestl_gpu_hash_quad2<<<grid2, block>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
-    // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, 0, thr_id);
 
     cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

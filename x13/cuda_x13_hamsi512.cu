@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <memory.h>
 
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 typedef unsigned char BitSequence;
 
@@ -687,5 +686,4 @@ __host__ void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
     dim3 block(threadsperblock);
 
     x13_hamsi512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
 }

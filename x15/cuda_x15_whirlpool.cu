@@ -11,8 +11,6 @@
 
 #include "cuda_helper.h"
 
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t pTarget[8];
 
@@ -2595,11 +2593,7 @@ extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
-
-	x15_whirlpool_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-
-	MyStreamSynchronize(NULL, order, thr_id);
+	x15_whirlpool_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
 
 __host__
@@ -2610,17 +2604,12 @@ extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
-
 	cudaMemset(d_WNonce[thr_id], 0xff, sizeof(uint32_t));
 
-	oldwhirlpool_gpu_finalhash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector,d_WNonce[thr_id]);
+	oldwhirlpool_gpu_finalhash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector,d_WNonce[thr_id]);
 
-	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-
 	result = *d_wnounce[thr_id];
-
 	return result;
 }
 
@@ -2631,11 +2620,7 @@ void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
-
-	oldwhirlpool_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
-
-	MyStreamSynchronize(NULL, order, thr_id);
+	oldwhirlpool_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 }
 
 __host__
