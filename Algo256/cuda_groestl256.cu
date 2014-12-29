@@ -294,7 +294,6 @@ void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, 
 #endif
 	groestl256_gpu_hash32<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_GNonce[thr_id]);
 	cudaMemcpy(d_gnounce[thr_id], d_GNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaDeviceSynchronize();
 	resultnonces[0] = *(d_gnounce[thr_id]);
 	resultnonces[1] = *(d_gnounce[thr_id] + 1);
 }

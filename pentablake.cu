@@ -390,7 +390,6 @@ uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	pentablake_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_resNounce[thr_id]);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
 		extra_results[0] = h_resNounce[thr_id][1];
 	}
@@ -431,7 +430,6 @@ uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounc
 	pentablake_gpu_check_hash <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNounce[thr_id]);
 
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
 		extra_results[0] = h_resNounce[thr_id][1];
 	}

@@ -100,7 +100,6 @@ uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	cuda_checkhash_64 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaDeviceSynchronize();
 
 	return h_resNonces[thr_id][0];
 }
@@ -135,7 +134,6 @@ uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounc
 
 	cuda_checkhash_64_suppl <<<grid, block>>> (startNounce, d_inputHash, d_resNonces[thr_id]);
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], 8*sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaDeviceSynchronize();
 
 	rescnt = h_resNonces[thr_id][0];
 	if (rescnt > 1)
@@ -188,7 +186,6 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-	cudaDeviceSynchronize();
 	result = *h_resNonces[thr_id];
 
 	return result;
