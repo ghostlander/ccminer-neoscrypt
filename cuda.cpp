@@ -6,7 +6,6 @@
 #ifndef _WIN32
 #include <unistd.h>
 #endif
-
 // include thrust
 #ifndef __cplusplus
 #include <thrust/version.h>
@@ -117,7 +116,7 @@ int cuda_finddevice(char *name)
 
 // Zeitsynchronisations-Routine von cudaminer mit CPU sleep
 typedef struct { double value[8]; } tsumarray;
-/*
+
 cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 {
 	cudaError_t result = cudaSuccess;
@@ -145,7 +144,7 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 		result = cudaStreamSynchronize(stream);
 	return result;
 }
-*/
+
 
 int cuda_gpu_clocks(struct cgpu_info *gpu)
 {
