@@ -84,7 +84,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);

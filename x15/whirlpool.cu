@@ -64,7 +64,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	if (!init[thr_id]) {
-		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
 		x15_whirlpool_cpu_init(thr_id, throughput, 1 /* old whirlpool */);

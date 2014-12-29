@@ -176,7 +176,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id);
