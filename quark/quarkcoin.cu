@@ -214,7 +214,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
 
-		MyStreamSynchronize(NULL, 2, thr_id);
+		MyStreamSynchronize(NULL, 3, thr_id);
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
@@ -227,7 +227,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der bedingte Branch für JH512
 		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 3, thr_id);
+		MyStreamSynchronize(NULL, 4, thr_id);
 
 		// Scan nach Gewinner Hashes auf der GPU
 		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
