@@ -538,11 +538,11 @@ static int share_result(int result, const char *reason)
 
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
-		if (strncmp(reason, "low difficulty share", 20) == 0) {
-			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
-			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
+//		if (strncmp(reason, "low difficulty share", 20) == 0) {
+//			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
+//			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
 			return 0;
-		}
+//		}
 	}
 	return 1;
 }
