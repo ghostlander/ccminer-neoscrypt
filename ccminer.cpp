@@ -409,7 +409,6 @@ void proper_exit(int reason)
 	if (check_dups)
 		hashlog_purge_all();
 
-	cuda_devicereset();
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
 #endif
@@ -417,15 +416,20 @@ void proper_exit(int reason)
 	if (hnvml)
 		nvml_destroy(hnvml);
 #endif
+	
+	cuda_devicereset();
+	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
 
 	free(opt_syslog_pfx);
 	free(opt_api_allow);
 	hashlog_purge_all();
 	stats_purge_all();
+	cuda_devicereset();
 
 	try
 	{
-		abort();
+		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
+		exit(0);
 	}
 	catch (...)
 	{
