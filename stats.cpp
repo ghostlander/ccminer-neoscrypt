@@ -52,7 +52,7 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 		if (ratio < 0.4 || ratio > 1.6)
 			data.ignored = 1;
 	}
-	tlastscans[key] = data;
+	if (!tlastscans.empty()) tlastscans[key] = data;
 }
 
 /**

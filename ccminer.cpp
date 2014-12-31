@@ -406,12 +406,10 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
-	cuda_devicereset();
-
 	if (check_dups)
 		hashlog_purge_all();
-	stats_purge_all();
 
+	cuda_devicereset();
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
 #endif
@@ -419,9 +417,20 @@ void proper_exit(int reason)
 	if (hnvml)
 		nvml_destroy(hnvml);
 #endif
+
 	free(opt_syslog_pfx);
 	free(opt_api_allow);
-	exit(reason);
+	hashlog_purge_all();
+	stats_purge_all();
+
+	try
+	{
+		abort();
+	}
+	catch (...)
+	{
+		int t = 0;
+	}
 }
 
 static bool jobj_binary(const json_t *obj, const char *key,
@@ -544,11 +553,7 @@ static int share_result(int result, const char *reason)
 
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
-//		if (strncmp(reason, "low difficulty share", 20) == 0) {
-//			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
-//			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
-			return 0;
-//		}
+		return 0;
 		if (strncmp(reason, "Duplicate share", 15) == 0) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
