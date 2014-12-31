@@ -247,6 +247,5 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 
-	x15_whirlpool_cpu_free(thr_id);
 	return 0;
 }
