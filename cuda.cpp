@@ -127,21 +127,18 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 		double tsleep = 0.95;
 
 		double a = 0.95, b = 0.05;
-		if (!tsum.empty())
+		if (tsum.find(situation) == tsum.end()) { a = 0.5; b = 0.5; } // faster initial convergence
+		tsleep = 0.95*tsum[situation].value[thr_id];
+		if (cudaStreamQuery(stream) == cudaErrorNotReady)
 		{
-			if (tsum.find(situation) == tsum.end()) { a = 0.5; b = 0.5; } // faster initial convergence
-			tsleep = 0.95*tsum[situation].value[thr_id];
-			if (cudaStreamQuery(stream) == cudaErrorNotReady)
-			{
-				usleep((useconds_t)(1e6*tsleep));
-				struct timeval tv_start, tv_end;
-				gettimeofday(&tv_start, NULL);
-				result = cudaStreamSynchronize(stream);
-				gettimeofday(&tv_end, NULL);
-				tsync = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
-			}
-			if (tsync >= 0) tsum[situation].value[thr_id] = a * tsum[situation].value[thr_id] + b * (tsleep + tsync);
+			usleep((useconds_t)(1e6*tsleep));
+			struct timeval tv_start, tv_end;
+			gettimeofday(&tv_start, NULL);
+			result = cudaStreamSynchronize(stream);
+			gettimeofday(&tv_end, NULL);
+			tsync = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
 		}
+		if (tsync >= 0) tsum[situation].value[thr_id] = a * tsum[situation].value[thr_id] + b * (tsleep + tsync);
 	}
 	else
 		result = cudaStreamSynchronize(stream);
