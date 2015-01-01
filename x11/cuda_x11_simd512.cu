@@ -662,6 +662,7 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 	dim3 grid8(((threads + TPB-1)/TPB)*8);
 
 	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
+	MyStreamSynchronize(NULL, order, thr_id);
 
 	dim3 grid((threads + TPB-1)/TPB);
 
@@ -674,6 +675,8 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 		x11_simd512_gpu_compress1_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 		x11_simd512_gpu_compress2_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 	}
+	MyStreamSynchronize(NULL, order, thr_id);
+
 	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
