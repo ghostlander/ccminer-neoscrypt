@@ -87,7 +87,6 @@ void hashlog_remember_scan_range(struct work* work)
 	uint64_t key = (njobid << 32);
 	uint64_t range = hashlog_get_scan_range(work->job_id);
 	hashlog_data data;
-	if (tlastshares.empty()) return;
 
 	// global scan range of a job
 	data = tlastshares[key];
@@ -132,7 +131,6 @@ uint64_t hashlog_get_scan_range(char* jobid)
 	uint64_t keypfx = (njobid << 32);
 	uint64_t keymsk = (0xffffffffULL << 32);
 	hashlog_data data;
-	if (tlastshares.empty()) return ret;
 
 	data.scanned_from = 0;
 	data.scanned_to = 0;
