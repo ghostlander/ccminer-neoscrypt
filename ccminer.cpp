@@ -2151,7 +2151,7 @@ int main(int argc, char *argv[])
 #endif
 	printf("  Based on pooler cpuminer 2.3.2\n");
 	printf("  CUDA support by Christian Buchner and Christian H.\n");
-	printf("  Include some of djm34 additions and sp optimisations\n\n");
+	printf("  Include some of djm34 additions and sp optimalizations\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");

@@ -708,6 +708,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			uint32_t tmp = atomicExch(&(d_nonce[0].x), nounce);
 			if (tmp != 0xffffffff)
 				d_nonce[0].y = tmp;
+
 		}
 	}
 }
