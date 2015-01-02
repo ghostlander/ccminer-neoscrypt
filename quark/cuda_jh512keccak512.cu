@@ -326,9 +326,22 @@ __device__ __forceinline__ void JHHash(const uint32_t *data, uint32_t *hashval)
     state.buffer[15] = 0x00020000;
     F8(&state);
 
-    /*truncating the final hash value to generate the message digest*/
-#pragma unroll 16
-    for (int i=0; i < 16; ++i) hashval[i] = state.x[4][i];
+	hashval[0] = state.x[4][0];
+	hashval[1] = state.x[4][1];
+	hashval[2] = state.x[4][2];
+	hashval[3] = state.x[4][3];
+	hashval[4] = state.x[5][0];
+	hashval[5] = state.x[5][1];
+	hashval[6] = state.x[5][2];
+	hashval[7] = state.x[5][3];
+	hashval[8] = state.x[6][0];
+	hashval[9] = state.x[6][1];
+	hashval[10] = state.x[6][2];
+	hashval[11] = state.x[6][3];
+	hashval[12] = state.x[7][0];
+	hashval[13] = state.x[7][1];
+	hashval[14] = state.x[7][2];
+	hashval[15] = state.x[7][3];
 }
 
 #define U32TO64_LE(p) \
