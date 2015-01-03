@@ -406,9 +406,6 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
-	if (check_dups)
-		hashlog_purge_all();
-
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
 #endif
@@ -424,11 +421,10 @@ void proper_exit(int reason)
 	free(opt_api_allow);
 	hashlog_purge_all();
 	stats_purge_all();
-	cuda_devicereset();
 
 	try
 	{
-		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
+		sleep(3);			//make sure that the gpu threads are stopped when updating the stats.
 		exit(0);
 	}
 	catch (...)
@@ -2151,7 +2147,7 @@ int main(int argc, char *argv[])
 #endif
 	printf("  Based on pooler cpuminer 2.3.2\n");
 	printf("  CUDA support by Christian Buchner and Christian H.\n");
-	printf("  Include some of djm34 additions and sp optimalizations\n\n");
+	printf("  Include some of djm34 additions and sp optimizations\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
