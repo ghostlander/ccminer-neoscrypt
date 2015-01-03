@@ -171,7 +171,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
@@ -183,7 +182,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der unbedingte Branch für BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 1, thr_id);
+		MyStreamSynchronize(NULL, 3, thr_id);
 
 		quark_compactTest_single_false_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
 				d_branch3Nonces[thr_id], &nrm3,
@@ -219,7 +218,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
 
-		MyStreamSynchronize(NULL, 3, thr_id);
+		MyStreamSynchronize(NULL, 1, thr_id);
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
@@ -229,7 +228,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der bedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 4, thr_id);
+		MyStreamSynchronize(NULL, 0, thr_id);
 		// das ist der bedingte Branch für JH512
 		uint2 foundNonce = quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++, ptarget[7]);
 //		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
@@ -245,16 +244,15 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			{
 				int res = 1;
 				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) 
-				{
-					pdata[21] = secNonce;
-					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				}
+//				if (foundNonce.y != 0xffffffff)
+//				{
+//					pdata[21] = foundNonce.y;
+//					res++;
+//					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
+//				}
 				pdata[19] = foundNonce.x;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce.x, vhash64[7], Htarg);
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else

@@ -704,8 +704,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			if (d_nonce[0].x == 0xffffffff)
 			{
 				d_nonce[0].x = nounce;
-			}
-			if (d_nonce[0].x != 0xffffffff)
+			} else
 			{
 				d_nonce[0].y = nounce;
 			}
