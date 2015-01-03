@@ -418,6 +418,8 @@ void proper_exit(int reason)
 	hashlog_purge_all();
 	stats_purge_all();
 	cuda_devicereset();
+	
+	pthread_mutex_lock(&g_work_lock);	//freeze stratum
 
 	try
 	{
