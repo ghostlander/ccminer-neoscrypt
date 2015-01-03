@@ -406,9 +406,6 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
-	if (check_dups)
-		hashlog_purge_all();
-
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
 #endif
@@ -424,11 +421,10 @@ void proper_exit(int reason)
 	free(opt_api_allow);
 	hashlog_purge_all();
 	stats_purge_all();
-	cuda_devicereset();
 
 	try
 	{
-		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
+		sleep(3);			//make sure that the gpu threads are stopped when updating the stats.
 		exit(0);
 	}
 	catch (...)
