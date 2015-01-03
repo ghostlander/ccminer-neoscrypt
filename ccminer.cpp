@@ -421,6 +421,8 @@ void proper_exit(int reason)
 	free(opt_api_allow);
 	hashlog_purge_all();
 	stats_purge_all();
+	
+	pthread_mutex_lock(&g_work_lock);	//freeze stratum
 
 	try
 	{
