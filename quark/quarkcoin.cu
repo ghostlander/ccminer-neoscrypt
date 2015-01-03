@@ -171,7 +171,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
@@ -237,16 +236,15 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			{
 				int res = 1;
 				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) 
-				{
-					pdata[21] = secNonce;
-					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				}
+//				if (foundNonce.y != 0xffffffff)
+//				{
+//					pdata[21] = foundNonce.y;
+//					res++;
+//					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
+//				}
 				pdata[19] = foundNonce.x;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce.x, vhash64[7], Htarg);
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else

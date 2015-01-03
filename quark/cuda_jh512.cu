@@ -354,7 +354,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 
 // Die Hash-Funktion
 __global__ __launch_bounds__(256, 4)
-void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *dnounce, uint32_t target)
+void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *dnounce, const uint32_t target)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -392,9 +392,9 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			{
 				dnounce[0].x = nounce;
 			}
-			if (dnounce[0].x != 0xffffffff)
+			else
 			{
-				dnounce[0].y = nounce;
+				if (dnounce[0].x != nounce) dnounce[0].y = nounce;
 			}
 		}
 	}
@@ -423,13 +423,11 @@ __host__ void  quark_jh512_cpu_init(int thr_id, uint32_t threads)
 __host__ uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order,uint32_t target)
 {
 	const uint32_t threadsperblock = 256;
-
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
-
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id],target );
+	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
+	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 	uint2 res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
 	return res;
