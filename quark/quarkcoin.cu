@@ -36,6 +36,9 @@ extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order, uint32_t target);
+extern void  quark_jh512_cpu_init(int thr_id, uint32_t threads);
+
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
@@ -158,6 +161,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput);
 		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput);
 
+		quark_jh512_cpu_init(thr_id, throughput);
+
 		init[thr_id] = true;
 	}
 
@@ -166,7 +171,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
@@ -218,32 +222,29 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der bedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der bedingte Branch für JH512
-		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
-
-		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+		uint2 foundNonce = quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++, ptarget[7]);
+//		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
+//		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		if  (foundNonce.x!= 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], foundNonce.x);
 			quarkhash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) 
 			{
 				int res = 1;
 				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) 
-				{
-					pdata[21] = secNonce;
-					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
-				}
-				pdata[19] = foundNonce;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+//				if (foundNonce.y != 0xffffffff)
+//				{
+//					pdata[21] = foundNonce.y;
+//					res++;
+//					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
+//				}
+				pdata[19] = foundNonce.x;
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else

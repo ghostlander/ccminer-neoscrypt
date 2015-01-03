@@ -3,10 +3,7 @@
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-typedef struct {
-    uint32_t x[8][4];                     /*the 1024-bit state, ( x[i][0] || x[i][1] || x[i][2] || x[i][3] ) is the ith row of the state in the pseudocode*/
-    uint32_t buffer[16];                  /*the 512-bit message block to be hashed;*/
-} hashState;
+static uint2 *d_nonce[8];
 
 /*42 round constants, each round constant is 32-byte (256-bit)*/
 __constant__ uint32_t c_INIT_bitslice[8][4] = {
@@ -115,7 +112,7 @@ __constant__ unsigned char c_E8_bitslice_roundconstant[42][32] = {
       m1 ^= (temp0 & (m0));        \
       m2 ^= temp0;
 
-__device__ __forceinline__ void Sbox_and_MDS_layer(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void Sbox_and_MDS_layer(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
     uint32_t temp0;
 	uint32_t cc0, cc1;
@@ -124,212 +121,223 @@ __device__ __forceinline__ void Sbox_and_MDS_layer(hashState* state, uint32_t ro
     for (int i = 0; i < 4; i++) {
 		cc0 = ((uint32_t*)c_E8_bitslice_roundconstant[roundnumber])[i];
 		cc1 = ((uint32_t*)c_E8_bitslice_roundconstant[roundnumber])[i+4];
-        Sbox(state->x[0][i],state->x[2][i], state->x[4][i], state->x[6][i], cc0);
-        Sbox(state->x[1][i],state->x[3][i], state->x[5][i], state->x[7][i], cc1);
-        L(state->x[0][i],state->x[2][i],state->x[4][i],state->x[6][i],state->x[1][i],state->x[3][i],state->x[5][i],state->x[7][i]);
+        Sbox(x[0][i],x[2][i], x[4][i], x[6][i], cc0);
+        Sbox(x[1][i],x[3][i], x[5][i], x[7][i], cc1);
+        L(x[0][i],x[2][i],x[4][i],x[6][i],x[1][i],x[3][i],x[5][i],x[7][i]);
     }
 }
+uint32_t x[8][4];
+uint32_t buffer[16];
 
-__device__ __forceinline__ void RoundFunction0(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction0(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x,buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 		uint32_t y;
-		SWAP1(state->x[j][0], y);
-		SWAP1(state->x[j][1], y);
-		SWAP1(state->x[j][2], y);
-		SWAP1(state->x[j][3], y);
+		SWAP1(x[j][0], y);
+		SWAP1(x[j][1], y);
+		SWAP1(x[j][2], y);
+		SWAP1(x[j][3], y);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction1(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction1(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 		uint32_t y;
-		SWAP2(state->x[j][0], y);
-		SWAP2(state->x[j][1], y);
-		SWAP2(state->x[j][2], y);
-		SWAP2(state->x[j][3], y);
+		SWAP2(x[j][0], y);
+		SWAP2(x[j][1], y);
+		SWAP2(x[j][2], y);
+		SWAP2(x[j][3], y);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction2(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction2(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 		uint32_t y;
-		SWAP4(state->x[j][0], y);
-		SWAP4(state->x[j][1], y);
-		SWAP4(state->x[j][2], y);
-		SWAP4(state->x[j][3], y);
+		SWAP4(x[j][0], y);
+		SWAP4(x[j][1], y);
+		SWAP4(x[j][2], y);
+		SWAP4(x[j][3], y);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction3(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction3(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP8(state->x[j][i]);
+		for (int i = 0; i < 4; i++) SWAP8(x[j][i]);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction4(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction4(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP16(state->x[j][i]);
+		for (int i = 0; i < 4; i++) SWAP16(x[j][i]);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction5(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction5(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
 	uint32_t temp0;
 
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 2
 		for (int i = 0; i < 4; i = i+2) {
-			temp0 = state->x[j][i]; state->x[j][i] = state->x[j][i+1]; state->x[j][i+1] = temp0;
+			temp0 = x[j][i]; x[j][i] = x[j][i+1]; x[j][i+1] = temp0;
 		}
 	}
 }
 
-__device__ __forceinline__ void RoundFunction6(hashState* state, uint32_t roundnumber)
+static __device__ __forceinline__ void RoundFunction6(uint32_t x[8][4], uint32_t buffer[16], uint32_t roundnumber)
 {
 	uint32_t temp0;
 
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, buffer, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 2
 		for (int i = 0; i < 2; i++) {
-			temp0 = state->x[j][i]; state->x[j][i] = state->x[j][i+2]; state->x[j][i+2] = temp0;
+			temp0 = x[j][i]; x[j][i] = x[j][i+2]; x[j][i+2] = temp0;
 		}
 	}
 }
 
 /*The bijective function E8, in bitslice form */
-__device__ __forceinline__ void E8(hashState *state)
+static __device__ __forceinline__ void E8(uint32_t x[8][4], uint32_t buffer[16])
 {
     /*perform 6 rounds*/
 //#pragma unroll 6
     for (int i = 0; i < 42; i+=7)
 	{
-		RoundFunction0(state, i);
-		RoundFunction1(state, i+1);
-		RoundFunction2(state, i+2);
-		RoundFunction3(state, i+3);
-		RoundFunction4(state, i+4);
-		RoundFunction5(state, i+5);
-		RoundFunction6(state, i+6);
+		RoundFunction0(x, buffer, i);
+		RoundFunction1(x, buffer, i + 1);
+		RoundFunction2(x, buffer, i + 2);
+		RoundFunction3(x, buffer, i + 3);
+		RoundFunction4(x, buffer, i + 4);
+		RoundFunction5(x, buffer, i + 5);
+		RoundFunction6(x, buffer, i + 6);
+	}
+}
+
+/*The bijective function E8, in bitslice form */
+static __device__ __forceinline__ void E8_final(uint32_t x[8][4], uint32_t buffer[16])
+{
+	/*perform 6 rounds*/
+	#pragma unroll 6
+	for (int i = 0; i < 42; i += 7)
+	{
+		RoundFunction0(x, buffer, i);
+		RoundFunction1(x, buffer, i + 1);
+		RoundFunction2(x, buffer, i + 2);
+		RoundFunction3(x, buffer, i + 3);
+		RoundFunction4(x, buffer, i + 4);
+		RoundFunction5(x, buffer, i + 5);
+		RoundFunction6(x, buffer, i + 6);
 	}
 }
 
 /*The compression function F8 */
-__device__ __forceinline__ void F8(hashState *state)
+static __device__ __forceinline__ void F8(uint32_t x[8][4], uint32_t buffer[16])
 {
     /*xor the 512-bit message with the fist half of the 1024-bit hash state*/
 #pragma unroll 16
-    for (int i = 0; i < 16; i++)  state->x[i >> 2][i & 3] ^= ((uint32_t*)state->buffer)[i];
+    for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
 
     /*the bijective function E8 */
-    E8(state);
+	E8(x, buffer );
 
     /*xor the 512-bit message with the second half of the 1024-bit hash state*/
 #pragma unroll 16
-    for (int i = 0; i < 16; i++)  state->x[(16+i) >> 2][(16+i) & 3] ^= ((uint32_t*)state->buffer)[i];
+    for (int i = 0; i < 16; i++)  x[(16+i) >> 2][(16+i) & 3] ^= ((uint32_t*)buffer)[i];
+}
+
+/*The compression function F8 */
+static __device__ __forceinline__ void F8_final(uint32_t x[8][4], uint32_t buffer[16])
+{
+	/*xor the 512-bit message with the fist half of the 1024-bit hash state*/
+#pragma unroll 16
+	for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
+
+	/*the bijective function E8 */
+	E8_final(x, buffer);
+
+	/*xor the 512-bit message with the second half of the 1024-bit hash state*/
+#pragma unroll 16
+	for (int i = 0; i < 16; i++)  x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)buffer)[i];
 }
 
 
 __device__ __forceinline__ void JHHash(const uint32_t *data, uint32_t *hashval)
 {
-    hashState state;
-
-    /*load the intital hash value H0 into state*/
-	/*
-    #define INIT(a,b,c,d) ((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
-    state.x[0][0] = INIT(0x6f,0xd1,0x4b,0x96);
-    state.x[0][1] = INIT(0x3e,0x00,0xaa,0x17);
-    state.x[0][2] = INIT(0x63,0x6a,0x2e,0x05);
-    state.x[0][3] = INIT(0x7a,0x15,0xd5,0x43);
-    state.x[1][0] = INIT(0x8a,0x22,0x5e,0x8d);
-    state.x[1][1] = INIT(0x0c,0x97,0xef,0x0b);
-    state.x[1][2] = INIT(0xe9,0x34,0x12,0x59);
-    state.x[1][3] = INIT(0xf2,0xb3,0xc3,0x61);
-    state.x[2][0] = INIT(0x89,0x1d,0xa0,0xc1);
-    state.x[2][1] = INIT(0x53,0x6f,0x80,0x1e);
-    state.x[2][2] = INIT(0x2a,0xa9,0x05,0x6b);
-    state.x[2][3] = INIT(0xea,0x2b,0x6d,0x80);
-    state.x[3][0] = INIT(0x58,0x8e,0xcc,0xdb);
-    state.x[3][1] = INIT(0x20,0x75,0xba,0xa6);
-    state.x[3][2] = INIT(0xa9,0x0f,0x3a,0x76);
-    state.x[3][3] = INIT(0xba,0xf8,0x3b,0xf7);
-    state.x[4][0] = INIT(0x01,0x69,0xe6,0x05);
-    state.x[4][1] = INIT(0x41,0xe3,0x4a,0x69);
-    state.x[4][2] = INIT(0x46,0xb5,0x8a,0x8e);
-    state.x[4][3] = INIT(0x2e,0x6f,0xe6,0x5a);
-    state.x[5][0] = INIT(0x10,0x47,0xa7,0xd0);
-    state.x[5][1] = INIT(0xc1,0x84,0x3c,0x24);
-    state.x[5][2] = INIT(0x3b,0x6e,0x71,0xb1);
-    state.x[5][3] = INIT(0x2d,0x5a,0xc1,0x99);
-    state.x[6][0] = INIT(0xcf,0x57,0xf6,0xec);
-    state.x[6][1] = INIT(0x9d,0xb1,0xf8,0x56);
-    state.x[6][2] = INIT(0xa7,0x06,0x88,0x7c);
-    state.x[6][3] = INIT(0x57,0x16,0xb1,0x56);
-    state.x[7][0] = INIT(0xe3,0xc2,0xfc,0xdf);
-    state.x[7][1] = INIT(0xe6,0x85,0x17,0xfb);
-    state.x[7][2] = INIT(0x54,0x5a,0x46,0x78);
-    state.x[7][3] = INIT(0xcc,0x8c,0xdd,0x4b);
-	*/
+	uint32_t x[8][4];
+	uint32_t buffer[16];
 #pragma unroll 8
 	for(int j=0;j<8;j++)
 	{
 #pragma unroll 4
 		for(int i=0;i<4;i++)
-			state.x[j][i] = c_INIT_bitslice[j][i];
+			x[j][i] = c_INIT_bitslice[j][i];
 	}
 
 #pragma unroll 16
-    for (int i=0; i < 16; ++i) state.buffer[i] = data[i];
-    F8(&state);
+    for (int i=0; i < 16; ++i) buffer[i] = data[i];
+	F8(x, buffer );
 
     /*pad the message when databitlen is multiple of 512 bits, then process the padded block*/
-    state.buffer[0] = 0x80;
+    buffer[0] = 0x80;
 #pragma unroll 14
-    for (int i=1; i < 15; i++) state.buffer[i] = 0;
-    state.buffer[15] = 0x00020000;
-    F8(&state);
+    for (int i=1; i < 15; i++) buffer[i] = 0;
+    buffer[15] = 0x00020000;
+	F8(x, buffer);
 
-    /*truncating the final hash value to generate the message digest*/
-#pragma unroll 16
-    for (int i=0; i < 16; ++i) hashval[i] = state.x[4][i];
+	hashval[0] = x[4][0];
+	hashval[1] = x[4][1];
+	hashval[2] = x[4][2];
+	hashval[3] = x[4][3];
+	hashval[4] = x[5][0];
+	hashval[5] = x[5][1];
+	hashval[6] = x[5][2];
+	hashval[7] = x[5][3];
+	hashval[8] = x[6][0];
+	hashval[9] = x[6][1];
+	hashval[10] = x[6][2];
+	hashval[11] = x[6][3];
+	hashval[12] = x[7][0];
+	hashval[13] = x[7][1];
+	hashval[14] = x[7][2];
+	hashval[15] = x[7][3];
 }
 
 // Die Hash-Funktion
-__global__ __launch_bounds__(256, 3)
+__global__ __launch_bounds__(256, 4)
 void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -342,6 +350,54 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 
         JHHash(Hash, Hash);
     }
+}
+
+// Die Hash-Funktion
+__global__ __launch_bounds__(256, 4)
+void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *dnounce, const uint32_t target)
+{
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+
+		int hashPosition = nounce - startNounce;
+		const uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+
+		uint32_t x[8][4];
+		uint32_t buffer[16];
+
+#pragma unroll 8
+		for (int j = 0; j<8; j++)
+		{
+#pragma unroll 4
+			for (int i = 0; i<4; i++)
+				x[j][i] = c_INIT_bitslice[j][i];
+		}
+
+#pragma unroll 16
+		for (int i = 0; i < 16; ++i) buffer[i] = Hash[i];
+		F8(x, buffer);
+
+		/*pad the message when databitlen is multiple of 512 bits, then process the padded block*/
+		buffer[0] = 0x80;
+#pragma unroll 14
+		for (int i = 1; i < 15; i++) buffer[i] = 0;
+		buffer[15] = 0x00020000;
+		F8_final(x, buffer);
+
+		if (x[5][3] <= target)
+		{
+			if (dnounce[0].x == 0xffffffff)
+			{
+				dnounce[0].x = nounce;
+			}
+			else
+			{
+				if (dnounce[0].x != nounce) dnounce[0].y = nounce;
+			}
+		}
+	}
 }
 
 
@@ -357,3 +413,22 @@ __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
     MyStreamSynchronize(NULL, order, thr_id);
 }
 
+// Setup-Funktionen
+__host__ void  quark_jh512_cpu_init(int thr_id, uint32_t threads)
+{
+	cudaMalloc(&d_nonce[thr_id], sizeof(uint2));
+}
+
+
+__host__ uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order,uint32_t target)
+{
+	const uint32_t threadsperblock = 256;
+	// berechne wie viele Thread Blocks wir brauchen
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
+	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
+	uint2 res;
+	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
+	return res;
+}
