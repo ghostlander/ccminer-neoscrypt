@@ -415,12 +415,14 @@ void proper_exit(int reason)
 #endif
 	
 	cuda_devicereset();
+	pthread_mutex_lock(&g_work_lock);	//freeze stratum
 	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
 
 	free(opt_syslog_pfx);
 	free(opt_api_allow);
 	hashlog_purge_all();
 	stats_purge_all();
+	
 
 	try
 	{
