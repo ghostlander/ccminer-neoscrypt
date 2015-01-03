@@ -48,78 +48,36 @@ const uint64_t c_u512[16] =
 #define G(a,b,c,d,x) { \
 	uint8_t idx1 = c_sigma[i][x]; \
 	uint8_t idx2 = c_sigma[i][x+1]; \
-	v[a] += (block[idx1] ^ c_u512[idx2]) + v[b]; \
-	v[d] = SWAPDWORDS( v[d] ^ v[a]); \
+	v[a] += vectorize(block[idx1] ^ c_u512[idx2]) + v[b]; \
+	v[d] = SWAPDWORDS2( v[d] ^ v[a]); \
 	v[c] += v[d]; \
-	v[b] = ROTR( v[b] ^ v[c], 25); \
-	v[a] += (block[idx2] ^ c_u512[idx1]) + v[b]; \
-	v[d] = ROTR16( v[d] ^ v[a]); \
+	v[b] = ROR2(v[b] ^ v[c], 25); \
+	v[a] += vectorize(block[idx2] ^ c_u512[idx1]) + v[b]; \
+	v[d] = ROR2(v[d] ^ v[a],16); \
 	v[c] += v[d]; \
-	v[b] = ROTR( v[b] ^ v[c], 11); \
-}
-
-__device__ __forceinline__
-void G3(uint64_t a, uint64_t b, uint64_t c, uint64_t d, const uint64_t x, const uint64_t *m, uint64_t *v, int i)
-{
-	const uint32_t	idx1 = c_sigma[i][x];
-	const uint32_t	idx2 = c_sigma[i][x + 1];
-	const uint64_t const1 = m[idx1];
-	const uint64_t const2 = c_u512[idx2];
-	const uint64_t const3 = m[idx2];
-	const uint64_t const4 = c_u512[idx1];
-
-	uint64_t		t;
-	uint2			t3, result;
-	short4			temp;
-	//	short4			t4;
-	asm("xor.b64	%0, %1, %2;" : "=l"(t) : "l"(const1), "l"(const2));
-	asm("add.s64 	%0, %1, %2;" : "=l"(v[a]) : "l"(v[a]), "l"(v[b]));
-	asm("add.s64 	%0, %1, %2;" : "=l"(v[a]) : "l"(v[a]), "l"(t));
-	asm("xor.b64 	%0, %1, %2;" : "=l"(t) : "l"(v[d]), "l"(v[a]));
-	asm("mov.b64 	{%0, %1}, %2 ;" : "=r"(t3.x), "=r"(t3.y) : "l"(t));
-	asm("mov.b64 	%0, {%1, %2} ;" : "=l"(v[d]) : "r"(t3.y), "r"(t3.x));
-	asm("add.s64 	%0, %1, %2;" : "=l"(v[c]) : "l"(v[c]), "l"(v[d]));
-	asm("xor.b64 	%0, %1, %2;" : "=l"(t) : "l"(v[b]), "l"(v[c]));
-	asm("mov.b64 	{%0, %1}, %2 ;" : "=r"(t3.x), "=r"(t3.y) : "l"(t));
-	asm("shf.r.wrap.b32 %0, %1, %2, 25;" : "=r"(result.x) : "r"(t3.y), "r"(t3.x));
-	asm("shf.r.wrap.b32 %0, %1, %2, 25;" : "=r"(result.y) : "r"(t3.x), "r"(t3.y));
-	asm("mov.b64 	%0, {%1, %2} ;" : "=l"(v[b]) : "r"(result.y), "r"(result.x));
-	asm("xor.b64 	%0, %1, %2;" : "=l"(t) : "l"(const3), "l"(const4));
-	asm("add.s64 	%0, %1, %2;" : "=l"(t) : "l"(v[b]), "l"(t));
-	asm("add.s64 	%0, %1, %2;" : "=l"(v[a]) : "l"(v[a]), "l"(t));
-	asm("xor.b64  	%0, %1, %2;" : "=l"(v[d]) : "l"(v[d]), "l"(v[a]));
-	asm("mov.b64 { %0,  %1, %2, %3 }, %4; ": "=h"(temp.x), "=h"(temp.y), "=h"(temp.z), "=h"(temp.w) : "l"(v[d]));
-	asm("mov.b64 %0, {%1, %2, %3 , %4}; ":  "=l"(v[d]) : "h"(temp.y), "h"(temp.z), "h"(temp.w), "h"(temp.x));
-	asm("add.s64 	%0, %1, %2;" : "=l"(v[c]) : "l"(v[c]), "l"(v[d]));
-	asm("xor.b64  	%0, %1, %2;" : "=l"(v[b]) : "l"(v[b]), "l"(v[c]));
-	asm("mov.b64 	{%0, %1}, %2 ;" : "=r"(t3.x), "=r"(t3.y) : "l"(v[b]));
-	asm("shf.r.wrap.b32 %0, %1, %2, 11;" : "=r"(result.x) : "r"(t3.y), "r"(t3.x));
-	asm("shf.r.wrap.b32 %0, %1, %2, 11;" : "=r"(result.y) : "r"(t3.x), "r"(t3.y));
-	asm("mov.b64 	%0, {%1, %2} ;" : "=l"(v[b]) : "r"(result.y), "r"(result.x));
-}
+	v[b] = ROR2(v[b] ^ v[c], 11); \
+  }
 
 __device__ __forceinline__ 
 void quark_blake512_compress(uint64_t *const __restrict__ h, const uint64_t *const __restrict__ block, const int T0)
 {
-	uint64_t v[16];
+	register uint2 v[16];
 
 	#pragma unroll 8
 	for (int i = 0; i < 8; i++)
-		v[i] = h[i];
-	v[ 8] = c_u512[0];
-	v[ 9] = c_u512[1];
-	v[10] = c_u512[2];
-	v[11] = c_u512[3];
-	v[12] = c_u512[4] ^ T0;
-	v[13] = c_u512[5] ^ T0;
-	v[14] = c_u512[6];
-	v[15] = c_u512[7];
+		v[i] = vectorize(h[i]);
+	v[8] = vectorize(c_u512[0]);
+	v[9] = vectorize(c_u512[1]);
+	v[10] = vectorize(c_u512[2]);
+	v[11] = vectorize(c_u512[3]);
+	v[12] = vectorize(c_u512[4] ^ T0);
+	v[13] = vectorize(c_u512[5] ^ T0);
+	v[14] = vectorize(c_u512[6]);
+	v[15] = vectorize(c_u512[7]);
 
-	//#pragma unroll 16
-	for(int i = 0; i < 16; ++i )
+	#pragma unroll 2
+	for(int i = 0; i < 16; i++ )
 	{
-
-#if __CUDA_ARCH__ < 520
 		G( 0, 4, 8, 12, 0 );
 		G( 1, 5, 9, 13, 2 );
 		G( 2, 6, 10, 14, 4 );
@@ -128,25 +86,16 @@ void quark_blake512_compress(uint64_t *const __restrict__ h, const uint64_t *con
 		G( 1, 6, 11, 12, 10 );
 		G( 2, 7, 8, 13, 12 );
 		G( 3, 4, 9, 14, 14 );
- #else
-		G3(0, 4, 8, 12, 0,block,v,i);
-		G3(1, 5, 9, 13, 2, block, v, i);
-		G3(2, 6, 10, 14, 4, block, v, i);
-		G3(3, 7, 11, 15, 6, block, v, i);
-		G3(0, 5, 10, 15, 8, block, v, i);
-		G3(1, 6, 11, 12, 10, block, v, i);
-		G3(2, 7, 8, 13, 12, block, v, i);
-		G3(3, 4, 9, 14, 14, block, v, i);
-#endif
 	}
-	h[0] ^= v[0] ^ v[8];
-	h[1] ^= v[1] ^ v[9];
-	h[2] ^= v[2] ^ v[10];
-	h[3] ^= v[3] ^ v[11];
-	h[4] ^= v[4] ^ v[12];
-	h[5] ^= v[5] ^ v[13];
-	h[6] ^= v[6] ^ v[14];
-	h[7] ^= v[7] ^ v[15];
+
+	h[0] ^= devectorize(v[0] ^ v[8]);
+	h[1] ^= devectorize(v[1] ^ v[9]);
+	h[2] ^= devectorize(v[2] ^ v[10]);
+	h[3] ^= devectorize(v[3] ^ v[11]);
+	h[4] ^= devectorize(v[4] ^ v[12]);
+	h[5] ^= devectorize(v[5] ^ v[13]);
+	h[6] ^= devectorize(v[6] ^ v[14]);
+	h[7] ^= devectorize(v[7] ^ v[15]);
 }
 
 
@@ -165,9 +114,9 @@ static const uint64_t d_constHashPadding[8] = {
 
 __global__ 
 #if __CUDA_ARCH__ > 500
-	__launch_bounds__(256, 2)
+	__launch_bounds__(32, 16)
 #else
-	__launch_bounds__(256, 4)
+	__launch_bounds__(32, 32)
 #endif
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
 {
@@ -235,18 +184,18 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 __global__ 
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 2)
+__launch_bounds__(32, 16)
 #else
-__launch_bounds__(256, 4)
+__launch_bounds__(32, 32)
 #endif
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint64_t buf[16];
 		uint32_t nounce = startNounce + thread;
 
+		uint64_t buf[16];
 		uint64_t h[8] = {
 			0x6a09e667f3bcc908ULL,
 			0xbb67ae8584caa73bULL,
@@ -311,7 +260,7 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 
 __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 32;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -320,7 +269,7 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 
 __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 32;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
