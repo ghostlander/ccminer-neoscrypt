@@ -141,7 +141,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xf;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
@@ -169,12 +169,12 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
-
+	cuda_check_cpu_setTarget(ptarget);
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 
 	do {
 		int order = 0;
-		uint32_t nrm1=0, nrm2=0, nrm3=0;
+		uint32_t nrm1 = 0, nrm2 = 0, nrm3 = 0;
 
 		// erstes Blake512 Hash mit CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
@@ -182,12 +182,12 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der unbedingte Branch für BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 3, thr_id);
+		MyStreamSynchronize(NULL, 1, thr_id);
 
 		quark_compactTest_single_false_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
-				d_branch3Nonces[thr_id], &nrm3,
-				order++);
-		
+			d_branch3Nonces[thr_id], &nrm3,
+			order++);
+
 		// nur den Skein Branch weiterverfolgen
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
@@ -218,7 +218,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
 
-		MyStreamSynchronize(NULL, 1, thr_id);
+		MyStreamSynchronize(NULL, 3, thr_id);
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
@@ -228,31 +228,34 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der bedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 0, thr_id);
 		// das ist der bedingte Branch für JH512
-		uint2 foundNonce = quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++, ptarget[7]);
-//		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
-//		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
-		if  (foundNonce.x!= 0xffffffff)
+		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
+
+		MyStreamSynchronize(NULL, 4, thr_id);
+
+		// Scan nach Gewinner Hashes auf der GPU
+		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		if (foundNonce != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce.x);
+			be32enc(&endiandata[19], foundNonce);
 			quarkhash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) 
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
 				// check if there was some other ones...
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-//				if (foundNonce.y != 0xffffffff)
-//				{
-//					pdata[21] = foundNonce.y;
-//					res++;
-//					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
-//				}
-				pdata[19] = foundNonce.x;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
+				if (secNonce != 0)
+				{
+					pdata[21] = secNonce;
+					res++;
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				}
+				pdata[19] = foundNonce;
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else
