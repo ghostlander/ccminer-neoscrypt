@@ -268,7 +268,7 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	quark_blake512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
