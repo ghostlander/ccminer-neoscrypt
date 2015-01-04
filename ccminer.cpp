@@ -1088,9 +1088,12 @@ static void *miner_thread(void *userdata)
 		affine_to_cpu(thr_id, thr_id % num_cpus);
 	}
 
-	while (1) {
+	while (1) 
+	{
+		work.data[19] = 0;	//reset Hashcounters
+		work.data[21] = 0;
 		struct timeval tv_start, tv_end, diff;
-		unsigned long hashes_done;
+		unsigned long hashes_done=0;
 		uint32_t start_nonce;
 		uint32_t scan_time = have_longpoll ? LP_SCANTIME : opt_scantime;
 		uint64_t max64, minmax = 0x100000;
@@ -1446,17 +1449,19 @@ static void *miner_thread(void *userdata)
 			work.scanned_to = nonceptr[0];
 		else {
 			work.scanned_to = max_nonce;
-			if (opt_debug && opt_benchmark) {
+			if (opt_debug && opt_benchmark) 
+			{
 				// to debug nonce ranges
 				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
 					nonceptr[0], (nonceptr[0] - start_nonce));
+
 			}
 		}
 
 		hashlog_remember_scan_range(&work);
 
 		/* output */
-		if (!opt_quiet && loopcnt) {
+		if (!opt_quiet && (loopcnt > 0)) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
 			applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
@@ -1464,7 +1469,7 @@ static void *miner_thread(void *userdata)
 		}
 
 		/* loopcnt: ignore first loop hashrate */
-		if (loopcnt && thr_id == (opt_n_threads - 1)) {
+		if ((loopcnt>0) && thr_id == (opt_n_threads - 1)) {
 			double hashrate = 0.;
 			pthread_mutex_lock(&stats_lock);
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
