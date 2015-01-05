@@ -563,7 +563,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
-	/* discard if a new bloc was sent */
+//	This code causes many pools to submitt alot less nounces that are found Removed SP-HASH 1-jan-2015.
+	/*  
+	// discard if a new bloc was sent
 	stale_work = work->height != g_work.height;
 	if (have_stratum && !stale_work) {
 		pthread_mutex_lock(&g_work_lock);
@@ -577,6 +579,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_WARNING, "stale work detected, discarding");
 		return true;
 	}
+	*/
+
 	calc_diff(work, 0);
 
 	if (have_stratum) {
