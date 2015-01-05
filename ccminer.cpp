@@ -1090,8 +1090,11 @@ static void *miner_thread(void *userdata)
 
 	while (1) 
 	{
-		work.data[19] = 0;	//reset Hashcounters
-		work.data[21] = 0;
+		if (opt_benchmark)
+		{
+			work.data[19] = 0;	//reset Hashcounters
+			work.data[21] = 0;
+		}
 		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done=0;
 		uint32_t start_nonce;
