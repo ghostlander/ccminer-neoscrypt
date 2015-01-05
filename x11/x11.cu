@@ -199,7 +199,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				}
 				pdata[19] = foundNonce.x;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else //quick echo failed. Do full echo
