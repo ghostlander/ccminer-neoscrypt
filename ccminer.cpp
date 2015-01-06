@@ -563,24 +563,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
-//	This code causes many pools to submitt alot less nounces that are found Removed SP-HASH 1-jan-2015.
-	/*  
-	// discard if a new bloc was sent
-	stale_work = work->height != g_work.height;
-	if (have_stratum && !stale_work) {
-		pthread_mutex_lock(&g_work_lock);
-		if (strlen(work->job_id + 8))
-			stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
-		pthread_mutex_unlock(&g_work_lock);
-	}
-
-	if (stale_work) {
-		if (opt_debug)
-			applog(LOG_WARNING, "stale work detected, discarding");
-		return true;
-	}
-	*/
-
 	calc_diff(work, 0);
 
 	if (have_stratum) {
@@ -629,6 +611,15 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		free(noncestr);
 
 		gettimeofday(&stratum.tv_submit, NULL);
+
+		pthread_mutex_lock(&g_work_lock);
+		stale_work = work->height != g_work.height;
+		pthread_mutex_unlock(&g_work_lock);
+		if (stale_work)
+		{
+			applog(LOG_WARNING, "stale work detected, discarding");
+			return true;
+		}
 		if (unlikely(!stratum_send_line(&stratum, s))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
@@ -636,8 +627,15 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		hashlog_remember_submit(work, nonce);
 
-	} else {
+	} else 
+	{
+		stale_work = work->height != g_work.height;
 
+		if (stale_work)
+		{
+			applog(LOG_WARNING, "stale work detected, discarding");
+			return true;
+		}
 		/* build hex string */
 		char *str = NULL;
 
@@ -1450,19 +1448,12 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		if (rc > 1)
-			work.scanned_to = nonceptr[2];
-		else if (rc)
-			work.scanned_to = nonceptr[0];
-		else {
-			work.scanned_to = max_nonce;
-			if (opt_debug && opt_benchmark) 
-			{
-				// to debug nonce ranges
-				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
-					nonceptr[0], (nonceptr[0] - start_nonce));
-
-			}
+		work.scanned_to = start_nonce + hashes_done - 1;
+		if (opt_debug && opt_benchmark) 
+		{
+			// to debug nonce ranges
+			applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
+				start_nonce + hashes_done - 1, hashes_done);
 		}
 
 		hashlog_remember_scan_range(&work);
@@ -1514,7 +1505,7 @@ static void *miner_thread(void *userdata)
 					break;
 			}
 		}
-
+		work.data[19] = start_nonce + hashes_done;
 		loopcnt++;
 	}
 
@@ -1698,7 +1689,8 @@ static void *stratum_thread(void *userdata)
 			pthread_mutex_lock(&g_work_lock);
 			stratum_gen_work(&stratum, &g_work);
 			g_work_time = time(NULL);
-			if (stratum.job.clean) {
+			if (stratum.job.clean) 
+			{
 				if (!opt_quiet)
 					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
 						stratum.job.height);
