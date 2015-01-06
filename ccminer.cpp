@@ -631,7 +631,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		gettimeofday(&stratum.tv_submit, NULL);
 
-		pthread_mutex_lock(&g_work_lock);
+/*		pthread_mutex_lock(&g_work_lock);
 		stale_work = work->height != g_work.height;
 		pthread_mutex_unlock(&g_work_lock);
 		if (stale_work)
@@ -639,6 +639,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_WARNING, "stale work detected, discarding");
 			return true;
 		}
+		*/
 		if (unlikely(!stratum_send_line(&stratum, s))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
@@ -649,6 +650,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 	} else 
 	{
+		/*
 		stale_work = work->height != g_work.height;
 
 		if (stale_work)
@@ -656,6 +658,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_WARNING, "stale work detected, discarding");
 			return true;
 		}
+		*/
 		/* build hex string */
 		char *str = NULL;
 
