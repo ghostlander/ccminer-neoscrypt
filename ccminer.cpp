@@ -1427,17 +1427,11 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		if (rc > 1)
-			work.scanned_to = nonceptr[2];
-		else if (rc)
-			work.scanned_to = nonceptr[0];
-		else {
-			work.scanned_to = max_nonce;
-			if (opt_debug && opt_benchmark) {
-				// to debug nonce ranges
-				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
-					nonceptr[0], (nonceptr[0] - start_nonce));
-			}
+		work.scanned_to = start_nonce + hashes_done - 1;
+		if (opt_debug && opt_benchmark) {
+			// to debug nonce ranges
+			applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
+				start_nonce + hashes_done - 1, hashes_done);
 		}
 
 		if (check_dups)
@@ -1490,7 +1484,7 @@ static void *miner_thread(void *userdata)
 					break;
 			}
 		}
-
+		work.data[19] = start_nonce + hashes_done;
 		loopcnt++;
 	}
 
