@@ -69,26 +69,13 @@ const uint64_t c_u512[16] =
 	v[b] = ROR2(v[b] ^ v[c], 11); \
 	}
 
-// Hash-Padding
-__device__ __constant__
-static const uint64_t d_constHashPadding[8] = {
-	0x0000000000000080ull,
-	0,
-	0,
-	0,
-	0,
-	0x0100000000000000ull,
-	0,
-	0x0002000000000000ull
-};
-
 __global__ 
 #if __CUDA_ARCH__ > 500
 	__launch_bounds__(32, 16)
 #else
 	__launch_bounds__(32, 32)
 #endif
-void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
+void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint64_t *const __restrict__ g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -112,20 +99,23 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		// 128 Bytes
 		uint64_t block[16];
 
-		const int32_t T0 = 512;
-
 		// Message for first round
 		#pragma unroll 8
 		for (int i=0; i < 8; ++i)
 			block[i] = cuda_swab64(inpHash[i]);
-
-		#pragma unroll 8
-		for (int i=0; i < 8; i++)
-			block[i+8] = cuda_swab64(d_constHashPadding[i]);
+		block[ 8] = 0x8000000000000000;
+		block[ 9] = 0;
+		block[10] = 0;
+		block[11] = 0;
+		block[12] = 0;
+		block[13] = 1;
+		block[14] = 0;
+		block[15] = 0x0000000000000200;
 
 		register uint2 v[16];
 
-		const uint2 h[8] = {
+		const uint2 h[8] =
+		{
 				{ 0xf3bcc908UL, 0x6a09e667UL },
 				{ 0x84caa73bUL, 0xbb67ae85UL },
 				{ 0xfe94f82bUL, 0x3c6ef372UL },
@@ -143,8 +133,8 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		v[9] = vectorize(c_u512[1]);
 		v[10] = vectorize(c_u512[2]);
 		v[11] = vectorize(c_u512[3]);
-		v[12] = vectorize(c_u512[4] ^ T0);
-		v[13] = vectorize(c_u512[5] ^ T0);
+		v[12] = vectorize(c_u512[4] ^ 512);
+		v[13] = vectorize(c_u512[5] ^ 512);
 		v[14] = vectorize(c_u512[6]);
 		v[15] = vectorize(c_u512[7]);
 
@@ -160,7 +150,6 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			G(2, 7, 8, 13, 12);
 			G(3, 4, 9, 14, 14);
 		}
-
 
 		uint64_t *outHash = &g_hash[8 * hashPosition];
 
@@ -194,7 +183,6 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 #pragma unroll 16
 		for (int i = 0; i < 16; ++i)
 			block[i] = c_PaddedMessage80[i];
-		const int32_t T0 = 640;
 		// The test Nonce
 		((uint32_t*)block)[18] = nounce;
 
@@ -229,8 +217,8 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 		v[9] = vectorize(u512[1]);
 		v[10] = vectorize(u512[2]);
 		v[11] = vectorize(u512[3]);
-		v[12] = vectorize(u512[4] ^ T0);
-		v[13] = vectorize(u512[5] ^ T0);
+		v[12] = vectorize(u512[4] ^ 640);
+		v[13] = vectorize(u512[5] ^ 640);
 		v[14] = vectorize(u512[6]);
 		v[15] = vectorize(u512[7]);
 
