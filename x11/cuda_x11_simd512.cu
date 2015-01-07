@@ -6,6 +6,7 @@
 // STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
 
 #define TPB 64
+#define TPB2 160 // compress for maxwell
 
 #include "cuda_helper.h"
 #include <stdio.h>
@@ -604,8 +605,8 @@ x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 }
 
 
-__global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ void __launch_bounds__(TPB2, 2)
+x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector, const uint4 *const __restrict__ g_fft4, uint32_t *const __restrict__ g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -664,20 +665,23 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
 	MyStreamSynchronize(NULL, order, thr_id);
 
-	dim3 grid((threads + TPB-1)/TPB);
-
 	if (device_sm[device_map[thr_id]] >= 500) 
 	{
-		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+		dim3 blockc(TPB2);
+		dim3 gridc((threads + TPB2 - 1) / TPB2);
+		x11_simd512_gpu_compress_64_maxwell <<< gridc, blockc >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 	}
 	else 
 	{
+		dim3 grid((threads + TPB - 1) / TPB);
 		x11_simd512_gpu_compress1_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 		x11_simd512_gpu_compress2_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 	}
 //	MyStreamSynchronize(NULL, order, thr_id);
 
-	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+	dim3 blockf(TPB);
+	dim3 gridf((threads + TPB - 1) / TPB);
+	x11_simd512_gpu_final_64 << <gridf, blockf >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 
 //	MyStreamSynchronize(NULL, order, thr_id);
 }

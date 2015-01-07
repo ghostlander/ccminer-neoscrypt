@@ -1143,8 +1143,9 @@ __device__ __forceinline__ void Round8_3_final(uint32_t *A,
 #define expanded_vector(x) __ldg(&g_fft4[x])
 #endif
 
-__device__ __forceinline__ void Round8_0(uint32_t *A, const int thr_offset,
-		int r, int s, int t, int u, uint4 *g_fft4) {
+__device__ __forceinline__ void Round8_0(uint32_t *const __restrict__ A, const int thr_offset,
+		int r, int s, int t, int u, const uint4 *const __restrict__ g_fft4)
+{
 	uint32_t w[8];
     uint4 hv1, hv2;
 
@@ -1176,8 +1177,9 @@ __device__ __forceinline__ void Round8_0(uint32_t *A, const int thr_offset,
 
 
 }
-__device__ __forceinline__ void Round8_1(uint32_t *A, const int thr_offset,
-		int r, int s, int t, int u, uint4 *g_fft4) {
+__device__ __forceinline__ void Round8_1(uint32_t *const __restrict__ A, const int thr_offset,
+		int r, int s, int t, int u, const uint4 *const __restrict__ g_fft4)
+{
 	uint32_t w[8];
     uint4 hv1, hv2;
 
@@ -1209,8 +1211,9 @@ __device__ __forceinline__ void Round8_1(uint32_t *A, const int thr_offset,
 
 
 }
-__device__ __forceinline__ void Round8_2(uint32_t *A, const int thr_offset,
-		int r, int s, int t, int u, uint4 *g_fft4) {
+__device__ __forceinline__ void Round8_2(uint32_t *const __restrict__ A, const int thr_offset,
+	int r, int s, int t, int u, const uint4 *const __restrict__ g_fft4)
+{
 	uint32_t w[8];
     uint4 hv1, hv2;
 
@@ -1242,8 +1245,9 @@ __device__ __forceinline__ void Round8_2(uint32_t *A, const int thr_offset,
 
 
 }
-__device__ __forceinline__ void Round8_3(uint32_t *A, const int thr_offset,
-		int r, int s, int t, int u, uint4 *g_fft4) {
+__device__ __forceinline__ void Round8_3(uint32_t *const __restrict__ A, const int thr_offset,
+	int r, int s, int t, int u, const uint4 *const __restrict__ g_fft4)
+{
 	uint32_t w[8];
     uint4 hv1, hv2;
 
@@ -1276,7 +1280,8 @@ __device__ __forceinline__ void Round8_3(uint32_t *A, const int thr_offset,
 
 }
 
-__device__ __forceinline__ void SIMD_Compress1(uint32_t *A, const int thr_id, const uint32_t *M, uint4 *g_fft4) {
+__device__ __forceinline__ void SIMD_Compress1(uint32_t *const __restrict__ A, const int thr_id, const uint32_t *const __restrict__ M, const uint4 *const __restrict__ g_fft4)
+{
 	int i;
 	const int thr_offset = thr_id << 6; // thr_id * 128 (je zwei elemente)
 #pragma unroll 8
@@ -1288,40 +1293,41 @@ __device__ __forceinline__ void SIMD_Compress1(uint32_t *A, const int thr_id, co
 	Round8_1(A, thr_offset, 28, 19, 22, 7, g_fft4);
 }
 
-__device__ __forceinline__ void Compression1(const uint32_t *hashval, const int texture_id, uint4 *g_fft4, uint32_t *g_state) {
-	uint32_t A[32];
-	int i;
-#pragma unroll 32
-	for (i=0; i < 32; i++) A[i] = c_IV_512[i];
-	uint32_t buffer[16];
-#pragma unroll 16
-	for (i=0; i < 16; i++) buffer[i] = hashval[i];
-	SIMD_Compress1(A, texture_id, buffer, g_fft4);
+__device__ __forceinline__ void Compression1(const uint32_t *const __restrict__ hashval, const int texture_id, const uint4 *const __restrict__ g_fft4, uint32_t *const __restrict__ g_state)
+{
+	uint32_t A[32] = {
+		0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558,
+		0xac506643, 0xa90635a5, 0xe25b878b, 0xaab7878f, 0x88817f7a, 0x0a02892b, 0x559a7550, 0x598f657e,
+		0x7eef60a1, 0x6b70e3e8, 0x9c1714d1, 0xb958e2a8, 0xab02675e, 0xed1c014f, 0xcd8d65bb, 0xfdb7a257,
+		0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22
+	};
+
+	SIMD_Compress1(A, texture_id, hashval, g_fft4);
 	uint32_t *state = (uint32_t*)&g_state[blockIdx.x * (blockDim.x*32)];
 #pragma unroll 32
-	for (i=0; i < 32; i++) state[threadIdx.x+blockDim.x*i] = A[i];
+	for (int i=0; i < 32; i++)
+		state[threadIdx.x+blockDim.x*i] = A[i];
 }
 
-__device__ __forceinline__ void SIMD_Compress2(uint32_t *A, const int thr_id, uint4 *g_fft4) {
-	uint32_t IV[4][8];
-	int i;
+__device__ __forceinline__ void SIMD_Compress2(uint32_t *const __restrict__ A, const int thr_id, const uint4 *const __restrict__ g_fft4)
+{
+	uint32_t IV0[8] = { 0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558 };
+	uint32_t IV1[8] = { 0xac506643, 0xa90635a5, 0xe25b878b, 0xaab7878f, 0x88817f7a, 0x0a02892b, 0x559a7550, 0x598f657e };
+	uint32_t IV2[8] = { 0x7eef60a1, 0x6b70e3e8, 0x9c1714d1, 0xb958e2a8, 0xab02675e, 0xed1c014f, 0xcd8d65bb, 0xfdb7a257 };
+	uint32_t IV3[8] = { 0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22 };
+
 	const int thr_offset = thr_id << 6; // thr_id * 128 (je zwei elemente)
-#pragma unroll 8
-	for(i=0; i<8; i++) {
-		IV[0][i] = c_IV_512[i];
-		IV[1][i] = c_IV_512[8+i];
-		IV[2][i] = c_IV_512[16+i];
-		IV[3][i] = c_IV_512[24+i];
-	}
+
 	Round8_2(A, thr_offset, 29, 9, 15, 5, g_fft4);
 	Round8_3(A, thr_offset, 4, 13, 10, 25, g_fft4);
-	STEP8_IF_32(IV[0],  4, 13, A, &A[8], &A[16], &A[24]);
-	STEP8_IF_33(IV[1], 13, 10, &A[24], A, &A[8], &A[16]);
-	STEP8_IF_34(IV[2], 10, 25, &A[16], &A[24], A, &A[8]);
-	STEP8_IF_35(IV[3], 25,  4, &A[8], &A[16], &A[24], A);
+	STEP8_IF_32(IV0,  4, 13, A, &A[8], &A[16], &A[24]);
+	STEP8_IF_33(IV1, 13, 10, &A[24], A, &A[8], &A[16]);
+	STEP8_IF_34(IV2, 10, 25, &A[16], &A[24], A, &A[8]);
+	STEP8_IF_35(IV3, 25,  4, &A[8], &A[16], &A[24], A);
 }
 
-__device__ __forceinline__ void Compression2(const int texture_id, uint4 *g_fft4, uint32_t *g_state) {
+__device__ __forceinline__ void Compression2(const int texture_id, const uint4 *const __restrict__ g_fft4, uint32_t *const __restrict__ g_state)
+{
 	uint32_t A[32];
 	int i;
 	uint32_t *state = &g_state[blockIdx.x * (blockDim.x*32)];
