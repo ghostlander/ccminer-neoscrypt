@@ -83,10 +83,11 @@ static const uint64_t d_constHashPadding[8] = {
 };
 
 __global__ 
+
 #if __CUDA_ARCH__ > 500
-	__launch_bounds__(32, 16)
+	__launch_bounds__(256, 4)
 #else
-	__launch_bounds__(32, 32)
+	__launch_bounds__(64, 16)
 #endif
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
 {
@@ -177,9 +178,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 __global__ 
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(32, 16)
+__launch_bounds__(256, 4)
 #else
-__launch_bounds__(32, 32)
+__launch_bounds__(64, 16)
 #endif
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
@@ -425,7 +426,7 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 
 __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 64;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
