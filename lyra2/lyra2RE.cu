@@ -102,7 +102,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		MyStreamSynchronize(NULL, 2, thr_id);
+		//MyStreamSynchronize(NULL, 2, thr_id);
 		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++, foundNonce);
 		if (foundNonce[0] != 0)
 		{

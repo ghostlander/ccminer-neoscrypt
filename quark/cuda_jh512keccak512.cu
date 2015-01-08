@@ -535,6 +535,6 @@ __host__ void cuda_jh512Keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint
     dim3 block(threadsperblock);
 
 	quark_jh512Keccak512_gpu_hash_64 << <grid, block>> >(threads, startNounce, d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
+//    MyStreamSynchronize(NULL, order, thr_id);
 }
 
