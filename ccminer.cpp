@@ -560,6 +560,7 @@ static int share_result(int result, const char *reason)
 		if (strncmp(reason, "Duplicate share", 15) == 0) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
+		}
 	}
 	return 1;
 }
@@ -569,9 +570,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	json_t *val, *res, *reason;
 	bool stale_work = false;
 	char s[384];
-
-		}
-	}
 
 	calc_diff(work, 0);
 

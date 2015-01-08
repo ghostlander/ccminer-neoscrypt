@@ -1,7 +1,6 @@
 #include "cuda_helper.h"
 
 static uint2 *d_nonce[8];
-static uint2 *d_nonce[8];
 
 __constant__ unsigned char c_E8_bitslice_roundconstant[42][32] = {
 	{ 0x72, 0xd5, 0xde, 0xa2, 0xdf, 0x15, 0xf8, 0x67, 0x7b, 0x84, 0x15, 0xa, 0xb7, 0x23, 0x15, 0x57, 0x81, 0xab, 0xd6, 0x90, 0x4d, 0x5a, 0x87, 0xf6, 0x4e, 0x9f, 0x4f, 0xc5, 0xc3, 0xd1, 0x2b, 0x40 },
@@ -274,7 +273,7 @@ static __device__ __forceinline__ void F8_final(uint32_t x[8][4], uint32_t buffe
 	for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
 
 	/*the bijective function E8 */
-	E8_final(x, buffer);
+	E8_final(x);
 
 	/*xor the 512-bit message with the second half of the 1024-bit hash state*/
 #pragma unroll 16
@@ -383,10 +382,6 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 	}
 }
 
-		}
-	}
-}
-
 
 __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
@@ -396,9 +391,6 @@ __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
     quark_jh512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-}
-
-
 }
 
 // Setup-Funktionen
