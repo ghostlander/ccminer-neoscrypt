@@ -265,21 +265,6 @@ static __device__ __forceinline__ void F8(uint32_t x[8][4], uint32_t buffer[16])
     for (int i = 0; i < 16; i++)  x[(16+i) >> 2][(16+i) & 3] ^= ((uint32_t*)buffer)[i];
 }
 
-/*The compression function F8 */
-static __device__ __forceinline__ void F8_final(uint32_t x[8][4], uint32_t buffer[16])
-{
-	/*xor the 512-bit message with the fist half of the 1024-bit hash state*/
-#pragma unroll 16
-	for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
-
-	/*the bijective function E8 */
-	E8_final(x);
-
-	/*xor the 512-bit message with the second half of the 1024-bit hash state*/
-#pragma unroll 16
-	for (int i = 0; i < 16; i++)  x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)buffer)[i];
-}
-
 __device__ __forceinline__ void JHHash(const uint32_t *data, uint32_t *hashval)
 {
 	uint32_t x[8][4] = {
@@ -405,7 +390,7 @@ __host__ uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint3
 	dim3 grid((threads + TPB2 - 1) / TPB2);
 	dim3 block(TPB2);
 
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
+	cudaMemset(d_nonce[thr_id], 0xff, sizeof(uint2));
 	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 	uint2 res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);

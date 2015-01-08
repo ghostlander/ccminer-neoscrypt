@@ -174,8 +174,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	do {
 		uint2 foundNonce;
-		foundNonce.x = 0xffffffffU;
-		foundNonce.y = 0xffffffffU;
 
 		int order = 0;
 		uint32_t nrm1 = 0, nrm2 = 0, nrm3 = 0;
