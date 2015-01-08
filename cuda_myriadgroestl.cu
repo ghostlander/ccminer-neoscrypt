@@ -305,7 +305,7 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
                         sizeof(uint32_t) * 8 );
 }
 
-__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint2 *nounce)
+__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint2 *nounce)
 {
     uint32_t threadsperblock = 256;
 

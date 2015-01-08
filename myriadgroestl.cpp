@@ -10,7 +10,7 @@
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
-void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint2 *nounce);
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint2 *nounce);
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
@@ -46,8 +46,6 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 17);
 	throughPut = min(throughPut, max_nonce - start_nonce);
 
-	uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
-
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
@@ -73,7 +71,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 		uint2 foundNounce;
 		const uint32_t Htarg = ptarget[7];
 
-		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], outputHash, &foundNounce);
+		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], &foundNounce);
 
 		if(foundNounce.x < 0xffffffff)
 		{
@@ -106,7 +104,6 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughPut)));
 
 	*hashes_done = pdata[19] - start_nonce + 1;
-	free(outputHash);
 	return 0;
 }
 
