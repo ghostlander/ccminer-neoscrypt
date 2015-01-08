@@ -720,7 +720,7 @@ fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outp
 
 void fugue256_cpu_init(int thr_id, uint32_t threads)
 {
-	cudaSetDevice(device_map[thr_id]);
+	CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);

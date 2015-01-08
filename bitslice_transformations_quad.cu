@@ -7,18 +7,16 @@
 #define __shfl(var, srcLane, width) (uint32_t)(var)
 #endif
 
-#ifdef __CUDA_ARCH__
-
 __device__ __forceinline__
-void to_bitslice_quad(uint32_t * __restrict__ input, uint32_t * __restrict__ output)
+void to_bitslice_quad(uint32_t *const __restrict__ input, uint32_t *const __restrict__ output)
 {
     uint32_t other[8];
-    const int n = threadIdx.x % 4;
+    const unsigned int n = threadIdx.x & 3;
 
     #pragma unroll
     for (int i = 0; i < 8; i++) {
         input[i] = __shfl((int)input[i], n ^ (3*(n >=1 && n <=2)), 4);
-        other[i] = __shfl((int)input[i], (threadIdx.x + 1) % 4, 4);
+        other[i] = __shfl((int)input[i], (threadIdx.x + 1) & 3, 4);
         input[i] = __shfl((int)input[i], threadIdx.x & 2, 4);
         other[i] = __shfl((int)other[i], threadIdx.x & 2, 4);
         if (threadIdx.x & 1) {
@@ -293,7 +291,7 @@ void to_bitslice_quad(uint32_t * __restrict__ input, uint32_t * __restrict__ out
 }
 
 __device__ __forceinline__
-void from_bitslice_quad(uint32_t * __restrict__ input, uint32_t * __restrict__ output)
+void from_bitslice_quad(const uint32_t *const __restrict__ input, uint32_t *const __restrict__ output)
 {
     output[ 0] = ((input[ 0] & 0x00000100) >> 8);
     output[ 0] |= ((input[ 1] & 0x00000100) >> 7);
@@ -432,11 +430,3 @@ void from_bitslice_quad(uint32_t * __restrict__ input, uint32_t * __restrict__ o
         if (threadIdx.x & 3) output[i] = output[i+1] = 0;
     }
 }
-
-#else
-
-/* host "fake" functions */
-#define from_bitslice_quad(st, out)
-#define to_bitslice_quad(in, msg) in[0] = (uint32_t) in[0];
-
-#endif /* device only code */

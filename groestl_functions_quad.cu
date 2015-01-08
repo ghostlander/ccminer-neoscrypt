@@ -1,6 +1,6 @@
 #include "cuda_helper.h"
 
-__device__ __forceinline__ void G256_Mul2(uint32_t *regs)
+__device__ __forceinline__ void G256_Mul2(uint32_t *const regs)
 {
     uint32_t tmp = regs[7];
     regs[7] = regs[6];
@@ -52,7 +52,7 @@ __device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32
 }
 
 __device__ __forceinline__ void G16mul_quad(uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0,
-                                       uint32_t &y3, uint32_t &y2, uint32_t &y1, uint32_t &y0)
+	const uint32_t &y3, const uint32_t &y2, const uint32_t &y1, const uint32_t &y0)
 {
     uint32_t t0,t1,t2;
     
@@ -144,7 +144,7 @@ __device__ __forceinline__ void transXtoA_quad(uint32_t &x0, uint32_t &x1, uint3
     x5 = t5;    
 }
 
-__device__ __forceinline__ void sbox_quad(uint32_t *r)
+__device__ __forceinline__ void sbox_quad(uint32_t *const r)
 {
     transAtoX_quad(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]);
 
@@ -283,7 +283,7 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 #undef X
 }
 
-__device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *r)
+__device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *const r)
 {
 
     for(int round=0;round<14;round++)
@@ -295,7 +295,7 @@ __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *r)
     }
 }
 
-__device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *r)
+__device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 {    
     for(int round=0;round<14;round++)
     {
@@ -306,7 +306,7 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *r)
     }
 }
 
-__device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t * __restrict__ state, uint32_t * __restrict__ message)
+__device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t *const __restrict__ state, uint32_t *const __restrict__ message)
 {
 #pragma unroll 8
     for(int u=0;u<8;u++) state[u] = message[u];

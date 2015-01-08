@@ -98,9 +98,9 @@ uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	dim3 block(threadsperblock);
 
 	cuda_checkhash_64 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
-//	cudaDeviceSynchronize();
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
 	return h_resNonces[thr_id][0];
 }
 
@@ -114,15 +114,14 @@ void cuda_checkhash_64_suppl(uint32_t startNounce, uint32_t *hash, uint32_t *res
 	uint32_t *inpHash = &hash[thread << 4];
 
 	if (hashbelowtarget(inpHash, pTarget)) {
-		int resNum = ++resNonces[0];
-		__threadfence();
+		int resNum = atomicAdd(resNonces,1)+1;
 		if (resNum < 8)
 			resNonces[resNum] = (startNounce + thread);
 	}
 }
 
 __host__
-uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce)
+uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint32_t foundnonce)
 {
 	uint32_t rescnt, result = 0;
 
@@ -134,18 +133,21 @@ uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounc
 	cudaMemset(d_resNonces[thr_id], 0, sizeof(uint32_t));
 
 	cuda_checkhash_64_suppl <<<grid, block>>> (startNounce, d_inputHash, d_resNonces[thr_id]);
-//	cudaDeviceSynchronize();
-
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], 8*sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	rescnt = h_resNonces[thr_id][0];
-	if (rescnt > numNonce) {
-		if (numNonce <= rescnt) {
-			result = h_resNonces[thr_id][numNonce+1];
-		}
-		if (opt_debug)
-			applog(LOG_WARNING, "Found %d nonces: %x + %x", rescnt, h_resNonces[thr_id][1], result);
-	}
 
+	rescnt = h_resNonces[thr_id][0];
+	if (rescnt > 1)
+	{
+		do
+		{
+			if (h_resNonces[thr_id][rescnt] != foundnonce)
+			{
+				result = h_resNonces[thr_id][rescnt];
+				break;
+			}
+			rescnt--;
+		} while (rescnt > 0);
+	}
 	return result;
 }
 
@@ -161,16 +163,11 @@ void cuda_check_hash_branch_64(uint32_t threads, uint32_t startNounce, uint32_t 
 		uint32_t hashPosition = (nounce - startNounce) << 4;
 		uint32_t *inpHash = &g_hash[hashPosition];
 
-		for (int i = 7; i >= 0; i--) {
-			if (inpHash[i] > pTarget[i]) {
-				return;
-			}
-			if (inpHash[i] < pTarget[i]) {
-				break;
-			}
+		if (hashbelowtarget(inpHash, pTarget))
+		{
+			if (resNounce[0] > nounce)
+				resNounce[0] = nounce;
 		}
-		if (resNounce[0] > nounce)
-			resNounce[0] = nounce;
 	}
 }
 
@@ -189,7 +186,6 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-//	cudaDeviceSynchronize();
 	result = *h_resNonces[thr_id];
 
 	return result;

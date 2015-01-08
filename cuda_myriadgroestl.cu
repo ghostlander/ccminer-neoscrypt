@@ -8,29 +8,26 @@
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
 uint32_t *d_outputHashes[8];
-extern uint32_t *d_resultNonce[8];
+uint2 *d_resultNonce[8];
 
 __constant__ uint32_t myriadgroestl_gpu_msg[32];
 
 // muss expandiert werden
-__constant__ uint32_t myr_sha256_gpu_constantTable[64];
-__constant__ uint32_t myr_sha256_gpu_constantTable2[64];
-__constant__ uint32_t myr_sha256_gpu_hashTable[8];
-
-uint32_t myr_sha256_cpu_hashTable[] = { 
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
-uint32_t myr_sha256_cpu_constantTable[] = {
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+__constant__ uint32_t myr_sha256_gpu_constantTable[64] = {
+	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+	0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+	0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+	0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+	0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+	0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+	0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+	0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 };
+// __constant__ uint32_t myr_sha256_gpu_constantTable2[64];
+__constant__ uint32_t myr_sha256_gpu_hashTable[8] = {
+	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
 
-uint32_t myr_sha256_cpu_w2Table[] = {
+__constant__ uint32_t myr_sha256_gpu_w2Table[64] = {
     0x80000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000200,
     0x80000000, 0x01400000, 0x00205000, 0x00005088, 0x22000800, 0x22550014, 0x05089742, 0xa0000020,
@@ -67,20 +64,12 @@ __device__ void myriadgroestl_gpu_sha256(uint32_t *message)
     uint32_t W2[16];
 
     // Initialisiere die register a bis h mit der Hash-Tabelle
-    uint32_t regs[8];
-    uint32_t hash[8];
+	uint32_t regs[8] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
+	uint32_t hash[8] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
 
-    // pre
-#pragma unroll 8
-    for (int k=0; k < 8; k++)
-    {
-        regs[k] = myr_sha256_gpu_hashTable[k];
-        hash[k] = regs[k];
-    }
-    
 #pragma unroll 16
     for(int k=0;k<16;k++)
-        W1[k] = SWAB32(message[k]);
+        W1[k] = cuda_swab32(message[k]);
 
 // Progress W1
 #pragma unroll 16
@@ -192,29 +181,29 @@ __device__ void myriadgroestl_gpu_sha256(uint32_t *message)
     for(int k=0;k<8;k++)
         regs[k] = hash[k];
 
+// to do: precalculate constants
+	uint32_t myr_sha256_gpu_constantTable2[64];
+#pragma unroll 64
+	for (int i = 0; i < 64; i++)
+		myr_sha256_gpu_constantTable2[i] = myr_sha256_gpu_constantTable[i] + myr_sha256_gpu_w2Table[i];
+
 // Progress W1
 #pragma unroll 64
-    for(int j=0;j<64;j++)
+    for(int j=0;j<61;j++)
     {
-        uint32_t T1, T2;
-        T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + myr_sha256_gpu_constantTable2[j];
-        T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
-        
-        #pragma unroll 7
-        for (int k=6; k >= 0; k--) regs[k+1] = regs[k];
-        regs[0] = T1 + T2;
-        regs[4] += T1;
-    }
+		uint32_t T1, T2;
+		T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + myr_sha256_gpu_constantTable2[j];
+		T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
 
-#pragma unroll 8
-    for(int k=0;k<8;k++)
-        hash[k] += regs[k];
+#pragma unroll 7
+		for (int k = 6; k >= 0; k--) regs[k + 1] = regs[k];
+		regs[0] = T1 + T2;
+		regs[4] += T1;
+	}
 
     //// FERTIG
 
-#pragma unroll 8
-    for(int k=0;k<8;k++)
-        message[k] = SWAB32(hash[k]);
+	message[7] = cuda_swab32(hash[7] + regs[4]);
 }
 
 __global__ void __launch_bounds__(256, 4)
@@ -227,11 +216,11 @@ __global__ void __launch_bounds__(256, 4)
         // GROESTL
         uint32_t paddedInput[8];
 #pragma unroll 8
-        for(int k=0;k<8;k++) paddedInput[k] = myriadgroestl_gpu_msg[4*k+threadIdx.x%4];
+		for (int k = 0; k<8; k++) paddedInput[k] = myriadgroestl_gpu_msg[4 * k + threadIdx.x % 4];
 
-        uint32_t nounce = startNounce + thread;
-        if ((threadIdx.x % 4) == 3)
-            paddedInput[4] = SWAB32(nounce);  // 4*4+3 = 19
+		uint32_t nounce = startNounce + thread;
+		if ((threadIdx.x % 4) == 3)
+			paddedInput[4] = cuda_swab32(nounce);  // 4*4+3 = 19
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(paddedInput, msgBitsliced);
@@ -252,8 +241,8 @@ __global__ void __launch_bounds__(256, 4)
     }
 }
 
-__global__ void
- myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
+__global__ void __launch_bounds__(256, 3)
+ myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint2 *resNounce, uint32_t *hashBuffer)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -268,55 +257,22 @@ __global__ void
 
         myriadgroestl_gpu_sha256(out_state);
         
-        int i, position = -1;
-        bool rc = true;
-
-#pragma unroll 8
-        for (i = 7; i >= 0; i--) {
-            if (out_state[i] > pTarget[i]) {
-                if(position < i) {
-                    position = i;
-                    rc = false;
-                }
-             }
-             if (out_state[i] < pTarget[i]) {
-                if(position < i) {
-                    position = i;
-                    rc = true;
-                }
-             }
-        }
-
-        if(rc == true)
-            if(resNounce[0] > nounce)
-                resNounce[0] = nounce;
+        if (out_state[7] <= pTarget[7])
+		{
+			uint32_t tmp = atomicExch(&(resNounce[0].x), nounce);
+			if (tmp != 0xffffffff)
+				resNounce[0].y = tmp;
+		 }
     }
 }
 
 // Setup-Funktionen
 __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaSetDevice(device_map[thr_id]);
+    CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
     
-    cudaMemcpyToSymbol( myr_sha256_gpu_hashTable,
-                        myr_sha256_cpu_hashTable,
-                        sizeof(uint32_t) * 8 );
-
-    cudaMemcpyToSymbol( myr_sha256_gpu_constantTable,
-                        myr_sha256_cpu_constantTable,
-                        sizeof(uint32_t) * 64 );
-
-    // zweite CPU-Tabelle bauen und auf die GPU laden
-    uint32_t temp[64];
-    for(int i=0;i<64;i++)
-        temp[i] = myr_sha256_cpu_w2Table[i] + myr_sha256_cpu_constantTable[i];
-
-    cudaMemcpyToSymbol( myr_sha256_gpu_constantTable2,
-                        temp,
-                        sizeof(uint32_t) * 64 );
-
     // Speicher für Gewinner-Nonce belegen
-    cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
+    cudaMalloc(&d_resultNonce[thr_id], sizeof(uint2)); 
 
     // Speicher für temporäreHashes
     cudaMalloc(&d_outputHashes[thr_id], 16*sizeof(uint32_t)*threads); 
@@ -343,13 +299,13 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
                         msgBlock,
                         128);
 
-    cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
+    cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint2));
     cudaMemcpyToSymbol( pTarget,
                         pTargetIn,
                         sizeof(uint32_t) * 8 );
 }
 
-__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
+__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint2 *nounce)
 {
     uint32_t threadsperblock = 256;
 
@@ -357,7 +313,7 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     const int factor=4;
 
-    cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
+    cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint2));
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
@@ -367,5 +323,5 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     myriadgroestl_gpu_hash_quad2<<<grid2, block>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
 
-    cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
 }

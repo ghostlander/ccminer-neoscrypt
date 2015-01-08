@@ -99,7 +99,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
@@ -215,7 +215,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (secNonce != 0) {
 					pdata[21] = secNonce;

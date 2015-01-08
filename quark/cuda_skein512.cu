@@ -518,9 +518,8 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
 
-	quark_skein512_gpu_hash_64 << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-//	uint32_t res;
-//	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	quark_skein512_gpu_hash_64 << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+//	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 /*
@@ -532,10 +531,9 @@ uint32_t quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
-	quark_skein512_gpu_hash_64_final<< <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
+	quark_skein512_gpu_hash_64_final<< <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;

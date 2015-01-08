@@ -9,6 +9,12 @@
 #include <device_functions.h>
 #include <device_launch_parameters.h>
 #define __launch_bounds__(max_tpb, min_blocks)
+uint32_t __byte_perm(uint32_t x, uint32_t y, uint32_t z);
+uint32_t __shfl(uint32_t x, uint32_t y, uint32_t z);
+uint32_t atomicExch(uint32_t *x, uint32_t y);
+uint32_t atomicAdd(uint32_t *x, uint32_t y);
+void __syncthreads(void);
+void __threadfence(void);
 #endif
 
 #include <stdint.h>
@@ -20,10 +26,8 @@ extern "C"  long device_sm[8];
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
 extern void cuda_check_cpu_setTarget(const void *ptarget);
 extern uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash);
-extern uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce);
+extern uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint32_t foundnonce);
 extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
-extern __device__ __device_builtin__ void __syncthreads(void);
-extern __device__ __device_builtin__ void __threadfence(void);
 
 #ifndef __CUDA_ARCH__
 // define blockDim and threadIdx for host

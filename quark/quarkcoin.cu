@@ -145,7 +145,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
@@ -173,6 +173,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 
 	do {
+		uint2 foundNonce;
+
 		int order = 0;
 		uint32_t nrm1 = 0, nrm2 = 0, nrm3 = 0;
 
@@ -228,40 +230,33 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der bedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der bedingte Branch für JH512
-		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
-
-		MyStreamSynchronize(NULL, 4, thr_id);
-
-		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
-		if (foundNonce != 0xffffffff)
+		foundNonce = quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++, ptarget[7]);
+		if (foundNonce.x != 0xffffffffU)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], foundNonce.x);
 			quarkhash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
-				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0)
+				// check if there was some other ones...
+				if (foundNonce.y != 0xffffffffU)
 				{
-					pdata[21] = secNonce;
+					pdata[21] = foundNonce.y;
 					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce $%08X", thr_id, foundNonce.y);
 				}
-				pdata[19] = foundNonce;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				pdata[19] = foundNonce.x;
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce $%08X", thr_id, foundNonce.x);
 				return res;
 			}
 			else
 			{
-				if (vhash64[7] > Htarg) // don't show message if it is equal but fails fulltest
-					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+				if (vhash64[7] != Htarg) // don't show message if it is equal but fails fulltest
+					applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 

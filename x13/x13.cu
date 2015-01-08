@@ -164,7 +164,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
@@ -200,7 +200,6 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 	//	uint32_t foundNonce = x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		MyStreamSynchronize(NULL, 1, thr_id);
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != 0xffffffff)
@@ -212,7 +211,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) 
 			{
 				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (secNonce != 0) 
 				{

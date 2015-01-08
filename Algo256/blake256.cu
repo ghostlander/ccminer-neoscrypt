@@ -408,7 +408,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	if (!init[thr_id]) {
 		if (active_gpus > 1)
-			cudaSetDevice(device_map[thr_id]);
+			CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]),0);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		init[thr_id] = true;
@@ -448,8 +448,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
 				rc = 1;
+				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
-				*hashes_done = pdata[19] - first_nonce + 1;
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
 					be32enc(&endiandata[19], extra_results[0]);
@@ -457,7 +457,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 					if (vhashcpu[6] <= Htarg /* && fulltest(vhashcpu, ptarget) */) {
 						pdata[21] = extra_results[0];
 						applog(LOG_BLUE, "1:%x 2:%x", foundNonce, extra_results[0]);
-						*hashes_done = max(*hashes_done, extra_results[0] - first_nonce + 1);
 						rc = 2;
 					}
 					extra_results[0] = UINT32_MAX;

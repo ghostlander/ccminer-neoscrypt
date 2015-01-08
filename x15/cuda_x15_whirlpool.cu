@@ -2573,11 +2573,10 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		cudaMemcpyToSymbol(mixTob5Tox, old1_T5, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
+		cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t));
+		cudaMallocHost(&d_wnounce[thr_id], sizeof(uint32_t));
 		break;
 	}
-
-	cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t));
-	cudaMallocHost(&d_wnounce[thr_id], sizeof(uint32_t));
 }
 
 __host__

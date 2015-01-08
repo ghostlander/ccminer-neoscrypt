@@ -587,7 +587,6 @@ uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounc
 	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
 
 	cudaMemcpy(d_nounce[thr_id], d_KNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	cudaDeviceSynchronize();
 	result = *d_nounce[thr_id];
 
 	return result;

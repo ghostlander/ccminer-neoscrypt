@@ -152,7 +152,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
@@ -204,7 +204,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				}
 				pdata[19] = foundNonce.x;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce, vhash64[7], Htarg);
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
 			else //quick echo failed. Do full echo
@@ -219,7 +219,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 					{
 						int res = 1;
 						// check if there was some other ones...
-						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 						*hashes_done = pdata[19] - first_nonce + throughput;
 						if (secNonce != 0) {
 							pdata[21] = secNonce;
@@ -251,7 +251,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			{
 				int res = 1;
 				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (secNonce != 0) {
 					pdata[21] = secNonce;
