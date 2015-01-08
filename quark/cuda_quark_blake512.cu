@@ -35,14 +35,14 @@ __constant__ uint8_t c_sigma[16][16] =
 __device__ __constant__
 const uint64_t c_u512[16] =
 {
-  0x243f6a8885a308d3ULL, 0x13198a2e03707344ULL, 
-  0xa4093822299f31d0ULL, 0x082efa98ec4e6c89ULL,
-  0x452821e638d01377ULL, 0xbe5466cf34e90c6cULL, 
-  0xc0ac29b7c97c50ddULL, 0x3f84d5b5b5470917ULL,
-  0x9216d5d98979fb1bULL, 0xd1310ba698dfb5acULL, 
-  0x2ffd72dbd01adfb7ULL, 0xb8e1afed6a267e96ULL,
-  0xba7c9045f12c7f99ULL, 0x24a19947b3916cf7ULL, 
-  0x0801f2e2858efc16ULL, 0x636920d871574e69ULL
+	0x243f6a8885a308d3ULL, 0x13198a2e03707344ULL,
+	0xa4093822299f31d0ULL, 0x082efa98ec4e6c89ULL,
+	0x452821e638d01377ULL, 0xbe5466cf34e90c6cULL,
+	0xc0ac29b7c97c50ddULL, 0x3f84d5b5b5470917ULL,
+	0x9216d5d98979fb1bULL, 0xd1310ba698dfb5acULL,
+	0x2ffd72dbd01adfb7ULL, 0xb8e1afed6a267e96ULL,
+	0xba7c9045f12c7f99ULL, 0x24a19947b3916cf7ULL,
+	0x0801f2e2858efc16ULL, 0x636920d871574e69ULL
 };
 
 #define G(a,b,c,d,x) { \
@@ -58,59 +58,16 @@ const uint64_t c_u512[16] =
 	v[b] = ROR2(v[b] ^ v[c], 11); \
   }
 
-__device__ __forceinline__ 
-void quark_blake512_compress(uint64_t *const __restrict__ h, const uint64_t *const __restrict__ block, const int T0)
-{
-	register uint2 v[16];
-
-	#pragma unroll 8
-	for (int i = 0; i < 8; i++)
-		v[i] = vectorize(h[i]);
-	v[8] = vectorize(c_u512[0]);
-	v[9] = vectorize(c_u512[1]);
-	v[10] = vectorize(c_u512[2]);
-	v[11] = vectorize(c_u512[3]);
-	v[12] = vectorize(c_u512[4] ^ T0);
-	v[13] = vectorize(c_u512[5] ^ T0);
-	v[14] = vectorize(c_u512[6]);
-	v[15] = vectorize(c_u512[7]);
-
-	#pragma unroll 2
-	for(int i = 0; i < 16; i++ )
-	{
-		G( 0, 4, 8, 12, 0 );
-		G( 1, 5, 9, 13, 2 );
-		G( 2, 6, 10, 14, 4 );
-		G( 3, 7, 11, 15, 6 );
-		G( 0, 5, 10, 15, 8 );
-		G( 1, 6, 11, 12, 10 );
-		G( 2, 7, 8, 13, 12 );
-		G( 3, 4, 9, 14, 14 );
+#define Gprecalc(a,b,c,d,idx1,idx2) { \
+	v[a] += vectorize(block[idx2] ^ u512[idx1]) + v[b]; \
+	v[d] = SWAPDWORDS2( v[d] ^ v[a]); \
+	v[c] += v[d]; \
+	v[b] = ROR2(v[b] ^ v[c], 25); \
+	v[a] += vectorize(block[idx1] ^ u512[idx2]) + v[b]; \
+	v[d] = ROR2(v[d] ^ v[a],16); \
+	v[c] += v[d]; \
+	v[b] = ROR2(v[b] ^ v[c], 11); \
 	}
-
-	h[0] ^= devectorize(v[0] ^ v[8]);
-	h[1] ^= devectorize(v[1] ^ v[9]);
-	h[2] ^= devectorize(v[2] ^ v[10]);
-	h[3] ^= devectorize(v[3] ^ v[11]);
-	h[4] ^= devectorize(v[4] ^ v[12]);
-	h[5] ^= devectorize(v[5] ^ v[13]);
-	h[6] ^= devectorize(v[6] ^ v[14]);
-	h[7] ^= devectorize(v[7] ^ v[15]);
-}
-
-
-// Hash-Padding
-__device__ __constant__
-static const uint64_t d_constHashPadding[8] = {
-	0x0000000000000080ull,
-	0,
-	0,
-	0,
-	0,
-	0x0100000000000000ull,
-	0,
-	0x0002000000000000ull
-};
 
 __global__ 
 #if __CUDA_ARCH__ > 500
@@ -118,7 +75,7 @@ __global__
 #else
 	__launch_bounds__(32, 32)
 #endif
-void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
+void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint64_t *const __restrict__ g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -140,45 +97,70 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		uint64_t *inpHash = &g_hash[hashPosition<<3]; // hashPosition * 8
 
 		// 128 Bytes
-		uint64_t buf[16];
-
-		// State
-		uint64_t h[8] = {
-			0x6a09e667f3bcc908ULL,
-			0xbb67ae8584caa73bULL,
-			0x3c6ef372fe94f82bULL,
-			0xa54ff53a5f1d36f1ULL,
-			0x510e527fade682d1ULL,
-			0x9b05688c2b3e6c1fULL,
-			0x1f83d9abfb41bd6bULL,
-			0x5be0cd19137e2179ULL
-		};
+		uint64_t block[16];
 
 		// Message for first round
 		#pragma unroll 8
 		for (int i=0; i < 8; ++i)
-			buf[i] = cuda_swab64(inpHash[i]);
+			block[i] = cuda_swab64(inpHash[i]);
+		block[ 8] = 0x8000000000000000;
+		block[ 9] = 0;
+		block[10] = 0;
+		block[11] = 0;
+		block[12] = 0;
+		block[13] = 1;
+		block[14] = 0;
+		block[15] = 0x0000000000000200;
 
-		#pragma unroll 8
-		for (int i=0; i < 8; i++)
-			buf[i+8] = cuda_swab64(d_constHashPadding[i]);
+		register uint2 v[16];
 
-		// Ending round
-		quark_blake512_compress( h, buf, 512 );
+		const uint2 h[8] =
+		{
+				{ 0xf3bcc908UL, 0x6a09e667UL },
+				{ 0x84caa73bUL, 0xbb67ae85UL },
+				{ 0xfe94f82bUL, 0x3c6ef372UL },
+				{ 0x5f1d36f1UL, 0xa54ff53aUL },
+				{ 0xade682d1UL, 0x510e527fUL },
+				{ 0x2b3e6c1fUL, 0x9b05688cUL },
+				{ 0xfb41bd6bUL, 0x1f83d9abUL },
+				{ 0x137e2179UL, 0x5be0cd19UL }
+		};
 
-#if __CUDA_ARCH__ <= 350
-		uint32_t *outHash = (uint32_t*)&g_hash[8 * hashPosition];
-		#pragma unroll 8
-		for (int i=0; i < 8; i++) {
-			outHash[2*i+0] = cuda_swab32( _HIWORD(h[i]) );
-			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
+#pragma unroll 8
+		for (int i = 0; i < 8; i++)
+			v[i] = h[i];
+		v[8] = vectorize(c_u512[0]);
+		v[9] = vectorize(c_u512[1]);
+		v[10] = vectorize(c_u512[2]);
+		v[11] = vectorize(c_u512[3]);
+		v[12] = vectorize(c_u512[4] ^ 512);
+		v[13] = vectorize(c_u512[5] ^ 512);
+		v[14] = vectorize(c_u512[6]);
+		v[15] = vectorize(c_u512[7]);
+
+#pragma unroll 2
+		for (int i = 0; i < 16; i++)
+		{
+			G(0, 4, 8, 12, 0);
+			G(1, 5, 9, 13, 2);
+			G(2, 6, 10, 14, 4);
+			G(3, 7, 11, 15, 6);
+			G(0, 5, 10, 15, 8);
+			G(1, 6, 11, 12, 10);
+			G(2, 7, 8, 13, 12);
+			G(3, 4, 9, 14, 14);
 		}
-#else
+
 		uint64_t *outHash = &g_hash[8 * hashPosition];
-		for (int i=0; i < 8; i++) {
-			outHash[i] = cuda_swab64(h[i]);
-		}
-#endif
+
+		outHash[0] = devectorizeswap(h[0] ^ v[0] ^ v[8]);
+		outHash[1] = devectorizeswap(h[1] ^ v[1] ^ v[9]);
+		outHash[2] = devectorizeswap(h[2] ^ v[2] ^ v[10]);
+		outHash[3] = devectorizeswap(h[3] ^ v[3] ^ v[11]);
+		outHash[4] = devectorizeswap(h[4] ^ v[4] ^ v[12]);
+		outHash[5] = devectorizeswap(h[5] ^ v[5] ^ v[13]);
+		outHash[6] = devectorizeswap(h[6] ^ v[6] ^ v[14]);
+		outHash[7] = devectorizeswap(h[7] ^ v[7] ^ v[15]);
 	}
 }
 
@@ -195,42 +177,204 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 	{
 		uint32_t nounce = startNounce + thread;
 
-		uint64_t buf[16];
-		uint64_t h[8] = {
-			0x6a09e667f3bcc908ULL,
-			0xbb67ae8584caa73bULL,
-			0x3c6ef372fe94f82bULL,
-			0xa54ff53a5f1d36f1ULL,
-			0x510e527fade682d1ULL,
-			0x9b05688c2b3e6c1fULL,
-			0x1f83d9abfb41bd6bULL,
-			0x5be0cd19137e2179ULL
-		};
+		uint64_t block[16];
 
 		// Message für die erste Runde in Register holen
-		#pragma unroll 16
-		for (int i=0; i < 16; ++i)
-			buf[i] = c_PaddedMessage80[i];
-
+#pragma unroll 16
+		for (int i = 0; i < 16; ++i)
+			block[i] = c_PaddedMessage80[i];
 		// The test Nonce
-		((uint32_t*)buf)[18] = nounce;
+		((uint32_t*)block)[18] = nounce;
 
-		quark_blake512_compress( h, buf, 640 );
+		register uint2 v[16];
+		register uint64_t u512[16] =
+		{
+			0x243f6a8885a308d3ULL, 0x13198a2e03707344ULL,
+			0xa4093822299f31d0ULL, 0x082efa98ec4e6c89ULL,
+			0x452821e638d01377ULL, 0xbe5466cf34e90c6cULL,
+			0xc0ac29b7c97c50ddULL, 0x3f84d5b5b5470917ULL,
+			0x9216d5d98979fb1bULL, 0xd1310ba698dfb5acULL,
+			0x2ffd72dbd01adfb7ULL, 0xb8e1afed6a267e96ULL,
+			0xba7c9045f12c7f99ULL, 0x24a19947b3916cf7ULL,
+			0x0801f2e2858efc16ULL, 0x636920d871574e69ULL
+		};
 
-#if __CUDA_ARCH__ <= 350
-		uint32_t *outHash = outputHash + 16 * thread;
+		const uint2 h[8] = {
+				{ 0xf3bcc908UL,0x6a09e667UL },
+				{ 0x84caa73bUL ,0xbb67ae85UL },
+				{ 0xfe94f82bUL,0x3c6ef372UL },
+				{ 0x5f1d36f1UL,0xa54ff53aUL },
+				{ 0xade682d1UL,0x510e527fUL },
+				{ 0x2b3e6c1fUL,0x9b05688cUL },
+				{ 0xfb41bd6bUL,0x1f83d9abUL },
+				{ 0x137e2179UL,0x5be0cd19UL }
+		};
+
 		#pragma unroll 8
-		for (int i=0; i < 8; i++) {
-			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
-			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
-		}
-#else
-		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-		for (int i=0; i < 8; i++) {
-			outHash[i] = cuda_swab64( h[i] );
-		}
-#endif
+		for (int i = 0; i < 8; i++)
+			v[i] = h[i];
+		v[8] = vectorize(u512[0]);
+		v[9] = vectorize(u512[1]);
+		v[10] = vectorize(u512[2]);
+		v[11] = vectorize(u512[3]);
+		v[12] = vectorize(u512[4] ^ 640);
+		v[13] = vectorize(u512[5] ^ 640);
+		v[14] = vectorize(u512[6]);
+		v[15] = vectorize(u512[7]);
 
+		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
+		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
+		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
+		Gprecalc(0, 5, 10, 15, 0x9, 0x8)
+		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
+		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
+		Gprecalc(3, 4, 9, 14, 0xf, 0xe)
+
+		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
+		Gprecalc(1, 5, 9, 13, 0x8, 0x4)
+		Gprecalc(2, 6, 10, 14, 0xf, 0x9)
+		Gprecalc(3, 7, 11, 15, 0x6, 0xd)
+		Gprecalc(0, 5, 10, 15, 0xc, 0x1)
+		Gprecalc(1, 6, 11, 12, 0x2, 0x0)
+		Gprecalc(2, 7, 8, 13, 0x7, 0xb)
+		Gprecalc(3, 4, 9, 14, 0x3, 0x5)
+
+		Gprecalc(0, 4, 8, 12, 0x8, 0xb)
+		Gprecalc(1, 5, 9, 13, 0x0, 0xc)
+		Gprecalc(2, 6, 10, 14, 0x2, 0x5)
+		Gprecalc(3, 7, 11, 15, 0xd, 0xf)
+		Gprecalc(0, 5, 10, 15, 0xe, 0xa)
+		Gprecalc(1, 6, 11, 12, 0x6, 0x3)
+		Gprecalc(2, 7, 8, 13, 0x1, 0x7)
+		Gprecalc(3, 4, 9, 14, 0x4, 0x9)
+
+		Gprecalc(0, 4, 8, 12, 0x9, 0x7)
+		Gprecalc(1, 5, 9, 13, 0x1, 0x3)
+		Gprecalc(2, 6, 10, 14, 0xc, 0xd)
+		Gprecalc(3, 7, 11, 15, 0xe, 0xb)
+		Gprecalc(0, 5, 10, 15, 0x6, 0x2)
+		Gprecalc(1, 6, 11, 12, 0xa, 0x5)
+		Gprecalc(2, 7, 8, 13, 0x0, 0x4)
+		Gprecalc(3, 4, 9, 14, 0x8, 0xf)
+
+		Gprecalc(0, 4, 8, 12, 0x0, 0x9)
+		Gprecalc(1, 5, 9, 13, 0x7, 0x5)
+		Gprecalc(2, 6, 10, 14, 0x4, 0x2)
+		Gprecalc(3, 7, 11, 15, 0xf, 0xa)
+		Gprecalc(0, 5, 10, 15, 0x1, 0xe)
+		Gprecalc(1, 6, 11, 12, 0xc, 0xb)
+		Gprecalc(2, 7, 8, 13, 0x8, 0x6)
+		Gprecalc(3, 4, 9, 14, 0xd, 0x3)
+		
+		Gprecalc(0, 4, 8, 12, 0xc, 0x2)
+		Gprecalc(1, 5, 9, 13, 0xa, 0x6)
+		Gprecalc(2, 6, 10, 14, 0xb, 0x0)
+		Gprecalc(3, 7, 11, 15, 0x3, 0x8)
+		Gprecalc(0, 5, 10, 15, 0xd, 0x4)
+		Gprecalc(1, 6, 11, 12, 0x5, 0x7)
+		Gprecalc(2, 7, 8, 13, 0xe, 0xf)
+		Gprecalc(3, 4, 9, 14, 0x9, 0x1)
+
+		Gprecalc(0, 4, 8, 12, 0x5, 0xc)
+		Gprecalc(1, 5, 9, 13, 0xf, 0x1)
+		Gprecalc(2, 6, 10, 14, 0xd, 0xe)
+		Gprecalc(3, 7, 11, 15, 0xa, 0x4)
+		Gprecalc(0, 5, 10, 15, 0x7, 0x0)
+		Gprecalc(1, 6, 11, 12, 0x3, 0x6)
+		Gprecalc(2, 7, 8, 13, 0x2, 0x9)
+		Gprecalc(3, 4, 9, 14, 0xb, 0x8)
+
+		Gprecalc(0, 4, 8, 12, 0xb, 0xd)
+		Gprecalc(1, 5, 9, 13, 0xe, 0x7)
+		Gprecalc(2, 6, 10, 14, 0x1, 0xc)
+		Gprecalc(3, 7, 11, 15, 0x9, 0x3)
+		Gprecalc(0, 5, 10, 15, 0x0, 0x5)
+		Gprecalc(1, 6, 11, 12, 0x4, 0xf)
+		Gprecalc(2, 7, 8, 13, 0x6, 0x8)
+		Gprecalc(3, 4, 9, 14, 0xa, 0x2)
+
+		Gprecalc(0, 4, 8, 12, 0xf, 0x6)
+		Gprecalc(1, 5, 9, 13, 0x9, 0xe)
+		Gprecalc(2, 6, 10, 14, 0x3, 0xb)
+		Gprecalc(3, 7, 11, 15, 0x8, 0x0)
+		Gprecalc(0, 5, 10, 15, 0x2, 0xc)
+		Gprecalc(1, 6, 11, 12, 0x7, 0xd)
+		Gprecalc(2, 7, 8, 13, 0x4, 0x1)
+		Gprecalc(3, 4, 9, 14, 0x5, 0xa)
+
+		Gprecalc(0, 4, 8, 12, 0x2, 0xa)
+		Gprecalc(1, 5, 9, 13, 0x4, 0x8)
+		Gprecalc(2, 6, 10, 14, 0x6, 0x7)
+		Gprecalc(3, 7, 11, 15, 0x5, 0x1)
+		Gprecalc(0, 5, 10, 15, 0xb, 0xf)
+		Gprecalc(1, 6, 11, 12, 0xe, 0x9)
+		Gprecalc(2, 7, 8, 13, 0xc, 0x3)
+		Gprecalc(3, 4, 9, 14, 0x0, 0xd)
+		
+		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
+		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
+		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
+		Gprecalc(0, 5, 10, 15, 0x9, 0x8)
+		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
+		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
+		Gprecalc(3, 4, 9, 14, 0xf, 0xe)
+
+		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
+		Gprecalc(1, 5, 9, 13, 0x8, 0x4)
+		Gprecalc(2, 6, 10, 14, 0xf, 0x9)
+		Gprecalc(3, 7, 11, 15, 0x6, 0xd)
+		Gprecalc(0, 5, 10, 15, 0xc, 0x1)
+		Gprecalc(1, 6, 11, 12, 0x2, 0x0)
+		Gprecalc(2, 7, 8, 13, 0x7, 0xb)
+		Gprecalc(3, 4, 9, 14, 0x3, 0x5)
+
+		Gprecalc(0, 4, 8, 12, 0x8, 0xb)
+		Gprecalc(1, 5, 9, 13, 0x0, 0xc)
+		Gprecalc(2, 6, 10, 14, 0x2, 0x5)
+		Gprecalc(3, 7, 11, 15, 0xd, 0xf)
+		Gprecalc(0, 5, 10, 15, 0xe, 0xa)
+		Gprecalc(1, 6, 11, 12, 0x6, 0x3)
+		Gprecalc(2, 7, 8, 13, 0x1, 0x7)
+		Gprecalc(3, 4, 9, 14, 0x4, 0x9)
+
+		Gprecalc(0, 4, 8, 12, 0x9, 0x7)
+		Gprecalc(1, 5, 9, 13, 0x1, 0x3)
+		Gprecalc(2, 6, 10, 14, 0xc, 0xd)
+		Gprecalc(3, 7, 11, 15, 0xe, 0xb)
+		Gprecalc(0, 5, 10, 15, 0x6, 0x2)
+		Gprecalc(1, 6, 11, 12, 0xa, 0x5)
+		Gprecalc(2, 7, 8, 13, 0x0, 0x4)
+		Gprecalc(3, 4, 9, 14, 0x8, 0xf)
+
+		Gprecalc(0, 4, 8, 12, 0x0, 0x9)
+		Gprecalc(1, 5, 9, 13, 0x7, 0x5)
+		Gprecalc(2, 6, 10, 14, 0x4, 0x2)
+		Gprecalc(3, 7, 11, 15, 0xf, 0xa)
+		Gprecalc(0, 5, 10, 15, 0x1, 0xe)
+		Gprecalc(1, 6, 11, 12, 0xc, 0xb)
+		Gprecalc(2, 7, 8, 13, 0x8, 0x6)
+		Gprecalc(3, 4, 9, 14, 0xd, 0x3)
+		
+		Gprecalc(0, 4, 8, 12, 0xc, 0x2)
+		Gprecalc(1, 5, 9, 13, 0xa, 0x6)
+		Gprecalc(2, 6, 10, 14, 0xb, 0x0)
+		Gprecalc(3, 7, 11, 15, 0x3, 0x8)
+		Gprecalc(0, 5, 10, 15, 0xd, 0x4)
+		Gprecalc(1, 6, 11, 12, 0x5, 0x7)
+		Gprecalc(2, 7, 8, 13, 0xe, 0xf)
+		Gprecalc(3, 4, 9, 14, 0x9, 0x1)
+
+		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
+		outHash[0] = devectorizeswap(h[0] ^ v[0] ^ v[8]);
+		outHash[1] = devectorizeswap(h[1] ^ v[1] ^ v[9]);
+		outHash[2] = devectorizeswap(h[2] ^ v[2] ^ v[10]);
+		outHash[3] = devectorizeswap(h[3] ^ v[3] ^ v[11]);
+		outHash[4] = devectorizeswap(h[4] ^ v[4] ^ v[12]);
+		outHash[5] = devectorizeswap(h[5] ^ v[5] ^ v[13]);
+		outHash[6] = devectorizeswap(h[6] ^ v[6] ^ v[14]);
+		outHash[7] = devectorizeswap(h[7] ^ v[7] ^ v[15]);
 	}
 }
 
@@ -268,7 +412,7 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	quark_blake512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)

@@ -57,7 +57,7 @@ extern void x13_hamsi512_cpu_init(int thr_id, uint32_t threads);
 extern void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x13_fugue512_cpu_init(int thr_id, uint32_t threads);
-extern uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint2 x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 //extern uint32_t cuda_check_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash);
@@ -198,34 +198,32 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-	//	uint32_t foundNonce = x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		uint2 foundNonce = x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != 0xffffffff)
+		if (foundNonce.x != 0xffffffff)
 		{
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], foundNonce.x);
 			x13hash(vhash64, endiandata);
 			uint32_t Htarg = ptarget[7];
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) 
 			{
 				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) 
+				if (foundNonce.y != 0xffffffff) 
 				{
-					if (opt_benchmark) applog(LOG_INFO, "found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
-					pdata[21] = secNonce;
+					if (opt_benchmark) applog(LOG_INFO, "found second nounce %08x", thr_id, foundNonce.y);
+					pdata[21] = foundNonce.y;
 					res++;
 				}
-				pdata[19] = foundNonce;
-				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				pdata[19] = foundNonce.x;
+				if (opt_benchmark) applog(LOG_INFO, "found nounce %08x", thr_id, foundNonce.x);
 				return res;
 			}
 			else
 			{
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				if (vhash64[7] != Htarg) // don't show message if it is equal but fails fulltest
+					applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 		pdata[19] += throughput;

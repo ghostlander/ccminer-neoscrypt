@@ -6,10 +6,11 @@
 #include "sph/sph_groestl.h"
 
 #include "miner.h"
+#include "cuda_runtime.h"
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
-void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce);
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint2 *nounce);
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
@@ -69,27 +70,36 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	
 	do {
 		// GPU
-		uint32_t foundNounce = 0xFFFFFFFF;
+		uint2 foundNounce;
 		const uint32_t Htarg = ptarget[7];
 
 		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], outputHash, &foundNounce);
 
-		if(foundNounce < 0xffffffff)
+		if(foundNounce.x < 0xffffffff)
 		{
 			uint32_t tmpHash[8];
-			endiandata[19] = SWAP32(foundNounce);
+			endiandata[19] = SWAP32(foundNounce.x);
 			myriadhash(tmpHash, endiandata);
-			if (tmpHash[7] <= Htarg && 
-					fulltest(tmpHash, ptarget)) {
-						pdata[19] = foundNounce;
-						*hashes_done = foundNounce - start_nonce + 1;
-						free(outputHash);
-				return true;
-			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
+			if (tmpHash[7] <= Htarg && fulltest(tmpHash, ptarget))
+			{
+				int res = 1;
+				*hashes_done = pdata[19] - start_nonce + throughPut;
+				if (foundNounce.y != 0xffffffff)
+				{
+					if (opt_benchmark) applog(LOG_INFO, "found second nounce %08x", thr_id, foundNounce.y);
+					pdata[21] = foundNounce.y;
+					res++;
+				}
+				pdata[19] = foundNounce.x;
+				if (opt_benchmark)
+					applog(LOG_INFO, "found nounce %08x", thr_id, foundNounce.x);
+				return res;
 			}
-
-			foundNounce = 0xffffffff;
+			else
+			{
+				if (tmpHash[7] != Htarg) // don't show message if it is equal but fails fulltest
+					applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNounce.x);
+			}
 		}
 
 		pdata[19] += throughPut;
