@@ -3,8 +3,6 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // die Message it Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
@@ -398,7 +396,6 @@ __host__ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
     dim3 block(threadsperblock);
 
     quark_bmw512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
@@ -410,6 +407,5 @@ __host__ void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t st
     dim3 block(threadsperblock);
 
     quark_bmw512_gpu_hash_80<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
-    MyStreamSynchronize(NULL, order, thr_id);
 }
 

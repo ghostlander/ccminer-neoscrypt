@@ -3,9 +3,6 @@
 
 #define TPB 128
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
 #include "cuda_x11_aes.cu"
@@ -2621,7 +2618,6 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	dim3 block(TPB);
 
 	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
@@ -2632,7 +2628,6 @@ __host__ void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t 
 	dim3 block(TPB);
 
 	x11_shavite512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
-	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void x11_shavite512_setBlock_80(void *pdata)

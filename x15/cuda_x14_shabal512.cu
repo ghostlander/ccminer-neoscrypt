@@ -3,7 +3,6 @@
  */
 #include "cuda_helper.h"
 
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 /* $Id: shabal.c 175 2010-05-07 16:03:20Z tp $ */
 /*
@@ -490,8 +489,5 @@ __host__ void x14_shabal512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t s
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
 	x14_shabal512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-	MyStreamSynchronize(NULL, order, thr_id);
 }

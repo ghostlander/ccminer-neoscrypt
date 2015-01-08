@@ -63,7 +63,9 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 25 : 256 * 256 * 18;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 25 : 256 * 256 * 14;
+	if (device_sm[device_map[thr_id]] < 320) intensity = 256 * 256 * 6;
+
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity;
 	throughput = min(throughput, max_nonce - first_nonce);
 
@@ -100,10 +102,11 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		MyStreamSynchronize(NULL, 2, thr_id);
 		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++, foundNonce);
-		CUDA_SAFE_CALL(cudaGetLastError());
 		if (foundNonce[0] != 0)
 		{
+			CUDA_SAFE_CALL(cudaGetLastError());
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce[0]);

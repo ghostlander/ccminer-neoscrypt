@@ -218,7 +218,6 @@ void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32
 	dim3 block(threadsperblock);
 
 	blake256_gpu_hash_80 <<<grid, block>>> (threads, startNonce, Hash);
-	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__

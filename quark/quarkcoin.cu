@@ -186,6 +186,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der unbedingte Branch für BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
+		MyStreamSynchronize(NULL, 1, thr_id);
+
 		quark_compactTest_single_false_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
 			d_branch3Nonces[thr_id], &nrm3,
 			order++);
@@ -198,6 +200,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		// das ist der unbedingte Branch für JH512
 		quark_jh512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+
+		MyStreamSynchronize(NULL, 2, thr_id);
 
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
@@ -217,6 +221,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der unbedingte Branch für Skein512
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
+
+		MyStreamSynchronize(NULL, 3, thr_id);
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,

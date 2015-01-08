@@ -322,8 +322,6 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     dim3 grid2((threads + threadsperblock-1)/threadsperblock);
     myriadgroestl_gpu_hash_quad2<<<grid2, block>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
-    // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, 0, thr_id);
 
     cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
 }

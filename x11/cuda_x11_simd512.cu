@@ -10,8 +10,6 @@
 #include "cuda_helper.h"
 #include <stdio.h>
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 uint32_t *d_state[8];
 uint4 *d_temp4[8];
@@ -671,6 +669,5 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 //	MyStreamSynchronize(NULL, order, thr_id);
 
 	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-
 //	MyStreamSynchronize(NULL, order, thr_id);
 }

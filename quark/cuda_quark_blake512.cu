@@ -151,6 +151,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			G(3, 4, 9, 14, 14);
 		}
 
+
 		uint64_t *outHash = &g_hash[8 * hashPosition];
 
 		outHash[0] = devectorizeswap(h[0] ^ v[0] ^ v[8]);
@@ -365,6 +366,105 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 		Gprecalc(1, 6, 11, 12, 0x5, 0x7)
 		Gprecalc(2, 7, 8, 13, 0xe, 0xf)
 		Gprecalc(3, 4, 9, 14, 0x9, 0x1)
+		
+		Gprecalc(0, 4, 8, 12, 0xc, 0x2)
+		Gprecalc(1, 5, 9, 13, 0xa, 0x6)
+		Gprecalc(2, 6, 10, 14, 0xb, 0x0)
+		Gprecalc(3, 7, 11, 15, 0x3, 0x8)
+		Gprecalc(0, 5, 10, 15, 0xd, 0x4)
+		Gprecalc(1, 6, 11, 12, 0x5, 0x7)
+		Gprecalc(2, 7, 8, 13, 0xe, 0xf)
+		Gprecalc(3, 4, 9, 14, 0x9, 0x1)
+
+		Gprecalc(0, 4, 8, 12, 0x5, 0xc)
+		Gprecalc(1, 5, 9, 13, 0xf, 0x1)
+		Gprecalc(2, 6, 10, 14, 0xd, 0xe)
+		Gprecalc(3, 7, 11, 15, 0xa, 0x4)
+		Gprecalc(0, 5, 10, 15, 0x7, 0x0)
+		Gprecalc(1, 6, 11, 12, 0x3, 0x6)
+		Gprecalc(2, 7, 8, 13, 0x2, 0x9)
+		Gprecalc(3, 4, 9, 14, 0xb, 0x8)
+
+		Gprecalc(0, 4, 8, 12, 0xb, 0xd)
+		Gprecalc(1, 5, 9, 13, 0xe, 0x7)
+		Gprecalc(2, 6, 10, 14, 0x1, 0xc)
+		Gprecalc(3, 7, 11, 15, 0x9, 0x3)
+		Gprecalc(0, 5, 10, 15, 0x0, 0x5)
+		Gprecalc(1, 6, 11, 12, 0x4, 0xf)
+		Gprecalc(2, 7, 8, 13, 0x6, 0x8)
+		Gprecalc(3, 4, 9, 14, 0xa, 0x2)
+
+		Gprecalc(0, 4, 8, 12, 0xf, 0x6)
+		Gprecalc(1, 5, 9, 13, 0x9, 0xe)
+		Gprecalc(2, 6, 10, 14, 0x3, 0xb)
+		Gprecalc(3, 7, 11, 15, 0x8, 0x0)
+		Gprecalc(0, 5, 10, 15, 0x2, 0xc)
+		Gprecalc(1, 6, 11, 12, 0x7, 0xd)
+		Gprecalc(2, 7, 8, 13, 0x4, 0x1)
+		Gprecalc(3, 4, 9, 14, 0x5, 0xa)
+
+		Gprecalc(0, 4, 8, 12, 0x2, 0xa)
+		Gprecalc(1, 5, 9, 13, 0x4, 0x8)
+		Gprecalc(2, 6, 10, 14, 0x6, 0x7)
+		Gprecalc(3, 7, 11, 15, 0x5, 0x1)
+		Gprecalc(0, 5, 10, 15, 0xb, 0xf)
+		Gprecalc(1, 6, 11, 12, 0xe, 0x9)
+		Gprecalc(2, 7, 8, 13, 0xc, 0x3)
+		Gprecalc(3, 4, 9, 14, 0x0, 0xd)
+		
+		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
+		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
+		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
+		Gprecalc(0, 5, 10, 15, 0x9, 0x8)
+		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
+		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
+		Gprecalc(3, 4, 9, 14, 0xf, 0xe)
+
+		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
+		Gprecalc(1, 5, 9, 13, 0x8, 0x4)
+		Gprecalc(2, 6, 10, 14, 0xf, 0x9)
+		Gprecalc(3, 7, 11, 15, 0x6, 0xd)
+		Gprecalc(0, 5, 10, 15, 0xc, 0x1)
+		Gprecalc(1, 6, 11, 12, 0x2, 0x0)
+		Gprecalc(2, 7, 8, 13, 0x7, 0xb)
+		Gprecalc(3, 4, 9, 14, 0x3, 0x5)
+
+		Gprecalc(0, 4, 8, 12, 0x8, 0xb)
+		Gprecalc(1, 5, 9, 13, 0x0, 0xc)
+		Gprecalc(2, 6, 10, 14, 0x2, 0x5)
+		Gprecalc(3, 7, 11, 15, 0xd, 0xf)
+		Gprecalc(0, 5, 10, 15, 0xe, 0xa)
+		Gprecalc(1, 6, 11, 12, 0x6, 0x3)
+		Gprecalc(2, 7, 8, 13, 0x1, 0x7)
+		Gprecalc(3, 4, 9, 14, 0x4, 0x9)
+
+		Gprecalc(0, 4, 8, 12, 0x9, 0x7)
+		Gprecalc(1, 5, 9, 13, 0x1, 0x3)
+		Gprecalc(2, 6, 10, 14, 0xc, 0xd)
+		Gprecalc(3, 7, 11, 15, 0xe, 0xb)
+		Gprecalc(0, 5, 10, 15, 0x6, 0x2)
+		Gprecalc(1, 6, 11, 12, 0xa, 0x5)
+		Gprecalc(2, 7, 8, 13, 0x0, 0x4)
+		Gprecalc(3, 4, 9, 14, 0x8, 0xf)
+
+		Gprecalc(0, 4, 8, 12, 0x0, 0x9)
+		Gprecalc(1, 5, 9, 13, 0x7, 0x5)
+		Gprecalc(2, 6, 10, 14, 0x4, 0x2)
+		Gprecalc(3, 7, 11, 15, 0xf, 0xa)
+		Gprecalc(0, 5, 10, 15, 0x1, 0xe)
+		Gprecalc(1, 6, 11, 12, 0xc, 0xb)
+		Gprecalc(2, 7, 8, 13, 0x8, 0x6)
+		Gprecalc(3, 4, 9, 14, 0xd, 0x3)
+		
+		Gprecalc(0, 4, 8, 12, 0xc, 0x2)
+		Gprecalc(1, 5, 9, 13, 0xa, 0x6)
+		Gprecalc(2, 6, 10, 14, 0xb, 0x0)
+		Gprecalc(3, 7, 11, 15, 0x3, 0x8)
+		Gprecalc(0, 5, 10, 15, 0xd, 0x4)
+		Gprecalc(1, 6, 11, 12, 0x5, 0x7)
+		Gprecalc(2, 7, 8, 13, 0xe, 0xf)
+		Gprecalc(3, 4, 9, 14, 0x9, 0x1)
 
 		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
 		outHash[0] = devectorizeswap(h[0] ^ v[0] ^ v[8]);
@@ -408,10 +508,7 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-
 	quark_blake512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
-
-	// Strategisches Sleep Kommando zur Senkung der CPU Last
 //	MyStreamSynchronize(NULL, order, thr_id);
 }
 
@@ -424,6 +521,4 @@ __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t 
 
 	quark_blake512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 
-	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, order, thr_id);
 }

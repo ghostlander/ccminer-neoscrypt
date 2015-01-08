@@ -11,7 +11,6 @@
 #include "cuda_helper.h"
 
 // aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 __constant__ uint32_t pTarget[8];
 static uint2 *d_nonce[8];
 
@@ -835,7 +834,6 @@ __host__ uint2 x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint
 	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
 
 	x13_fugue512_gpu_hash_64_final <<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
-//	MyStreamSynchronize(NULL, order, thr_id);
 	uint2 res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
 	return res;
