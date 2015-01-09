@@ -236,25 +236,8 @@ static __device__ __forceinline__ void E8(uint32_t x[8][4])
 	}
 }
 
-/*The bijective function E8, in bitslice form */
-static __device__ __forceinline__ void E8_final(uint32_t x[8][4])
-{
-	/*perform 6 rounds*/
-	#pragma unroll 6
-	for (int i = 0; i < 42; i += 7)
-	{
-		RoundFunction0(x, i);
-		RoundFunction1(x, i + 1);
-		RoundFunction2(x, i + 2);
-		RoundFunction3(x, i + 3);
-		RoundFunction4(x, i + 4);
-		RoundFunction5(x, i + 5);
-		RoundFunction6(x, i + 6);
-	}
-}
-
 /*The compression function F8 */
-static __device__ __forceinline__ void F8(uint32_t x[8][4], uint32_t buffer[16])
+static __device__ __forceinline__ void F8(uint32_t x[8][4], const uint32_t buffer[16])
 {
     /*xor the 512-bit message with the fist half of the 1024-bit hash state*/
 #pragma unroll 16
@@ -329,7 +312,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 // Die Hash-Funktion
 #define TPB2 256
 __global__ __launch_bounds__(TPB2, 4)
-void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *dnounce, const uint32_t target)
+void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ dnounce, const uint32_t target)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -348,18 +331,22 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			{ 0xd0a74710, 0x243c84c1, 0xb1716e3b, 0x99c15a2d },
 			{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 			{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc } };
-		uint32_t buffer[16];
 
-#pragma unroll 16
-		for (int i = 0; i < 16; ++i)
-			buffer[i] = Hash[i];
-		F8(x, buffer);
+		F8(x, Hash);
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
 
-		/*the bijective function E8 */
-		E8_final(x);
+		for (int i = 0; i < 42; i += 7)
+		{
+			RoundFunction0(x, i);
+			RoundFunction1(x, i + 1);
+			RoundFunction2(x, i + 2);
+			RoundFunction3(x, i + 3);
+			RoundFunction4(x, i + 4);
+			RoundFunction5(x, i + 5);
+			RoundFunction6(x, i + 6);
+		}
 
 		if (x[5][3] <= target)
 		{
