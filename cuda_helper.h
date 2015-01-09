@@ -398,6 +398,12 @@ static __device__ __forceinline__ uint2 vectorize(uint64_t v) {
 	LOHI(result.x, result.y, v);
 	return result;
 }
+static __device__ __forceinline__ uint2 vectorizelow(uint32_t v) {
+	uint2 result;
+	result.x = v;
+	result.y = 0;
+	return result;
+}
 
 static __device__ __forceinline__ uint2 operator^ (uint2 a, uint32_t b) { return make_uint2(a.x^ b, a.y); }
 static __device__ __forceinline__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }

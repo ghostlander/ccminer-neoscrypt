@@ -309,7 +309,7 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_
 		{
 			keccak_gpu_state[i] = vectorize(inpHash[i]);
 		}
-		keccak_gpu_state[8] = vectorize(0x8000000000000001ULL);
+		keccak_gpu_state[8] = make_uint2(0x00000001UL, 0x80000000);	//vectorize(0x8000000000000001ULL);
 
 #pragma unroll
         for (int i=9; i<25; i++)

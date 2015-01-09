@@ -24,19 +24,7 @@ __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + paddi
 	v[b] = ROR2(v[b] ^ v[c], 11); \
 	}
 
-
-#define Gprecalc2(a,b,c,d,idx1,idx2) { \
-	v[a] += vectorize(block[idx2] ^ u512[idx1]) + v[b]; \
-	v[d] = SWAPDWORDS2( v[d] ^ v[a]); \
-	v[c] += v[d]; \
-	v[b] = ROR2(v[b] ^ v[c], 25); \
-	v[a] += vectorize(block[idx1] ^ u512[idx2]) + v[b]; \
-	v[d] = ROR2(v[d] ^ v[a],16); \
-	v[c] += v[d]; \
-	v[b] = ROR2(v[b] ^ v[c], 11); \
-		}
 __global__ 
-
 #if __CUDA_ARCH__ > 500
 	__launch_bounds__(256, 1)
 #else
