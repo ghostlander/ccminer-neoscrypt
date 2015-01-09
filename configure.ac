@@ -154,7 +154,7 @@ then
   CUDA_INCLUDES="-I$with_cuda/include"
   CUDA_LIBS="-lcudart"
   CUDA_LDFLAGS="-L$with_cuda/lib$SUFFIX"
-  if test -x "$with_cuda/bin/nvcc"
+  if test -x "$with_cuda/bin/nvcc" ; then
     NVCC="$with_cuda/bin/nvcc"
   fi
 else
