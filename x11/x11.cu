@@ -180,7 +180,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 1, thr_id);
+//		MyStreamSynchronize(NULL, 1, thr_id);
 
 		#ifdef FASTECHO
 		uint2 foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], order++);
