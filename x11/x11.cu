@@ -184,7 +184,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 		#ifdef FASTECHO
 		uint2 foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], order++);
-
 		if (foundNonce.x != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -207,34 +206,9 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
 				return res;
 			}
-			else //quick echo failed. Do full echo
+			else
 			{
-				x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-				if (foundNonce != UINT32_MAX)
-				{
-					be32enc(&endiandata[19], foundNonce);
-					x11hash(vhash64, endiandata);
-					if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
-					{
-						int res = 1;
-						// check if there was some other ones...
-						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
-						*hashes_done = pdata[19] - first_nonce + throughput;
-						if (secNonce != 0) {
-							pdata[21] = secNonce;
-							res++;
-							if (opt_benchmark)  applog(LOG_INFO, "Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
-						}
-						pdata[19] = foundNonce;
-						if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
-						return res;
-					} else
-					{
-						applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
-					}
-
-				}
+				if(vhash64[7] != Htarg) applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 		#else

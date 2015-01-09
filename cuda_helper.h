@@ -399,6 +399,7 @@ static __device__ __forceinline__ uint2 vectorize(uint64_t v) {
 	return result;
 }
 
+static __device__ __forceinline__ uint2 operator^ (uint2 a, uint32_t b) { return make_uint2(a.x^ b, a.y); }
 static __device__ __forceinline__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }
 static __device__ __forceinline__ uint2 operator& (uint2 a, uint2 b) { return make_uint2(a.x & b.x, a.y & b.y); }
 static __device__ __forceinline__ uint2 operator| (uint2 a, uint2 b) { return make_uint2(a.x | b.x, a.y | b.y); }
@@ -650,6 +651,13 @@ static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
 }
 
 static __device__ __forceinline__ uint64_t devectorizeswap(uint2 v) { return MAKE_ULONGLONG(cuda_swab32(v.y), cuda_swab32(v.x)); }
+static __device__ __forceinline__ uint2 vectorizeswap(uint64_t v) {
+	uint2 result;
+	LOHI(result.y, result.x, v);
+	result.x = cuda_swab32(result.x);
+	result.y = cuda_swab32(result.y);
+	return result;
+}
 
 #endif // #ifndef CUDA_HELPER_H
 
