@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [1.5.1-git])
+AC_INIT([ccminer], [1.5.26-git(SP-MOD)])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
@@ -154,7 +154,7 @@ then
   CUDA_INCLUDES="-I$with_cuda/include"
   CUDA_LIBS="-lcudart"
   CUDA_LDFLAGS="-L$with_cuda/lib$SUFFIX"
-  if test -x "$with_cuda/bin/nvcc"
+  if test -x "$with_cuda/bin/nvcc" ; then
     NVCC="$with_cuda/bin/nvcc"
   fi
 else

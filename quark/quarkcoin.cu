@@ -173,7 +173,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 
 	do {
-		uint2 foundNonce;
+//		uint2 foundNonce;
 
 		int order = 0;
 		uint32_t nrm1 = 0, nrm2 = 0, nrm3 = 0;
@@ -223,7 +223,42 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		// das ist der bedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
+		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
+		MyStreamSynchronize(NULL, 4, thr_id);
+
+		// Scan nach Gewinner Hashes auf der GPU
+		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		if (foundNonce != 0xffffffff)
+		{
+			const uint32_t Htarg = ptarget[7];
+			uint32_t vhash64[8];
+			be32enc(&endiandata[19], foundNonce);
+			quarkhash(vhash64, endiandata);
+
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			{
+				int res = 1;
+				// check if there was some other ones...
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, nrm3, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0)
+				{
+					pdata[21] = secNonce;
+					res++;
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				}
+				pdata[19] = foundNonce;
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+				return res;
+			}
+			else
+			{
+				if (vhash64[7] > Htarg) // don't show message if it is equal but fails fulltest
+					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+			}
+		}
+		/*
 		foundNonce = quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++, ptarget[7]);
 		if (foundNonce.x != 0xffffffffU)
 		{
@@ -253,7 +288,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 					applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-
+		*/
 		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
