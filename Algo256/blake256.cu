@@ -249,7 +249,6 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
-
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
 	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;

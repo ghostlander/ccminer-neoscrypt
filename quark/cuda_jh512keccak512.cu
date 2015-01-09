@@ -1,8 +1,5 @@
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 typedef struct {
     uint32_t x[8][4];                     /*the 1024-bit state, ( x[i][0] || x[i][1] || x[i][2] || x[i][3] ) is the ith row of the state in the pseudocode*/
     uint32_t buffer[16];                  /*the 512-bit message block to be hashed;*/
@@ -538,6 +535,6 @@ __host__ void cuda_jh512Keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint
     dim3 block(threadsperblock);
 
 	quark_jh512Keccak512_gpu_hash_64 << <grid, block>> >(threads, startNounce, d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
+//    MyStreamSynchronize(NULL, order, thr_id);
 }
 

@@ -407,6 +407,4 @@ void hefty_cpu_hash(int thr_id, uint32_t threads, int startNounce)
 
     hefty_gpu_hash <<< grid, block, shared_size >>> (threads, startNounce, heavy_heftyHashes[thr_id]);
 
-    // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, 0, thr_id);
 }

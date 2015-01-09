@@ -1,8 +1,5 @@
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 static uint2 *d_nonce[8];
 
 __constant__ unsigned char c_E8_bitslice_roundconstant[42][32] = {
@@ -365,9 +362,7 @@ __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
-
     quark_jh512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
 }
 
 // Setup-Funktionen
@@ -382,7 +377,7 @@ __host__ uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint3
 	dim3 grid((threads + TPB2 - 1) / TPB2);
 	dim3 block(TPB2);
 
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
+	cudaMemset(d_nonce[thr_id], 0xff, sizeof(uint2));
 	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 	uint2 res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);

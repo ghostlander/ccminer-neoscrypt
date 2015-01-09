@@ -212,8 +212,6 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
         sha256_cpu_hash(thr_id, throughput, pdata[19]);
         //cudaDeviceSynchronize();
 
-        // Hier ist die längste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
-        MyStreamSynchronize(NULL, 1, thr_id);
 
         ////// Compaction
         t = (uint64_t*) target2;

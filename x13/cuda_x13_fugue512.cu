@@ -10,10 +10,9 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+
 __constant__ uint32_t pTarget[8];
-static uint2 *d_nonce[8];
+static uint32_t *d_nonce[8];
 
 
 /*
@@ -667,9 +666,9 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		Hash[15] = cuda_swab32(S30);
 	}
 }
-#define TPB 256
-__global__ __launch_bounds__(TPB, 3)
-void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ d_nonce)
+
+__global__ __launch_bounds__(128, 7)
+void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_nonce)
 {
 	__shared__ uint32_t mixtabs[1024];
 
@@ -772,13 +771,16 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint
 		S27 ^= S00;
 		ROR9;
 		SMIX(S00, S01, S02, S03);
-		S04 ^= S00;
 
+
+		S04 ^= S00;
 		if (cuda_swab32(S04) <= pTarget[7])
 		{
-			uint32_t tmp = atomicExch(&(d_nonce->x), nounce);
-			if (tmp != 0xffffffffU)
-				d_nonce->y = tmp;
+			if (d_nonce[0] != 0xffffffff)
+			{
+				if (d_nonce[0] < nounce)  d_nonce[0] = nounce;
+			}
+			else d_nonce[0] = nounce;
 		}
 	}
 }
@@ -799,7 +801,7 @@ __host__ void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
 	texDef(mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab2Tex, mixTab2m, mixtab2_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
-	cudaMalloc(&d_nonce[thr_id], sizeof(uint2));
+	cudaMalloc(&d_nonce[thr_id], sizeof(uint32_t));
 }
 __host__ void x13_fugue512_cpu_setTarget(const void *ptarget)
 {
@@ -826,17 +828,18 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 	x13_fugue512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
-__host__ uint2 x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
+	const uint32_t threadsperblock = 128;
+
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + TPB - 1) / TPB);
-	dim3 block(TPB);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
 
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
+	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
-	x13_fugue512_gpu_hash_64_final <<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
-//	MyStreamSynchronize(NULL, order, thr_id);
-	uint2 res;
-	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
+	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
+	uint32_t res;
+	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
 }

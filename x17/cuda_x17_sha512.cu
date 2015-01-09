@@ -230,8 +230,5 @@ void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, 
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-	size_t shared_size =0;
-	x17_sha512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-
-	MyStreamSynchronize(NULL, order, thr_id);
+	x17_sha512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }

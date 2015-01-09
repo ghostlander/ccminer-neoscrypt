@@ -484,7 +484,6 @@ void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 block(threadsperblock);
 
 	qubit_luffa512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
-	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__

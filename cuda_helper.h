@@ -27,7 +27,6 @@ extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
 extern void cuda_check_cpu_setTarget(const void *ptarget);
 extern uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash);
 extern uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint32_t foundnonce);
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
 
 #ifndef __CUDA_ARCH__
@@ -35,6 +34,9 @@ extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char*
 extern const dim3 blockDim;
 extern const uint3 threadIdx;
 #endif
+
+extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+
 
 #ifndef SPH_C32
 #define SPH_C32(x) ((uint32_t)(x ## U))

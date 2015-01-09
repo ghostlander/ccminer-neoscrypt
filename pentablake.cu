@@ -313,7 +313,6 @@ void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNo
 
 	pentablake_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
-	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaDeviceSynchronize();
 }
 
@@ -369,7 +368,6 @@ void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, 
 
 	pentablake_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_outputHash);
 
-	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaDeviceSynchronize();
 }
 

@@ -26,6 +26,7 @@ extern "C"
 #include <stdio.h>
 #include <memory.h>
 
+
 static uint32_t *d_hash[8];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
@@ -166,6 +167,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
+
 	do {
 		int order = 0;
 
@@ -178,8 +180,11 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
+		MyStreamSynchronize(NULL, 1, thr_id);
+
 		#ifdef FASTECHO
 		uint2 foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], order++);
+
 		if (foundNonce.x != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];

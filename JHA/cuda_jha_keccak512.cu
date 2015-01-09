@@ -531,5 +531,4 @@ __host__ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t 
     dim3 block(threadsperblock);
 
     jackpot_keccak512_gpu_hash<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
-    MyStreamSynchronize(NULL, order, thr_id);
 }

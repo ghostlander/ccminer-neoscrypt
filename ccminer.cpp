@@ -414,7 +414,7 @@ void proper_exit(int reason)
 		nvml_destroy(hnvml);
 #endif
 	
-	cuda_devicereset();
+
 	pthread_mutex_lock(&g_work_lock);	//freeze stratum
 	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
 
@@ -422,11 +422,12 @@ void proper_exit(int reason)
 	free(opt_api_allow);
 	hashlog_purge_all();
 	stats_purge_all();
+	cuda_devicereset();
 	
 
 	try
 	{
-		sleep(3);			//make sure that the gpu threads are stopped when updating the stats.
+		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
 		exit(0);
 	}
 	catch (...)
@@ -569,17 +570,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	json_t *val, *res, *reason;
 	bool stale_work = false;
 	char s[384];
-
-	if (!have_stratum && !stale_work && allow_gbt) {
-		struct work wheight = { 0 };
-		if (get_blocktemplate(curl, &wheight)) {
-			if (work->height && work->height < wheight.height) {
-				if (opt_debug)
-					applog(LOG_WARNING, "bloc %u was already solved", work->height, wheight.height);
-				return true;
-			}
-		}
-	}
 
 	calc_diff(work, 0);
 
@@ -1116,9 +1106,15 @@ static void *miner_thread(void *userdata)
 		affine_to_cpu(thr_id, thr_id % num_cpus);
 	}
 
-	while (1) {
+	while (1) 
+	{
+		if (opt_benchmark)
+		{
+			work.data[19] = work.data[19] & 0xffffffffU;	//reset Hashcounters
+			work.data[21] = work.data[21] & 0xffffffffU;
+		}
 		struct timeval tv_start, tv_end, diff;
-		unsigned long hashes_done;
+		unsigned long hashes_done=0;
 		uint32_t start_nonce;
 		uint32_t scan_time = have_longpoll ? LP_SCANTIME : opt_scantime;
 		uint64_t max64, minmax = 0x100000;
@@ -1444,7 +1440,7 @@ static void *miner_thread(void *userdata)
 			hashlog_remember_scan_range(&work);
 
 		/* output */
-		if (!opt_quiet && loopcnt) {
+		if (!opt_quiet && (loopcnt > 0)) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
 			applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
@@ -1452,7 +1448,7 @@ static void *miner_thread(void *userdata)
 		}
 
 		/* loopcnt: ignore first loop hashrate */
-		if (loopcnt && thr_id == (opt_n_threads - 1)) {
+		if ((loopcnt>0) && thr_id == (opt_n_threads - 1)) {
 			double hashrate = 0.;
 			pthread_mutex_lock(&stats_lock);
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)

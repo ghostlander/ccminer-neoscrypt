@@ -11,8 +11,6 @@
 // aus cpu-miner.c
 extern short device_map[8];
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];
@@ -140,7 +138,7 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
     quark_groestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 
     // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, order, thr_id);
+	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -154,7 +152,4 @@ __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, u
     dim3 block(TPB);
 
     quark_doublegroestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
-
-    // Strategisches Sleep Kommando zur Senkung der CPU Last
-    MyStreamSynchronize(NULL, order, thr_id);
 }
