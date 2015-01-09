@@ -31,6 +31,22 @@ __constant__ uint64_t c_keccak_round_constants[24] = {
 	0x0000000080000001ull, 0x8000000080008008ull
 };
 
+__constant__ uint2 c_keccak_round_constants35[24] = {
+		{ 0x00000001ul, 0x00000000 }, { 0x00008082ul, 0x00000000 },
+		{ 0x0000808aul, 0x80000000 }, { 0x80008000ul, 0x80000000 },
+		{ 0x0000808bul, 0x00000000 }, { 0x80000001ul, 0x00000000 },
+		{ 0x80008081ul, 0x80000000 }, { 0x00008009ul, 0x80000000 },
+		{ 0x0000008aul, 0x00000000 }, { 0x00000088ul, 0x00000000 },
+		{ 0x80008009ul, 0x00000000 }, { 0x8000000aul, 0x00000000 },
+		{ 0x8000808bul, 0x00000000 }, { 0x0000008bul, 0x80000000 },
+		{ 0x00008089ul, 0x80000000 }, { 0x00008003ul, 0x80000000 },
+		{ 0x00008002ul, 0x80000000 }, { 0x00000080ul, 0x80000000 },
+		{ 0x0000800aul, 0x00000000 }, { 0x8000000aul, 0x80000000 },
+		{ 0x80008081ul, 0x80000000 }, { 0x00008080ul, 0x80000000 },
+		{ 0x80000001ul, 0x00000000 }, { 0x80008008ul, 0x80000000 }
+};
+
+
 static __device__ __forceinline__ void
 keccak_block(uint64_t *s) {
     int i;
@@ -151,7 +167,7 @@ keccak_block(uint64_t *s) {
         v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
         /* iota: a[0,0] ^= round constant */
-        s[0] ^= c_keccak_round_constants[i];
+        s[0] ^= c_keccak_round_constants [i];
     }
 }
 static __device__ __forceinline__ void
@@ -213,7 +229,7 @@ keccak_block_35(uint2 *s) {
 	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 	/* iota: a[0,0] ^= round constant */
-	s[0] ^= vectorize(c_keccak_round_constants[0]);
+	s[0] = s[0] ^ 1; //c_keccak_round_constants[0]);
 
 	for (i = 1; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -272,7 +288,7 @@ keccak_block_35(uint2 *s) {
 		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 		/* iota: a[0,0] ^= round constant */
-		s[0] ^= vectorize(c_keccak_round_constants[i]);
+		s[0] ^= c_keccak_round_constants35[i];
 	}
 }
 

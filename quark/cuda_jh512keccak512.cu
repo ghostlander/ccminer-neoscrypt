@@ -349,22 +349,21 @@ __device__ __forceinline__ void JHHash(const uint32_t *data, uint32_t *hashval)
 
 #define U64TO32_LE(p, v) \
     *p = (uint32_t)((v)); *(p+1) = (uint32_t)((v) >> 32);
-
-__constant__ uint64_t c_keccak_round_constants[24] = {
-	0x0000000000000001ull, 0x0000000000008082ull,
-	0x800000000000808aull, 0x8000000080008000ull,
-	0x000000000000808bull, 0x0000000080000001ull,
-	0x8000000080008081ull, 0x8000000000008009ull,
-	0x000000000000008aull, 0x0000000000000088ull,
-	0x0000000080008009ull, 0x000000008000000aull,
-	0x000000008000808bull, 0x800000000000008bull,
-	0x8000000000008089ull, 0x8000000000008003ull,
-	0x8000000000008002ull, 0x8000000000000080ull,
-	0x000000000000800aull, 0x800000008000000aull,
-	0x8000000080008081ull, 0x8000000000008080ull,
-	0x0000000080000001ull, 0x8000000080008008ull
+ 
+__constant__ uint2 c_keccak_round_constants[24] = {
+		{ 0x00000001ul, 0x00000000 }, { 0x00008082ul, 0x00000000 },
+		{ 0x0000808aul, 0x80000000 }, { 0x80008000ul, 0x80000000 },
+		{ 0x0000808bul, 0x00000000 }, { 0x80000001ul, 0x00000000 },
+		{ 0x80008081ul, 0x80000000 }, { 0x00008009ul, 0x80000000 },
+		{ 0x0000008aul, 0x00000000 }, { 0x00000088ul, 0x00000000 },
+		{ 0x80008009ul, 0x00000000 }, { 0x8000000aul, 0x00000000 },
+		{ 0x8000808bul, 0x00000000 }, { 0x0000008bul, 0x80000000 },
+		{ 0x00008089ul, 0x80000000 }, { 0x00008003ul, 0x80000000 },
+		{ 0x00008002ul, 0x80000000 }, { 0x00000080ul, 0x80000000 },
+		{ 0x0000800aul, 0x00000000 }, { 0x8000000aul, 0x80000000 },
+		{ 0x80008081ul, 0x80000000 }, { 0x00008080ul, 0x80000000 },
+		{ 0x80000001ul, 0x00000000 }, { 0x80008008ul, 0x80000000 }
 };
-
 
 static __device__ __forceinline__ void
 keccak_block(uint2 *s) {
@@ -427,7 +426,7 @@ keccak_block(uint2 *s) {
 	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 	/* iota: a[0,0] ^= round constant */
-	s[0] ^= vectorize(c_keccak_round_constants[0]);
+	s[0] = s[0]^1;//vectorize(c_keccak_round_constants[0]);
 
 	for (i = 1; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -486,7 +485,7 @@ keccak_block(uint2 *s) {
 		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 		/* iota: a[0,0] ^= round constant */
-		s[0] ^= vectorize(c_keccak_round_constants[i]);
+		s[0] ^= c_keccak_round_constants[i];
 	}
 }
 
