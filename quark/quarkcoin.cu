@@ -233,8 +233,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			quarkhash(vhash64, endiandata);
-			be32enc(&endiandata[19], foundNonce);
-			quarkhash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
