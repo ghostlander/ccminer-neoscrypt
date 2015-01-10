@@ -1110,8 +1110,8 @@ static void *miner_thread(void *userdata)
 	{
 		if (opt_benchmark)
 		{
-			work.data[19] = work.data[19] & 0xffffffffU;	//reset Hashcounters
-			work.data[21] = work.data[21] & 0xffffffffU;
+			work.data[19] = work.data[19] & 0xfffffffU;	//reset Hashcounters
+			work.data[21] = work.data[21] & 0xfffffffU;
 		}
 		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done=0;

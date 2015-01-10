@@ -31,11 +31,28 @@ __constant__ uint64_t keccak_round_constants[24] = {
 	0x8000000080008081ull, 0x8000000000008080ull,
 	0x0000000080000001ull, 0x8000000080008008ull
 };
+
+__constant__ uint2 keccak_round_constants35[24] = {
+		{ 0x00000001ul, 0x00000000 }, { 0x00008082ul, 0x00000000 },
+		{ 0x0000808aul, 0x80000000 }, { 0x80008000ul, 0x80000000 },
+		{ 0x0000808bul, 0x00000000 }, { 0x80000001ul, 0x00000000 },
+		{ 0x80008081ul, 0x80000000 }, { 0x00008009ul, 0x80000000 },
+		{ 0x0000008aul, 0x00000000 }, { 0x00000088ul, 0x00000000 },
+		{ 0x80008009ul, 0x00000000 }, { 0x8000000aul, 0x00000000 },
+		{ 0x8000808bul, 0x00000000 }, { 0x0000008bul, 0x80000000 },
+		{ 0x00008089ul, 0x80000000 }, { 0x00008003ul, 0x80000000 },
+		{ 0x00008002ul, 0x80000000 }, { 0x00000080ul, 0x80000000 },
+		{ 0x0000800aul, 0x00000000 }, { 0x8000000aul, 0x80000000 },
+		{ 0x80008081ul, 0x80000000 }, { 0x00008080ul, 0x80000000 },
+		{ 0x80000001ul, 0x00000000 }, { 0x80008008ul, 0x80000000 }
+};
+
+
 __constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + padding?)
 
 #if __CUDA_ARCH__ >= 350
 __device__ __forceinline__
-static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
+static void keccak_blockv35_32(uint2 *s)
 {
 	int i;
 	uint2 t1, t[5], u[5], v, w;
@@ -91,7 +108,7 @@ static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 	/* iota: a[0,0] ^= round constant */
-	s[0] ^= vectorize(keccak_round_constants[0]);
+	s[0] = s[0]^1;	//vectorize(keccak_round_constants[0]);
 
 #pragma unroll
 	for (i = 1; i < 24; i++) {
@@ -151,7 +168,7 @@ static void keccak_blockv35_32(uint2 *s, const uint64_t *keccak_round_constants)
 		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 		/* iota: a[0,0] ^= round constant */
-		s[0] ^= vectorize(keccak_round_constants[i]);
+		s[0] ^= keccak_round_constants35[i]; //vectorize(keccak_round_constants[i]);
 	}
 }
 #else
@@ -215,7 +232,7 @@ static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constan
 	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 	/* iota: a[0,0] ^= round constant */
-	s[0] ^= keccak_round_constants[0];
+	s[0] ^= 1;//keccak_round_constants[0];
 
 	for (i = 1; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -281,7 +298,7 @@ static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constan
 
 #if __CUDA_ARCH__ >= 350
 __device__ __forceinline__
-static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
+static void keccak_blockv35_80(uint2 *s)
 {
 	int i;
 	uint2 t[5], u[5], v, w;
@@ -342,7 +359,7 @@ static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
 	v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 	/* iota: a[0,0] ^= round constant */
-	s[0] ^= vectorize(keccak_round_constants[0]);
+	s[0] = s[0]^1; //keccak_round_constants[0];
 
 	#pragma unroll
 	for (i = 1; i < 24; i++) {
@@ -402,7 +419,7 @@ static void keccak_blockv35_80(uint2 *s, const uint64_t *keccak_round_constants)
 		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
 
 		/* iota: a[0,0] ^= round constant */
-		s[0] ^= vectorize(keccak_round_constants[i]);
+		s[0] ^= keccak_round_constants35[i];
 	}
 }
 #else
@@ -555,7 +572,7 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputH
 		keccak_gpu_state[10] = UINT2(1, 0);
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
 
-		keccak_blockv35_80(keccak_gpu_state,keccak_round_constants);
+		keccak_blockv35_80(keccak_gpu_state);
 		if (devectorize(keccak_gpu_state[3]) <= ((uint64_t*)pTarget)[3]) {resNounce[0] = nounce;}
 #else
 		uint64_t keccak_gpu_state[25];
@@ -607,7 +624,7 @@ void keccak256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *out
 		}
 		keccak_gpu_state[4]  = UINT2(1, 0);
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
-		keccak_blockv35_32(keccak_gpu_state, keccak_round_constants);
+		keccak_blockv35_32(keccak_gpu_state);
 
 		#pragma unroll 4
 		for (int i=0; i<4; i++)
