@@ -28,6 +28,7 @@ extern "C"
 
 
 static uint32_t *d_hash[8];
+static uint32_t *h_found[8];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -59,7 +60,7 @@ extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t start
 
 extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern uint2 x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, int order);
+extern void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, uint32_t *h_found, int order);
 extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
@@ -160,6 +161,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			return 0;
 		}
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 64 * throughput), 0); // why 64 ?
+		CUDA_CALL_OR_RET_X(cudaMallocHost(&(h_found[thr_id]), 4 * sizeof(uint32_t)), 0);
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
@@ -180,16 +182,14 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-//		MyStreamSynchronize(NULL, 1, thr_id);
-
 		#ifdef FASTECHO
-		uint2 foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], order++);
+		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], h_found[thr_id], order++);
 
-		if (foundNonce.x != 0xffffffff)
+		if (h_found[thr_id][0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce.x);
+			be32enc(&endiandata[19], h_found[thr_id][0]);
 			x11hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
@@ -197,44 +197,24 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				int res = 1;
 				// check if there was some other ones...
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (foundNonce.y != 0xffffffff)
+				if (h_found[thr_id][1] != 0xffffffff)
 				{
-					pdata[21] = foundNonce.y;
+					pdata[21] = h_found[thr_id][1];
 					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
+					if (opt_benchmark)
+						applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, h_found[thr_id][1], vhash64[7], Htarg);
 				}
-				pdata[19] = foundNonce.x;
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce, vhash64[7], Htarg);
+				pdata[19] = h_found[thr_id][0];
+				if (opt_benchmark)
+					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0], vhash64[7], Htarg);
 				return res;
 			}
-			else //quick echo failed. Do full echo
+			else
 			{
-				x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-				if (foundNonce != UINT32_MAX)
-				{
-					be32enc(&endiandata[19], foundNonce);
-					x11hash(vhash64, endiandata);
-					if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+				if (vhash64[7] != Htarg)
 					{
-						int res = 1;
-						// check if there was some other ones...
-						uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
-						*hashes_done = pdata[19] - first_nonce + throughput;
-						if (secNonce != 0) {
-							pdata[21] = secNonce;
-							res++;
-							if (opt_benchmark)  applog(LOG_INFO, "Found second nounce", thr_id, foundNonce, vhash64[7], Htarg);
-						}
-						pdata[19] = foundNonce;
-						if (opt_benchmark) applog(LOG_INFO, "Found nounce", thr_id, foundNonce, vhash64[7], Htarg);
-						return res;
-					} else
-					{
-						applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+						applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
 					}
-
-				}
 			}
 		}
 		#else
