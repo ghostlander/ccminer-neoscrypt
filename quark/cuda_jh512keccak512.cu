@@ -1,9 +1,5 @@
 #include "cuda_helper.h"
 
-typedef struct {
-    uint32_t x[8][4];                     /*the 1024-bit state, ( x[i][0] || x[i][1] || x[i][2] || x[i][3] ) is the ith row of the state in the pseudocode*/
-    uint32_t buffer[16];                  /*the 512-bit message block to be hashed;*/
-} hashState;
 
 #ifdef _MSC_VER
 #define UINT2(x,y) { x, y }
@@ -118,7 +114,7 @@ __constant__ unsigned char c_E8_bitslice_roundconstant[42][32] = {
       m1 ^= (temp0 & (m0));        \
       m2 ^= temp0;
 
-__device__ __forceinline__ void Sbox_and_MDS_layer(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void Sbox_and_MDS_layer(uint32_t x[8][4], uint32_t roundnumber)
 {
     uint32_t temp0;
 	uint32_t cc0, cc1;
@@ -127,221 +123,143 @@ __device__ __forceinline__ void Sbox_and_MDS_layer(hashState* state, uint32_t ro
     for (int i = 0; i < 4; i++) {
 		cc0 = ((uint32_t*)c_E8_bitslice_roundconstant[roundnumber])[i];
 		cc1 = ((uint32_t*)c_E8_bitslice_roundconstant[roundnumber])[i+4];
-        Sbox(state->x[0][i],state->x[2][i], state->x[4][i], state->x[6][i], cc0);
-        Sbox(state->x[1][i],state->x[3][i], state->x[5][i], state->x[7][i], cc1);
-        L(state->x[0][i],state->x[2][i],state->x[4][i],state->x[6][i],state->x[1][i],state->x[3][i],state->x[5][i],state->x[7][i]);
+        Sbox(x[0][i],x[2][i], x[4][i], x[6][i], cc0);
+        Sbox(x[1][i],x[3][i], x[5][i], x[7][i], cc1);
+        L(x[0][i],x[2][i],x[4][i],x[6][i],x[1][i],x[3][i],x[5][i],x[7][i]);
     }
 }
 
-__device__ __forceinline__ void RoundFunction0(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction0(uint32_t x[8][4], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 		uint32_t y;
-		SWAP1(state->x[j][0], y);
-		SWAP1(state->x[j][1], y);
-		SWAP1(state->x[j][2], y);
-		SWAP1(state->x[j][3], y);
+		SWAP1(x[j][0], y);
+		SWAP1(x[j][1], y);
+		SWAP1(x[j][2], y);
+		SWAP1(x[j][3], y);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction1(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction1(uint32_t x[8][4], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 		uint32_t y;
-		SWAP2(state->x[j][0], y);
-		SWAP2(state->x[j][1], y);
-		SWAP2(state->x[j][2], y);
-		SWAP2(state->x[j][3], y);
+		SWAP2(x[j][0], y);
+		SWAP2(x[j][1], y);
+		SWAP2(x[j][2], y);
+		SWAP2(x[j][3], y);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction2(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction2(uint32_t x[8][4], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 		uint32_t y;
-		SWAP4(state->x[j][0], y);
-		SWAP4(state->x[j][1], y);
-		SWAP4(state->x[j][2], y);
-		SWAP4(state->x[j][3], y);
+		SWAP4(x[j][0], y);
+		SWAP4(x[j][1], y);
+		SWAP4(x[j][2], y);
+		SWAP4(x[j][3], y);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction3(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction3(uint32_t x[8][4], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP8(state->x[j][i]);
+		for (int i = 0; i < 4; i++) SWAP8(x[j][i]);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction4(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction4(uint32_t x[8][4], uint32_t roundnumber)
 {
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP16(state->x[j][i]);
+		for (int i = 0; i < 4; i++) SWAP16(x[j][i]);
 	}
 }
 
-__device__ __forceinline__ void RoundFunction5(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction5(uint32_t x[8][4], uint32_t roundnumber)
 {
 	uint32_t temp0;
 
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 2
 		for (int i = 0; i < 4; i = i+2) {
-			temp0 = state->x[j][i]; state->x[j][i] = state->x[j][i+1]; state->x[j][i+1] = temp0;
+			temp0 = x[j][i]; x[j][i] = x[j][i+1]; x[j][i+1] = temp0;
 		}
 	}
 }
 
-__device__ __forceinline__ void RoundFunction6(hashState* state, uint32_t roundnumber)
+__device__ __forceinline__ void RoundFunction6(uint32_t x[8][4], uint32_t roundnumber)
 {
 	uint32_t temp0;
 
-	Sbox_and_MDS_layer(state, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
 #pragma unroll 2
 		for (int i = 0; i < 2; i++) {
-			temp0 = state->x[j][i]; state->x[j][i] = state->x[j][i+2]; state->x[j][i+2] = temp0;
+			temp0 = x[j][i]; x[j][i] = x[j][i+2]; x[j][i+2] = temp0;
 		}
 	}
 }
 
 /*The bijective function E8, in bitslice form */
-__device__ __forceinline__ void E8(hashState *state)
+__device__ __forceinline__ void E8(uint32_t x[8][4])
 {
     /*perform 6 rounds*/
 //#pragma unroll 6
     for (int i = 0; i < 42; i+=7)
 	{
-		RoundFunction0(state, i);
-		RoundFunction1(state, i+1);
-		RoundFunction2(state, i+2);
-		RoundFunction3(state, i+3);
-		RoundFunction4(state, i+4);
-		RoundFunction5(state, i+5);
-		RoundFunction6(state, i+6);
+		RoundFunction0(x, i);
+		RoundFunction1(x, i + 1);
+		RoundFunction2(x, i + 2);
+		RoundFunction3(x, i + 3);
+		RoundFunction4(x, i + 4);
+		RoundFunction5(x, i + 5);
+		RoundFunction6(x, i + 6);
 	}
 }
 
 /*The compression function F8 */
-__device__ __forceinline__ void F8(hashState *state)
+__device__ __forceinline__ void F8(uint32_t x[8][4],uint32_t *buffer)
 {
-    /*xor the 512-bit message with the fist half of the 1024-bit hash state*/
 #pragma unroll 16
-    for (int i = 0; i < 16; i++)  state->x[i >> 2][i & 3] ^= ((uint32_t*)state->buffer)[i];
-
-    /*the bijective function E8 */
-    E8(state);
-
-    /*xor the 512-bit message with the second half of the 1024-bit hash state*/
+    for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
+	E8(x);
 #pragma unroll 16
-    for (int i = 0; i < 16; i++)  state->x[(16+i) >> 2][(16+i) & 3] ^= ((uint32_t*)state->buffer)[i];
+    for (int i = 0; i < 16; i++) x[(16+i) >> 2][(16+i) & 3] ^= ((uint32_t*)buffer)[i];
 }
 
 
 __device__ __forceinline__ void JHHash(const uint32_t *data, uint32_t *hashval)
 {
-    hashState state;
-
-    /*load the intital hash value H0 into state*/
-	/*
-    #define INIT(a,b,c,d) ((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
-    state.x[0][0] = INIT(0x6f,0xd1,0x4b,0x96);
-    state.x[0][1] = INIT(0x3e,0x00,0xaa,0x17);
-    state.x[0][2] = INIT(0x63,0x6a,0x2e,0x05);
-    state.x[0][3] = INIT(0x7a,0x15,0xd5,0x43);
-    state.x[1][0] = INIT(0x8a,0x22,0x5e,0x8d);
-    state.x[1][1] = INIT(0x0c,0x97,0xef,0x0b);
-    state.x[1][2] = INIT(0xe9,0x34,0x12,0x59);
-    state.x[1][3] = INIT(0xf2,0xb3,0xc3,0x61);
-    state.x[2][0] = INIT(0x89,0x1d,0xa0,0xc1);
-    state.x[2][1] = INIT(0x53,0x6f,0x80,0x1e);
-    state.x[2][2] = INIT(0x2a,0xa9,0x05,0x6b);
-    state.x[2][3] = INIT(0xea,0x2b,0x6d,0x80);
-    state.x[3][0] = INIT(0x58,0x8e,0xcc,0xdb);
-    state.x[3][1] = INIT(0x20,0x75,0xba,0xa6);
-    state.x[3][2] = INIT(0xa9,0x0f,0x3a,0x76);
-    state.x[3][3] = INIT(0xba,0xf8,0x3b,0xf7);
-    state.x[4][0] = INIT(0x01,0x69,0xe6,0x05);
-    state.x[4][1] = INIT(0x41,0xe3,0x4a,0x69);
-    state.x[4][2] = INIT(0x46,0xb5,0x8a,0x8e);
-    state.x[4][3] = INIT(0x2e,0x6f,0xe6,0x5a);
-    state.x[5][0] = INIT(0x10,0x47,0xa7,0xd0);
-    state.x[5][1] = INIT(0xc1,0x84,0x3c,0x24);
-    state.x[5][2] = INIT(0x3b,0x6e,0x71,0xb1);
-    state.x[5][3] = INIT(0x2d,0x5a,0xc1,0x99);
-    state.x[6][0] = INIT(0xcf,0x57,0xf6,0xec);
-    state.x[6][1] = INIT(0x9d,0xb1,0xf8,0x56);
-    state.x[6][2] = INIT(0xa7,0x06,0x88,0x7c);
-    state.x[6][3] = INIT(0x57,0x16,0xb1,0x56);
-    state.x[7][0] = INIT(0xe3,0xc2,0xfc,0xdf);
-    state.x[7][1] = INIT(0xe6,0x85,0x17,0xfb);
-    state.x[7][2] = INIT(0x54,0x5a,0x46,0x78);
-    state.x[7][3] = INIT(0xcc,0x8c,0xdd,0x4b);
-	*/
-#pragma unroll 8
-	for(int j=0;j<8;j++)
-	{
-#pragma unroll 4
-		for(int i=0;i<4;i++)
-			state.x[j][i] = c_INIT_bitslice[j][i];
-	}
-
-#pragma unroll 16
-    for (int i=0; i < 16; ++i) state.buffer[i] = data[i];
-    F8(&state);
-
-    /*pad the message when databitlen is multiple of 512 bits, then process the padded block*/
-    state.buffer[0] = 0x80;
-#pragma unroll 14
-    for (int i=1; i < 15; i++) state.buffer[i] = 0;
-    state.buffer[15] = 0x00020000;
-    F8(&state);
-
-	hashval[0] = state.x[4][0];
-	hashval[1] = state.x[4][1];
-	hashval[2] = state.x[4][2];
-	hashval[3] = state.x[4][3];
-	hashval[4] = state.x[5][0];
-	hashval[5] = state.x[5][1];
-	hashval[6] = state.x[5][2];
-	hashval[7] = state.x[5][3];
-	hashval[8] = state.x[6][0];
-	hashval[9] = state.x[6][1];
-	hashval[10] = state.x[6][2];
-	hashval[11] = state.x[6][3];
-	hashval[12] = state.x[7][0];
-	hashval[13] = state.x[7][1];
-	hashval[14] = state.x[7][2];
-	hashval[15] = state.x[7][3];
 }
 
 #define U32TO64_LE(p) \
@@ -489,7 +407,7 @@ keccak_block(uint2 *s) {
 	}
 }
 
-__global__
+__global__ __launch_bounds__(256,3)
 void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -499,21 +417,76 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 
         int hashPosition = nounce - startNounce;
         uint32_t *Hash = &g_hash[16 * hashPosition];
-		JHHash(Hash, Hash);
+		uint32_t x[8][4];                     /*the 1024-bit state, ( x[i][0] || x[i][1] || x[i][2] || x[i][3] ) is the ith row of the state in the pseudocode*/	
+		#define INIT(a,b,c,d) ((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
+		x[0][0] = INIT(0x6f,0xd1,0x4b,0x96);
+		x[0][1] = INIT(0x3e,0x00,0xaa,0x17);
+		x[0][2] = INIT(0x63,0x6a,0x2e,0x05);
+		x[0][3] = INIT(0x7a,0x15,0xd5,0x43);
+		x[1][0] = INIT(0x8a,0x22,0x5e,0x8d);
+		x[1][1] = INIT(0x0c,0x97,0xef,0x0b);
+		x[1][2] = INIT(0xe9,0x34,0x12,0x59);
+		x[1][3] = INIT(0xf2,0xb3,0xc3,0x61);
+		x[2][0] = INIT(0x89,0x1d,0xa0,0xc1);
+		x[2][1] = INIT(0x53,0x6f,0x80,0x1e);
+		x[2][2] = INIT(0x2a,0xa9,0x05,0x6b);
+		x[2][3] = INIT(0xea,0x2b,0x6d,0x80);
+		x[3][0] = INIT(0x58,0x8e,0xcc,0xdb);
+		x[3][1] = INIT(0x20,0x75,0xba,0xa6);
+		x[3][2] = INIT(0xa9,0x0f,0x3a,0x76);
+		x[3][3] = INIT(0xba,0xf8,0x3b,0xf7);
+		x[4][0] = INIT(0x01,0x69,0xe6,0x05);
+		x[4][1] = INIT(0x41,0xe3,0x4a,0x69);
+		x[4][2] = INIT(0x46,0xb5,0x8a,0x8e);
+		x[4][3] = INIT(0x2e,0x6f,0xe6,0x5a);
+		x[5][0] = INIT(0x10,0x47,0xa7,0xd0);
+		x[5][1] = INIT(0xc1,0x84,0x3c,0x24);
+		x[5][2] = INIT(0x3b,0x6e,0x71,0xb1);
+		x[5][3] = INIT(0x2d,0x5a,0xc1,0x99);
+		x[6][0] = INIT(0xcf,0x57,0xf6,0xec);
+		x[6][1] = INIT(0x9d,0xb1,0xf8,0x56);
+		x[6][2] = INIT(0xa7,0x06,0x88,0x7c);
+		x[6][3] = INIT(0x57,0x16,0xb1,0x56);
+		x[7][0] = INIT(0xe3,0xc2,0xfc,0xdf);
+		x[7][1] = INIT(0xe6,0x85,0x17,0xfb);
+		x[7][2] = INIT(0x54,0x5a,0x46,0x78);
+		x[7][3] = INIT(0xcc,0x8c,0xdd,0x4b);
+
+#pragma unroll 16
+		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)Hash)[i];
+		E8(x);
+#pragma unroll 16
+		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)Hash)[i];
+
+		x[0 >> 2][0 & 3] ^= 0x80;
+		x[15 >> 2][15 & 3] ^= 0x00020000;
+		E8(x);
+		x[(16 + 0) >> 2][(16 + 0) & 3] ^= 0x80;
+		x[(16 + 15) >> 2][(16 + 15) & 3] ^= 0x00020000;
 
 		uint2 keccak_gpu_state[25];
-#pragma unroll
-		for (int i = 0; i<8; i++)
-		{
-			keccak_gpu_state[i].x = Hash[(i * 2)];
-			keccak_gpu_state[i].y = Hash[(i * 2) + 1];
-		}
-		keccak_gpu_state[8] = vectorize(0x8000000000000001ULL);
 
+		keccak_gpu_state[0].x = x[4][0];
+		keccak_gpu_state[0].y = x[4][1];
+		keccak_gpu_state[1].x = x[4][2];
+		keccak_gpu_state[1].y = x[4][3];
+		keccak_gpu_state[2].x = x[5][0];
+		keccak_gpu_state[2].y = x[5][1];
+		keccak_gpu_state[3].x = x[5][2];
+		keccak_gpu_state[3].y = x[5][3];
+		keccak_gpu_state[4].x = x[6][0];
+		keccak_gpu_state[4].y = x[6][1];
+		keccak_gpu_state[5].x = x[6][2];
+		keccak_gpu_state[5].y = x[6][3];
+		keccak_gpu_state[6].x = x[7][0];
+		keccak_gpu_state[6].y = x[7][1];
+		keccak_gpu_state[7].x = x[7][2];
+		keccak_gpu_state[7].y = x[7][3];
+		keccak_gpu_state[8] = make_uint2(0x00000001, 0x80000000);
 #pragma unroll
 		for (int i = 9; i<25; i++)
 		{
-			keccak_gpu_state[i] = UINT2(0, 0);
+			keccak_gpu_state[i] = make_uint2(0, 0);
 		}
 		keccak_block(keccak_gpu_state);
 
