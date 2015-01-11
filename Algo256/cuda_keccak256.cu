@@ -7,14 +7,9 @@ extern "C" {
 
 #include "cuda_helper.h"
 
-#ifdef _MSC_VER
-#define UINT2(x,y) { x, y }
-#else
-#define UINT2(x,y) (uint2) { x, y }
-#endif
+#define UINT2(x,y) make_uint2(x,y)
 
-uint32_t *d_nounce[8];
-uint32_t *d_KNonce[8];
+static uint32_t *d_KNonce[8];
 
 __constant__ uint32_t pTarget[8];
 __constant__ uint64_t keccak_round_constants[24] = {
@@ -573,7 +568,12 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputH
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
 
 		keccak_blockv35_80(keccak_gpu_state);
-		if (devectorize(keccak_gpu_state[3]) <= ((uint64_t*)pTarget)[3]) {resNounce[0] = nounce;}
+		if (devectorize(keccak_gpu_state[3]) <= ((uint64_t*)pTarget)[3])
+		{
+			uint32_t tmp = atomicExch(resNounce, nounce);
+			if (tmp != 0xffffffff)
+				resNounce[1] = tmp;
+	}
 #else
 		uint64_t keccak_gpu_state[25];
 		#pragma unroll 25
@@ -586,27 +586,28 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputH
 		keccak_gpu_state[16] = 0x8000000000000000;
 
 		keccak_blockv30_80(keccak_gpu_state, keccak_round_constants);
-		if (keccak_gpu_state[3] <= ((uint64_t*)pTarget)[3]) { resNounce[0] = nounce; }
+		if (keccak_gpu_state[3] <= ((uint64_t*)pTarget)[3])
+		{
+			uint32_t tmp = atomicExch(resNounce, nounce);
+			if (tmp != 0xffffffff)
+				resNounce[1] = tmp;
+		}
 #endif
 	}
 }
 
 __host__
-uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order, uint32_t *h_nounce)
 {
-	uint32_t result = UINT32_MAX;
-	cudaMemset(d_KNonce[thr_id], 0xff, sizeof(uint32_t));
+	cudaMemset(d_KNonce[thr_id], 0xff, 4*sizeof(uint32_t));
 	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
 	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
-
-	cudaMemcpy(d_nounce[thr_id], d_KNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	result = *d_nounce[thr_id];
-
-	return result;
+	MyStreamSynchronize(NULL, order, thr_id);
+	cudaMemcpy(h_nounce, d_KNonce[thr_id], 4 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
 
 __global__ __launch_bounds__(256,3)
@@ -672,6 +673,5 @@ void keccak256_setBlock_80(void *pdata,const void *pTargetIn)
 __host__
 void keccak256_cpu_init(int thr_id, uint32_t threads)
 {
-	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], sizeof(uint32_t)));
-	CUDA_SAFE_CALL(cudaMallocHost(&d_nounce[thr_id], 1*sizeof(uint32_t)));
+	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], 4*sizeof(uint32_t)));
 }
