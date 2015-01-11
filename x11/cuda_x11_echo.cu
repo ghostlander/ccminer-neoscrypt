@@ -309,35 +309,26 @@ __device__ __forceinline__ void cuda_echo_round(
 }
 
 
-__device__ __forceinline__ void cuda_echo_round_final(
-	const uint32_t *const __restrict__ sharedMemory, uint32_t *const __restrict__  hash)
-{
-}
-
 
 __device__ __forceinline__
 void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 {
 	/* each thread startup will fill a uint32 */
-	if (threadIdx.x < 128) {
+	if (threadIdx.x < 256) {
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
 		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
 		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
 		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
 
-		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
 	}
 }
 
 
-#if __CUDA_ARCH__ > 500
-__global__ __launch_bounds__(128, 6)
-#else
-__global__ __launch_bounds__(128, 7)
-#endif
+__global__ __launch_bounds__(256, 4)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -362,7 +353,7 @@ __host__ void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 
 __host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const uint32_t threadsperblock = 128;
+    const uint32_t threadsperblock = 256;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -377,11 +368,7 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-#if __CUDA_ARCH__ > 500
-__global__ __launch_bounds__(128, 6)
-#else
-__global__ __launch_bounds__(128, 8)
-#endif
+__global__ __launch_bounds__(256, 4)
 void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ d_nonce, uint32_t target)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -583,7 +570,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		{
 
 			// Big Sub Words
-#pragma unroll 8
+			#pragma unroll 4
 			for (int idx = 0; idx < 64; idx += 16)
 			{
 				AES_2ROUND(sharedMemory,
@@ -600,7 +587,6 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 					k0++);
 
 			}
-
 			// Shift Rows
 #pragma unroll 4
 			for (int i = 0; i < 4; i++)
@@ -711,7 +697,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 }
 __host__ uint2 x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, int order)
 {
-	const uint32_t threadsperblock = 128;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
