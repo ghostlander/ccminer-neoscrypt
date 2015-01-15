@@ -315,17 +315,6 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		h6 = make_uint2(0x1A75B523ull, 0x991112C7);
 		h7 = make_uint2(0x660FCC33ull, 0xAE18A40B);
 
-/*
-		// Initialisierung
-		h0 = vectorize(0x4903ADFF749C51CEull);
-		h1 = vectorize(0x0D95DE399746DF03ull);
-		h2 = vectorize(0x8FD1934127C79BCEull);
-		h3 = vectorize(0x9A255629FF352CB1ull);
-		h4 = vectorize(0x5DB62599DF6CA7B0ull);
-		h5 = vectorize(0xEABE394CA9D5C3F4ull);
-		h6 = vectorize(0x991112C71A75B523ull);
-		h7 = vectorize(0xAE18A40B660FCC33ull);
-*/
 		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg		
 #pragma unroll 8
 		for(int i=0;i<8;i++)
