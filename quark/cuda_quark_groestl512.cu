@@ -9,11 +9,11 @@
 #define THF 4
 
 // aus cpu-miner.c
-extern short device_map[8];
+//extern short device_map[8];
 
 
 // diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props[8];
+//static cudaDeviceProp props[8];
 
 // 64 Register Variante für Compute 3.0
 #include "groestl_functions_quad.cu"
@@ -122,7 +122,7 @@ quark_doublegroestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, 
 // Setup-Funktionen
 __host__ void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
+//    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
 }
 
 __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
