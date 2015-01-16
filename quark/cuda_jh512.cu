@@ -1,7 +1,5 @@
 #include "cuda_helper.h"
 
-static uint2 *d_nonce[8];
-
 __constant__ unsigned char c_E8_bitslice_roundconstant[42][32] = {
 	{ 0x72, 0xd5, 0xde, 0xa2, 0xdf, 0x15, 0xf8, 0x67, 0x7b, 0x84, 0x15, 0xa, 0xb7, 0x23, 0x15, 0x57, 0x81, 0xab, 0xd6, 0x90, 0x4d, 0x5a, 0x87, 0xf6, 0x4e, 0x9f, 0x4f, 0xc5, 0xc3, 0xd1, 0x2b, 0x40 },
 	{ 0xea, 0x98, 0x3a, 0xe0, 0x5c, 0x45, 0xfa, 0x9c, 0x3, 0xc5, 0xd2, 0x99, 0x66, 0xb2, 0x99, 0x9a, 0x66, 0x2, 0x96, 0xb4, 0xf2, 0xbb, 0x53, 0x8a, 0xb5, 0x56, 0x14, 0x1a, 0x88, 0xdb, 0xa2, 0x31 },
@@ -299,7 +297,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 // Die Hash-Funktion
 #define TPB2 256
 __global__ __launch_bounds__(TPB2, 4)
-void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ dnounce, const uint32_t target)
+void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -307,7 +305,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
-		const uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
 
 		uint32_t x[8][4] = {
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
@@ -335,12 +333,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 			RoundFunction6(x, i + 6);
 		}
 
-		if (x[5][3] <= target)
-		{
-			uint32_t tmp = atomicExch(&(dnounce->x), nounce);
-			if (tmp != 0xffffffffU)
-				dnounce->y = tmp;
-		}
+		Hash[7] = x[5][3];
 	}
 }
 
@@ -358,18 +351,12 @@ __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 // Setup-Funktionen
 __host__ void  quark_jh512_cpu_init(int thr_id, uint32_t threads)
 {
-	cudaMalloc(&d_nonce[thr_id], sizeof(uint2));
 }
 
-
-__host__ uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order,uint32_t target)
+__host__ void quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	dim3 grid((threads + TPB2 - 1) / TPB2);
 	dim3 block(TPB2);
 
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
-	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
-	uint2 res;
-	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
-	return res;
+	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
