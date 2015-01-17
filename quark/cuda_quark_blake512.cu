@@ -502,5 +502,5 @@ __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t 
 	dim3 block(threadsperblock);
 
 	quark_blake512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
-//	MyStreamSynchronize(NULL, order, thr_id);
+	MyStreamSynchronize(NULL, order, thr_id);
 }
