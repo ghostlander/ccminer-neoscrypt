@@ -6,6 +6,7 @@
 #include "cuda_x11_aes.cu"
 
 static uint2 *d_nonce[8];
+static uint32_t *d_found[8];
 
 __device__ __forceinline__ void AES_2ROUND(
 	const uint32_t*const __restrict__ sharedMemory,
@@ -349,6 +350,7 @@ void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *c
 __host__ void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaMalloc(&d_nonce[thr_id], sizeof(uint2));
+	CUDA_SAFE_CALL(cudaMalloc(&(d_found[thr_id]), 4 * sizeof(uint32_t)));
 }
 
 __host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
@@ -369,7 +371,7 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 }
 
 __global__ __launch_bounds__(256, 4)
-void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ d_nonce, uint32_t target)
+void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 	__shared__ uint32_t sharedMemory[1024];
 	echo_gpu_init(sharedMemory);
@@ -688,24 +690,21 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		test ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ W[11] ^ W[31] ^ backup;
 		if (test <= target)
 		{
-			uint32_t tmp = atomicExch(&(d_nonce[0].x), nounce);
+			uint32_t tmp = atomicExch(&(d_found[0]), nounce);
 			if (tmp != 0xffffffff)
-				d_nonce[0].y = tmp;
-
+				d_found[1] = tmp;
 		}
 	}
 }
-__host__ uint2 x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, int order)
+__host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, uint32_t *h_found, int order)
 {
 	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
+	cudaMemset(d_found[thr_id], 0xff, 4*sizeof(uint32_t));
 
-	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
-	uint2 res;
-	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
-	return res;
+	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_found[thr_id], target);
+	cudaMemcpy(h_found, d_found[thr_id], 4*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

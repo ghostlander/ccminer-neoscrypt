@@ -8,7 +8,7 @@
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
 uint32_t *d_outputHashes[8];
-static uint2 *d_resultNonce[8];
+static uint32_t *d_resultNonce[8];
 
 __constant__ uint32_t myriadgroestl_gpu_msg[32];
 
@@ -242,7 +242,7 @@ __global__ void __launch_bounds__(256, 4)
 }
 
 __global__ void __launch_bounds__(256, 3)
- myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint2 *resNounce, uint32_t *hashBuffer)
+ myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -259,9 +259,9 @@ __global__ void __launch_bounds__(256, 3)
         
         if (out_state[7] <= pTarget[7])
 		{
-			uint32_t tmp = atomicExch(&(resNounce[0].x), nounce);
+			uint32_t tmp = atomicExch(resNounce, nounce);
 			if (tmp != 0xffffffff)
-				resNounce[0].y = tmp;
+				resNounce[1] = tmp;
 		 }
     }
 }
@@ -272,7 +272,7 @@ __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
     CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
     
     // Speicher für Gewinner-Nonce belegen
-    cudaMalloc(&d_resultNonce[thr_id], sizeof(uint2)); 
+    cudaMalloc(&d_resultNonce[thr_id], 4*sizeof(uint32_t)); 
 
     // Speicher für temporäreHashes
     cudaMalloc(&d_outputHashes[thr_id], 16*sizeof(uint32_t)*threads); 
@@ -299,13 +299,13 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
                         msgBlock,
                         128);
 
-    cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint2));
+    cudaMemset(d_resultNonce[thr_id], 0xFF, 4*sizeof(uint32_t));
     cudaMemcpyToSymbol( pTarget,
                         pTargetIn,
                         sizeof(uint32_t) * 8 );
 }
 
-__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint2 *nounce)
+__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *nounce)
 {
     uint32_t threadsperblock = 256;
 
@@ -313,7 +313,7 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     const int factor=4;
 
-    cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint2));
+    cudaMemset(d_resultNonce[thr_id], 0xFF, 4*sizeof(uint32_t));
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
@@ -323,5 +323,5 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     myriadgroestl_gpu_hash_quad2<<<grid2, block>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
 
-    cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
+    cudaMemcpy(nounce, d_resultNonce[thr_id], 4*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

@@ -35,14 +35,14 @@ __constant__ uint32_t pTarget[8];
 	#define USE_SHARED 1
 	// Maxwell and Fermi cards get the best speed with SHARED access it seems.
 	#if USE_SHARED
-	#define T0up(x) (*((uint32_t*)mixtabs + (    (x))))
-	#define T0dn(x) (*((uint32_t*)mixtabs + (256+(x))))
-	#define T1up(x) (*((uint32_t*)mixtabs + (512+(x))))
-	#define T1dn(x) (*((uint32_t*)mixtabs + (768+(x))))
-	#define T2up(x) (*((uint32_t*)mixtabs + (1024+(x))))
-	#define T2dn(x) (*((uint32_t*)mixtabs + (1280+(x))))
-	#define T3up(x) (*((uint32_t*)mixtabs + (1536+(x))))
-	#define T3dn(x) (*((uint32_t*)mixtabs + (1792+(x))))
+	#define T0up(x) (*(mixtabs + (    (x))))
+	#define T0dn(x) (*(mixtabs + (256+(x))))
+	#define T1up(x) (*(mixtabs + (512+(x))))
+	#define T1dn(x) (*(mixtabs + (768+(x))))
+	#define T2up(x) (*(mixtabs + (1024+(x))))
+	#define T2dn(x) (*(mixtabs + (1280+(x))))
+	#define T3up(x) (*(mixtabs + (1536+(x))))
+	#define T3dn(x) (*(mixtabs + (1792+(x))))
 	#else
 	#define T0up(x) tex1Dfetch(t0up2, x)
 	#define T0dn(x) tex1Dfetch(t0dn2, x)
@@ -105,7 +105,7 @@ extern uint32_t T3up_cpu[];
 extern uint32_t T3dn_cpu[];
 
 __device__ __forceinline__
-void groestl256_perm_P(uint32_t thread,uint32_t *a, char *mixtabs)
+void groestl256_perm_P(uint32_t thread, uint32_t *a, uint32_t *mixtabs)
 {
 	#pragma unroll 10
 	for (int r = 0; r<10; r++)
@@ -136,7 +136,7 @@ void groestl256_perm_P(uint32_t thread,uint32_t *a, char *mixtabs)
 }
 
 __device__ __forceinline__
-void groestl256_perm_Q(uint32_t thread, uint32_t *a, char *mixtabs)
+void groestl256_perm_Q(uint32_t thread, uint32_t *a, uint32_t *mixtabs)
 {
 	#pragma unroll
 	for (int r = 0; r<10; r++)
@@ -178,17 +178,17 @@ __global__ __launch_bounds__(256,1)
 void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ outputHash, uint32_t *const __restrict__ nonceVector)
 {
 #if USE_SHARED
-	extern __shared__ char mixtabs[];
+	__shared__ uint32_t mixtabs[2048];
 
 	if (threadIdx.x < 256) {
-		*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(t0up2, threadIdx.x);
-		*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(t0dn2, threadIdx.x);
-		*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(t1up2, threadIdx.x);
-		*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(t1dn2, threadIdx.x);
-		*((uint32_t*)mixtabs + (1024 + threadIdx.x)) = tex1Dfetch(t2up2, threadIdx.x);
-		*((uint32_t*)mixtabs + (1280 + threadIdx.x)) = tex1Dfetch(t2dn2, threadIdx.x);
-		*((uint32_t*)mixtabs + (1536 + threadIdx.x)) = tex1Dfetch(t3up2, threadIdx.x);
-		*((uint32_t*)mixtabs + (1792 + threadIdx.x)) = tex1Dfetch(t3dn2, threadIdx.x);
+		*(mixtabs + (threadIdx.x)) = tex1Dfetch(t0up2, threadIdx.x);
+		*(mixtabs + (256 + threadIdx.x)) = tex1Dfetch(t0dn2, threadIdx.x);
+		*(mixtabs + (512 + threadIdx.x)) = tex1Dfetch(t1up2, threadIdx.x);
+		*(mixtabs + (768 + threadIdx.x)) = tex1Dfetch(t1dn2, threadIdx.x);
+		*(mixtabs + (1024 + threadIdx.x)) = tex1Dfetch(t2up2, threadIdx.x);
+		*(mixtabs + (1280 + threadIdx.x)) = tex1Dfetch(t2dn2, threadIdx.x);
+		*(mixtabs + (1536 + threadIdx.x)) = tex1Dfetch(t3up2, threadIdx.x);
+		*(mixtabs + (1792 + threadIdx.x)) = tex1Dfetch(t3dn2, threadIdx.x);
 	}
 
 	__syncthreads();
@@ -287,12 +287,7 @@ void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-#if USE_SHARED
-	size_t shared_size = 8 * 256 * sizeof(uint32_t);
-#else
-	size_t shared_size = 0;
-#endif
-	groestl256_gpu_hash32<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_GNonce[thr_id]);
+	groestl256_gpu_hash32<<<grid, block>>>(threads, startNounce, d_outputHash, d_GNonce[thr_id]);
 	cudaMemcpy(d_gnounce[thr_id], d_GNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	resultnonces[0] = *(d_gnounce[thr_id]);
 	resultnonces[1] = *(d_gnounce[thr_id] + 1);

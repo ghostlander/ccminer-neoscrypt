@@ -467,6 +467,7 @@ __host__ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
     dim3 block(threadsperblock);
 
     quark_bmw512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)

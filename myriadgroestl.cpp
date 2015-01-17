@@ -6,11 +6,14 @@
 #include "sph/sph_groestl.h"
 
 #include "miner.h"
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
+
+static bool init[8] = { 0 };
+static uint32_t *h_found[8];
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
-void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint2 *nounce);
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *nounce);
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
@@ -33,8 +36,6 @@ extern "C" void myriadhash(void *state, const void *input)
     memcpy(state, hashB, 32);
 }
 
-static bool init[8] = { 0 };
-
 extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {	
@@ -46,8 +47,6 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 17);
 	throughPut = min(throughPut, max_nonce - start_nonce);
 
-	uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
-
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
@@ -58,6 +57,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 #else
 		myriadgroestl_cpu_init(thr_id, throughPut);
 #endif
+		cudaMallocHost(&(h_found[thr_id]), 4 * sizeof(uint32_t));
 		init[thr_id] = true;
 	}
 	
@@ -69,36 +69,34 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	myriadgroestl_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
 	
 	do {
-		// GPU
-		uint2 foundNounce;
 		const uint32_t Htarg = ptarget[7];
 
-		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], outputHash, &foundNounce);
+		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], h_found[thr_id]);
 
-		if(foundNounce.x < 0xffffffff)
+		if (h_found[thr_id][0] < 0xffffffff)
 		{
 			uint32_t tmpHash[8];
-			endiandata[19] = SWAP32(foundNounce.x);
+			endiandata[19] = SWAP32(h_found[thr_id][0]);
 			myriadhash(tmpHash, endiandata);
 			if (tmpHash[7] <= Htarg && fulltest(tmpHash, ptarget))
 			{
 				int res = 1;
 				*hashes_done = pdata[19] - start_nonce + throughPut;
-				if (foundNounce.y != 0xffffffff)
+				if (h_found[thr_id][1] != 0xffffffff)
 				{
-					if (opt_benchmark) applog(LOG_INFO, "found second nounce %08x", thr_id, foundNounce.y);
-					pdata[21] = foundNounce.y;
+					if (opt_benchmark) applog(LOG_INFO, "found second nounce %08x", thr_id, h_found[thr_id][1]);
+					pdata[21] = h_found[thr_id][1];
 					res++;
 				}
-				pdata[19] = foundNounce.x;
+				pdata[19] = h_found[thr_id][0];
 				if (opt_benchmark)
-					applog(LOG_INFO, "found nounce %08x", thr_id, foundNounce.x);
+					applog(LOG_INFO, "found nounce %08x", thr_id, h_found[thr_id][0]);
 				return res;
 			}
 			else
 			{
 				if (tmpHash[7] != Htarg) // don't show message if it is equal but fails fulltest
-					applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNounce.x);
+					applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
 			}
 		}
 
@@ -106,7 +104,6 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughPut)));
 
 	*hashes_done = pdata[19] - start_nonce + 1;
-	free(outputHash);
 	return 0;
 }
 
