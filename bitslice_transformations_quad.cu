@@ -112,15 +112,25 @@ void from_bitslice_quad(const uint32_t *const __restrict__ input, uint32_t *cons
 	SWAP2(d[0], d[2]);
 	SWAP2(d[1], d[3]);
 
+	t = __byte_perm(d[0], d[2], 0x5410);
+	d[2] = __byte_perm(d[0], d[2], 0x7632);
+	d[0] = t;
+
+	t = __byte_perm(d[1], d[3], 0x5410);
+	d[3] = __byte_perm(d[1], d[3], 0x7632);
+	d[1] = t;
+
+	SWAP4(d[0], d[2]);
+	SWAP4(d[1], d[3]);
+
 	output[0] = d[0];
 	output[2] = d[1];
-	output[4] = d[2];
-	output[6] = d[3];
-	output[8] = d[4] >>16;
-	output[10] = d[5] >> 16;
-	output[12] = d[6] >> 16;
-	output[14] = d[7] >>16;
-
+	output[4] = d[0] >> 16;
+	output[6] = d[1] >> 16;
+	output[8] = d[2];
+	output[10] = d[3];
+	output[12] = d[2] >> 16;
+	output[14] = d[3] >> 16;
 #pragma unroll 8
     for (int i = 0; i < 16; i+=2) {
         if (threadIdx.x & 1) output[i] = __byte_perm(output[i], 0, 0x1032);
