@@ -18,7 +18,7 @@ __host__
 void cuda_check_cpu_init(int thr_id, uint32_t threads)
 {
     CUDA_CALL_OR_RET(cudaMallocHost(&h_resNonces[thr_id], 8*sizeof(uint32_t)));
-    CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 8*sizeof(uint32_t)));
+	CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 8 * sizeof(uint32_t)));
 }
 
 // Target Difficulty
@@ -171,6 +171,25 @@ void cuda_check_hash_branch_64(uint32_t threads, uint32_t startNounce, uint32_t 
 	}
 }
 
+__global__
+void cuda_check_quarkcoin_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
+{
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = g_nonceVector[thread];
+		uint32_t hashPosition = (nounce - startNounce) << 4;
+		uint32_t *inpHash = &g_hash[hashPosition];
+
+		if (inpHash[7] <= pTarget[7])
+		{
+			uint32_t tmp = atomicExch(resNounce, nounce);
+			if (tmp != 0xffffffff)
+				resNounce[1] = tmp;
+		}
+	}
+}
+
 __host__
 uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {
@@ -189,4 +208,18 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 	result = *h_resNonces[thr_id];
 
 	return result;
+}
+__host__
+void cuda_check_quarkcoin(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order, uint32_t *resNonces)
+{
+	cudaMemset(d_resNonces[thr_id], 0xff, 2*sizeof(uint32_t));
+
+	const uint32_t threadsperblock = 256;
+
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	cuda_check_quarkcoin_64 << <grid, block >> > (threads, startNounce, d_nonceVector, d_inputHash, d_resNonces[thr_id]);
+
+	cudaMemcpy(resNonces, d_resNonces[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

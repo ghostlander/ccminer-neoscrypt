@@ -1057,6 +1057,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
+			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+			break;
 		case ALGO_LYRA2:
 		case ALGO_QUBIT:
 			diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));

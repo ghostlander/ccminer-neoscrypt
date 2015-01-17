@@ -551,12 +551,12 @@ __global__ void
 fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
 #if USE_SHARED
-	extern __shared__ char mixtabs[];
+	__shared__ uint32_t mixtabs[1024];
 
-	*((uint32_t*)mixtabs + (    threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (256+threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (512+threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
-	*((uint32_t*)mixtabs + (768+threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
+	*(mixtabs + (    threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
+	*(mixtabs + (256+threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
+	*(mixtabs + (512+threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
+	*(mixtabs + (768+threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
 
 	__syncthreads();
 #endif
@@ -762,14 +762,7 @@ __host__ void fugue256_cpu_hash(int thr_id, uint32_t threads, int startNounce, v
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-#if USE_SHARED
-	size_t shared_size = 4 * 256 * sizeof(uint32_t);
-#else
-	size_t shared_size = 0;
-#endif
-	fugue256_gpu_hash<<<grid, block, shared_size>>>(thr_id, threads, startNounce, d_fugue256_hashoutput[thr_id], d_resultNonce[thr_id]);
-
+	fugue256_gpu_hash<<<grid, block>>>(thr_id, threads, startNounce, d_fugue256_hashoutput[thr_id], d_resultNonce[thr_id]);
 
 	//cudaMemcpy(outputHashes, d_fugue256_hashoutput[thr_id], 8 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);

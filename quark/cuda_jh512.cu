@@ -1,7 +1,5 @@
 #include "cuda_helper.h"
 
-static uint2 *d_nonce[8];
-
 __constant__ unsigned char c_E8_bitslice_roundconstant[42][32] = {
 	{ 0x72, 0xd5, 0xde, 0xa2, 0xdf, 0x15, 0xf8, 0x67, 0x7b, 0x84, 0x15, 0xa, 0xb7, 0x23, 0x15, 0x57, 0x81, 0xab, 0xd6, 0x90, 0x4d, 0x5a, 0x87, 0xf6, 0x4e, 0x9f, 0x4f, 0xc5, 0xc3, 0xd1, 0x2b, 0x40 },
 	{ 0xea, 0x98, 0x3a, 0xe0, 0x5c, 0x45, 0xfa, 0x9c, 0x3, 0xc5, 0xd2, 0x99, 0x66, 0xb2, 0x99, 0x9a, 0x66, 0x2, 0x96, 0xb4, 0xf2, 0xbb, 0x53, 0x8a, 0xb5, 0x56, 0x14, 0x1a, 0x88, 0xdb, 0xa2, 0x31 },
@@ -230,25 +228,8 @@ static __device__ __forceinline__ void E8(uint32_t x[8][4])
 		RoundFunction6(x, i + 6);
 	}
 }
-/*The bijective function E8, in bitslice form */
-static __device__ __forceinline__ void E8_final(uint32_t x[8][4])
-{
-	/*perform 6 rounds*/
-#pragma unroll 6
-	for (int i = 0; i < 42; i += 7)
-	{
-		RoundFunction0(x, i);
-		RoundFunction1(x, i + 1);
-		RoundFunction2(x, i + 2);
-		RoundFunction3(x, i + 3);
-		RoundFunction4(x, i + 4);
-		RoundFunction5(x, i + 5);
-		RoundFunction6(x, i + 6);
-	}
-}
 
-
-static __device__ __forceinline__ void F8(uint32_t x[8][4], uint32_t buffer[16])
+static __device__ __forceinline__ void F8(uint32_t x[8][4], const uint32_t buffer[16])
 {
 	/*xor the 512-bit message with the fist half of the 1024-bit hash state*/
 #pragma unroll 16
@@ -316,7 +297,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 // Die Hash-Funktion
 #define TPB2 256
 __global__ __launch_bounds__(TPB2, 4)
-void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint2 *dnounce, const uint32_t target)
+void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -324,7 +305,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
-		const uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
 
 		uint32_t x[8][4] = {
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
@@ -335,25 +316,24 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			{ 0xd0a74710, 0x243c84c1, 0xb1716e3b, 0x99c15a2d },
 			{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 			{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc } };
-		uint32_t buffer[16];
 
-#pragma unroll 16
-		for (int i = 0; i < 16; ++i)
-			buffer[i] = Hash[i];
-		F8(x, buffer);
+		F8(x, Hash);
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
 
-		/*the bijective function E8 */
-		E8_final(x);
-
-		if (x[5][3] <= target)
+		for (int i = 0; i < 42; i += 7)
 		{
-			uint32_t tmp = atomicExch(&(dnounce->x), nounce);
-			if (tmp != 0xffffffffU)
-				dnounce->y = tmp;
+			RoundFunction0(x, i);
+			RoundFunction1(x, i + 1);
+			RoundFunction2(x, i + 2);
+			RoundFunction3(x, i + 3);
+			RoundFunction4(x, i + 4);
+			RoundFunction5(x, i + 5);
+			RoundFunction6(x, i + 6);
 		}
+
+		Hash[7] = x[5][3];
 	}
 }
 
@@ -371,18 +351,12 @@ __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 // Setup-Funktionen
 __host__ void  quark_jh512_cpu_init(int thr_id, uint32_t threads)
 {
-	cudaMalloc(&d_nonce[thr_id], sizeof(uint2));
 }
 
-
-__host__ uint2 quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order,uint32_t target)
+__host__ void quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	dim3 grid((threads + TPB2 - 1) / TPB2);
 	dim3 block(TPB2);
 
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint2));
-	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
-	uint2 res;
-	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint2), cudaMemcpyDeviceToHost);
-	return res;
+	quark_jh512_gpu_hash_64_final << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
