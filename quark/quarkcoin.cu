@@ -139,10 +139,10 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	int intensity = 128 * 256 * 30;
+	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 20;
+	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 256*4096
 	throughput = min(throughput, max_nonce - first_nonce);
-//	int intensity = 256 * 256 * 16;
-//	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 21;
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;

@@ -168,11 +168,12 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
-	throughput = min(throughput, max_nonce - first_nonce);
+	int intensity = 256 * 256 * 9;
+	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 15;
+	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 256*256*8;
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00FF;
+		((uint32_t*)ptarget)[7] = 0x00F;
 
 	if (!init[thr_id])
 	{
