@@ -146,6 +146,7 @@ enum sha_algos {
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_S3,
+	ALGO_SPREADX11,
 	ALGO_WHC,
 	ALGO_X11,
 	ALGO_X13,
@@ -176,6 +177,7 @@ static const char *algo_names[] = {
 	"quark",
 	"qubit",
 	"s3",
+	"spread",
 	"whirl",
 	"x11",
 	"x13",
@@ -212,9 +214,9 @@ bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
 int active_gpus;
-char * device_name[8];
-short device_map[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-long  device_sm[8] = { 0 };
+char * device_name[16];
+int device_map[16] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15 };
+long  device_sm[16] = { 0 };
 char *rpc_user = NULL;
 static char *rpc_url;
 static char *rpc_userpass;
@@ -284,6 +286,7 @@ Options:\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
 			s3          S3 (1Coin)\n\
+			spread      Spread\n\
 			x11         X11 (DarkCoin)\n\
 			x13         X13 (MaruCoin)\n\
 			x14         X14\n\

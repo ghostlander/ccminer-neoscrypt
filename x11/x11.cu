@@ -1,7 +1,7 @@
 extern "C"
 {
 
-#define FASTECHO 0			//Fast echo can give hardware errors on low difficulty but accepted on most pools.
+#define FASTECHO 1			//Fast echo can give hardware errors on low difficulty but accepted on most pools.
 
 #ifdef _DEBUG //Visual Leak Detector for Visual C++ 
 //	#include <vld.h>
@@ -21,14 +21,16 @@ extern "C"
 }
 
 #include "miner.h"
+//#include <cuda.h>
+//#include <cuda_runtime.h>
 #include "cuda_helper.h"
 
 #include <stdio.h>
 #include <memory.h>
 
 
-static uint32_t *d_hash[8];
-static uint32_t *h_found[8];
+uint32_t *d_hash[8];
+uint32_t *h_found[8];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -144,7 +146,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	uint32_t intensity;
 
 	if (device_sm[device_map[thr_id]] >= 520)
-		intensity = 256 * 256 * 18;
+		intensity = 256 * 256 * 19;
 	else
 		intensity = 256 * 256 * 11;
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
@@ -157,7 +159,10 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
+		cudaSetDevice(device_map[thr_id]);
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);

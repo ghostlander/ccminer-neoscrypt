@@ -6,7 +6,7 @@
 #define TPB 128 
 
 // aus cpu-miner.c
-extern short device_map[8];
+extern int device_map[16];
 
 // Take a look at: https://www.schneier.com/skein1.3.pdf
 
