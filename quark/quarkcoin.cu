@@ -149,7 +149,10 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
+		cudaSetDevice(device_map[thr_id]);
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
@@ -177,7 +180,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 
 	do {
-//		uint2 foundNonce;
 
 		int order = 0;
 		uint32_t nrm1 = 0, nrm2 = 0, nrm3 = 0;
@@ -187,8 +189,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		// das ist der unbedingte Branch für BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		MyStreamSynchronize(NULL, 1, thr_id);
 
 		quark_compactTest_single_false_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
 			d_branch3Nonces[thr_id], &nrm3,
@@ -202,8 +202,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		// das ist der unbedingte Branch für JH512
 		quark_jh512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
-
-		MyStreamSynchronize(NULL, 2, thr_id);
 
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
@@ -223,7 +221,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der unbedingte Branch für Skein512
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 3, thr_id);
 
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
@@ -235,7 +232,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 		quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 4, thr_id);
 		uint32_t foundnonces[2];
 		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++, foundnonces);
 		if (foundnonces[0] != 0xffffffff)

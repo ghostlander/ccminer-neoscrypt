@@ -78,13 +78,13 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
-
+		cudaSetDevice(device_map[thr_id]);
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		// Konstanten kopieren, Speicher belegen
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id);
-
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
@@ -106,7 +106,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		MyStreamSynchronize(NULL, 1, thr_id);
+	//	MyStreamSynchronize(NULL, 1, thr_id);
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)

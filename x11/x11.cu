@@ -1,7 +1,7 @@
 extern "C"
 {
 
-#define FASTECHO 0			//Fast echo can give hardware errors on low difficulty but accepted on most pools.
+#define FASTECHO 1			//Fast echo can give hardware errors on low difficulty but accepted on most pools.
 
 #ifdef _DEBUG //Visual Leak Detector for Visual C++ 
 //	#include <vld.h>
@@ -21,14 +21,16 @@ extern "C"
 }
 
 #include "miner.h"
+//#include <cuda.h>
+//#include <cuda_runtime.h>
 #include "cuda_helper.h"
 
 #include <stdio.h>
 #include <memory.h>
 
 
-static uint32_t *d_hash[8];
-static uint32_t *h_found[8];
+uint32_t *d_hash[8];
+uint32_t *h_found[8];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -155,7 +157,10 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
+		cudaSetDevice(device_map[thr_id]);
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
@@ -184,7 +189,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		MyStreamSynchronize(NULL, 1, thr_id);
 		#ifdef FASTECHO
 		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], h_found[thr_id], order++);
 		if (h_found[thr_id][0] != 0xffffffff)

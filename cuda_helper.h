@@ -19,8 +19,8 @@ void __threadfence(void);
 
 #include <stdint.h>
 
-extern "C" short device_map[8];
-extern "C"  long device_sm[8];
+extern "C" int device_map[16];
+extern "C"  long device_sm[16];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
@@ -89,22 +89,29 @@ __device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
 		(((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 #endif
 
-// das Lo Word aus einem 64 Bit Typen extrahieren
-__device__ __forceinline__ uint32_t _LOWORD(const uint64_t &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2loint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x & 0xFFFFFFFFULL);
-#endif
+
+static __device__ uint32_t _HIWORD(const uint64_t x)
+{
+	uint32_t result;
+	asm(
+		"{\n\t"
+		".reg .u32 xl; \n\t"
+		"mov.b64 {xl,%0},%1; \n\t"
+		"}" : "=r"(result) : "l"(x)
+		);
+	return result;
 }
 
-// das Hi Word aus einem 64 Bit Typen extrahieren
-__device__ __forceinline__ uint32_t _HIWORD(const uint64_t &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2hiint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x >> 32);
-#endif
+static __device__ uint32_t _LOWORD(const uint64_t x)
+{
+	uint32_t result;
+	asm(
+		"{\n\t"
+		".reg .u32 xh; \n\t"
+		"mov.b64 {%0,xh},%1; \n\t"
+		"}" : "=r"(result) : "l"(x)
+		);
+	return result;
 }
 
 #ifdef __CUDA_ARCH__
