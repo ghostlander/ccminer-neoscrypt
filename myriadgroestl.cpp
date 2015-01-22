@@ -8,7 +8,7 @@
 #include "miner.h"
 #include <cuda_runtime.h>
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 static uint32_t *h_found[8];
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);

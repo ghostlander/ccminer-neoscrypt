@@ -28,7 +28,7 @@ extern "C" {
 #include "cuda_helper.h"
 
 // Memory for the hash functions
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
@@ -159,7 +159,7 @@ extern "C" void x15hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

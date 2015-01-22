@@ -19,8 +19,12 @@ void __threadfence(void);
 
 #include <stdint.h>
 
-extern "C" int device_map[16];
-extern "C"  long device_sm[16];
+#ifndef MAX_GPUS
+#define MAX_GPUS 16
+#endif
+
+extern "C" int device_map[MAX_GPUS];
+extern "C"  long device_sm[MAX_GPUS];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);

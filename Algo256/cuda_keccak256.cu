@@ -9,7 +9,7 @@ extern "C" {
 
 #define UINT2(x,y) make_uint2(x,y)
 
-static uint32_t *d_KNonce[8];
+static uint32_t *d_KNonce[MAX_GPUS];
 
 __constant__ uint32_t pTarget[8];
 __constant__ uint64_t keccak_round_constants[24] = {

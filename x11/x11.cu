@@ -29,7 +29,7 @@ extern "C"
 #include <memory.h>
 
 
-uint32_t *d_hash[8];
+uint32_t *d_hash[MAX_GPUS];
 uint32_t *h_found[8];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
@@ -136,7 +136,7 @@ extern "C" void x11hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,

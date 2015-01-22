@@ -216,9 +216,9 @@ bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
 int active_gpus;
-char * device_name[16];
-int device_map[16] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15 };
-long  device_sm[16] = { 0 };
+char * device_name[MAX_GPUS];
+int device_map[MAX_GPUS] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15 };
+long  device_sm[MAX_GPUS] = { 0 };
 char *rpc_user = NULL;
 static char *rpc_url;
 static char *rpc_userpass;
@@ -2229,6 +2229,11 @@ int main(int argc, char *argv[])
 #endif
 	if (num_cpus < 1)
 		num_cpus = 1;
+
+	// default thread to device map
+	for (i = 0; i < MAX_GPUS; i++) {
+		device_map[i] = i;
+	}
 
 	// number of gpus
 	active_gpus = cuda_num_devices();
