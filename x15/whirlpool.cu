@@ -58,7 +58,8 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
-	throughput = min(throughput, max_nonce - first_nonce);
+	apiReportThroughput(thr_id, (uint32_t) throughput);
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;

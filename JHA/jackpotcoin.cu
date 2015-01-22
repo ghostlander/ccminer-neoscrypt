@@ -95,7 +95,8 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		((uint32_t*)ptarget)[7] = 0x000f;
 
 	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
-	throughput = min(throughput, max_nonce - first_nonce);
+	apiReportThroughput(thr_id, throughput);
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (!init[thr_id])
 	{

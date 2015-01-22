@@ -171,6 +171,8 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	int intensity = 256 * 256 * 9;
 	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 15;
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 256*256*8;
+	apiReportThroughput(thr_id, (uint32_t) throughput);
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00F;

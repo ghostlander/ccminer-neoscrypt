@@ -152,6 +152,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
 	throughput = min(throughput, max_nonce - first_nonce);
+	apiReportThroughput(thr_id, (uint32_t) throughput);
 
 
 	if (opt_benchmark)
