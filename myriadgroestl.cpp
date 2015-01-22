@@ -72,7 +72,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	do {
 		const uint32_t Htarg = ptarget[7];
 
-		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], h_found[thr_id]);
+		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], h_found[thr_id]);
 
 		if (h_found[thr_id][0] < 0xffffffff)
 		{
@@ -82,7 +82,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			if (tmpHash[7] <= Htarg && fulltest(tmpHash, ptarget))
 			{
 				int res = 1;
-				*hashes_done = pdata[19] - start_nonce + throughPut;
+				*hashes_done = pdata[19] - start_nonce + throughput;
 				if (h_found[thr_id][1] != 0xffffffff)
 				{
 					if (opt_benchmark) applog(LOG_INFO, "found second nounce %08x", thr_id, h_found[thr_id][1]);
@@ -101,8 +101,8 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			}
 		}
 
-		pdata[19] += throughPut;
-	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughPut)));
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - start_nonce + 1;
 	return 0;
