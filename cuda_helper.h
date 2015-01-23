@@ -90,7 +90,7 @@ __device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
 #endif
 
 
-static __device__ uint32_t _HIWORD(const uint64_t x)
+static __device__ __forceinline__ uint32_t _HIWORD(const uint64_t x)
 {
 	uint32_t result;
 	asm(
@@ -102,7 +102,7 @@ static __device__ uint32_t _HIWORD(const uint64_t x)
 	return result;
 }
 
-static __device__ uint32_t _LOWORD(const uint64_t x)
+static __device__ __forceinline__ uint32_t _LOWORD(const uint64_t x)
 {
 	uint32_t result;
 	asm(
