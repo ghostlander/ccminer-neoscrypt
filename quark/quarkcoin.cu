@@ -139,8 +139,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	int intensity = 128 * 256 * 30;
-	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 20;
+	int intensity = 256 * 256 * 15;
+	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 16;
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 256*4096
 	apiReportThroughput(thr_id, (uint32_t) throughput);
 	throughput = min(throughput, max_nonce - first_nonce);
