@@ -216,10 +216,10 @@ __global__ void __launch_bounds__(256, 4)
         // GROESTL
         uint32_t paddedInput[8];
 #pragma unroll 8
-		for (int k = 0; k<8; k++) paddedInput[k] = myriadgroestl_gpu_msg[4 * k + threadIdx.x % 4];
+		for (int k = 0; k<8; k++) paddedInput[k] = myriadgroestl_gpu_msg[4 * k + (threadIdx.x & 3)];
 
 		uint32_t nounce = startNounce + thread;
-		if ((threadIdx.x % 4) == 3)
+		if ((threadIdx.x & 3) == 3)
 			paddedInput[4] = cuda_swab32(nounce);  // 4*4+3 = 19
 
         uint32_t msgBitsliced[8];

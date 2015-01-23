@@ -28,10 +28,10 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
         // GROESTL
         uint32_t paddedInput[8];
 #pragma unroll 8
-        for(int k=0;k<8;k++) paddedInput[k] = groestlcoin_gpu_msg[4*k+threadIdx.x%4];
+        for(int k=0;k<8;k++) paddedInput[k] = groestlcoin_gpu_msg[4*k+(threadIdx.x & 3)];
 
         uint32_t nounce = startNounce + thread;
-        if ((threadIdx.x % 4) == 3)
+        if ((threadIdx.x & 3) == 3)
             paddedInput[4] = SWAB32(nounce);  // 4*4+3 = 19
 
         uint32_t msgBitsliced[8];
@@ -45,14 +45,14 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
             if (round < 1)
             {
                 // Verkettung zweier Runden inclusive Padding.
-                msgBitsliced[ 0] = __byte_perm(state[ 0], 0x00800100, 0x4341 + ((threadIdx.x%4)==3)*0x2000);
+                msgBitsliced[ 0] = __byte_perm(state[ 0], 0x00800100, 0x4341 + ((threadIdx.x & 3)==3)*0x2000);
                 msgBitsliced[ 1] = __byte_perm(state[ 1], 0x00800100, 0x4341);
                 msgBitsliced[ 2] = __byte_perm(state[ 2], 0x00800100, 0x4341);
                 msgBitsliced[ 3] = __byte_perm(state[ 3], 0x00800100, 0x4341);
                 msgBitsliced[ 4] = __byte_perm(state[ 4], 0x00800100, 0x4341);
                 msgBitsliced[ 5] = __byte_perm(state[ 5], 0x00800100, 0x4341);
                 msgBitsliced[ 6] = __byte_perm(state[ 6], 0x00800100, 0x4341);
-                msgBitsliced[ 7] = __byte_perm(state[ 7], 0x00800100, 0x4341 + ((threadIdx.x%4)==0)*0x0010);
+				msgBitsliced[7] = __byte_perm(state[7], 0x00800100, 0x4341 + ((threadIdx.x & 3) == 0) * 0x0010);
             }
         }
 
@@ -60,7 +60,7 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
         uint32_t out_state[16];
         from_bitslice_quad(state, out_state);
         
-        if (threadIdx.x % 4 == 0)
+		if ((threadIdx.x & 3) == 0)
         {
             int i, position = -1;
             bool rc = true;

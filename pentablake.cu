@@ -180,7 +180,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
 
 	//#pragma unroll 16
 	for (uint32_t i = 0; i < 16; i++) {
-		uint32_t j = i % 8;
+		uint32_t j = i & 7;
 		h[j] ^= v[i];
 	}
 }
@@ -260,7 +260,7 @@ void pentablake_compress(uint64_t *h, const uint64_t *block, const uint64_t T0)
 
 	//#pragma unroll 16
 	for (i = 0; i < 16; i++) {
-		uint32_t idx = i % 8;
+		uint32_t idx = i & 7;
 		h[idx] ^= v[i];
 	}
 }

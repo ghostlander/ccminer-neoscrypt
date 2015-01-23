@@ -67,10 +67,10 @@ void sha256_init(uint32_t *state)
 
 /* Adjusted round function for rotating state */
 #define RNDr(S, W, i) \
-	RND(S[(64 - i) % 8], S[(65 - i) % 8], \
-	    S[(66 - i) % 8], S[(67 - i) % 8], \
-	    S[(68 - i) % 8], S[(69 - i) % 8], \
-	    S[(70 - i) % 8], S[(71 - i) % 8], \
+	RND(S[(64 - i) & 7], S[(65 - i) & 7], \
+	    S[(66 - i) & 7], S[(67 - i) & 7], \
+	    S[(68 - i) & 7], S[(69 - i) & 7], \
+	    S[(70 - i) & 7], S[(71 - i) & 7], \
 	    W[i] + sha256_k[i])
 
 #ifndef EXTERN_SHA256

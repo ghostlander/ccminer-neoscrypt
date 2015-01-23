@@ -174,7 +174,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 #else
 	//#pragma unroll 16
 	for (uint32_t i = 0; i < 16; i++) {
-		uint32_t j = i % 8U;
+		uint32_t j = i & 7U;
 		h[j] ^= v[i];
 	}
 #endif
@@ -396,7 +396,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	if (opt_benchmark) {
 		targetHigh = 0x1ULL << 32;
-		((uint32_t*)ptarget)[6] = swab32(0xff);
+		((uint32_t*)ptarget)[6] = swab32(0x4);
 	}
 
 	if (opt_tracegpu) {
