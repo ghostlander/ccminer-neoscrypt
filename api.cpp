@@ -621,7 +621,7 @@ static void setup_ipaccess()
 
 				ipaccess[ips].mask = 0;
 				while (mask-- >= 0) {
-					octet = 1 << (mask % 8);
+					octet = 1 << (mask & 7);
 					ipaccess[ips].mask |= (octet << (24 - (8 * (mask >> 3))));
 				}
 			}

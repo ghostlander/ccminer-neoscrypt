@@ -115,7 +115,7 @@ template <int BLOCKSIZE> __device__ void blake512_compress( uint64_t *h, const u
     }
 
 #pragma unroll 16
-    for( i = 0; i < 16; ++i )  h[i % 8] ^= v[i];
+    for( i = 0; i < 16; ++i )  h[i & 7] ^= v[i];
 }
 
 template <int BLOCKSIZE> __global__ void blake512_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
