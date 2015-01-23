@@ -43,7 +43,6 @@ __device__ __forceinline__
 void to_bitslice_quad(uint32_t *const __restrict__ input, uint32_t *const __restrict__ output)
 {
     uint32_t other[8];
-	uint32_t d[8];
 	uint32_t t;
 
     #pragma unroll
@@ -60,38 +59,29 @@ void to_bitslice_quad(uint32_t *const __restrict__ input, uint32_t *const __rest
         }
     }
 
-	merge8(d[0], input[0], input[4]);
-	merge8(d[1], other[0], other[4]);
-	merge8(d[2], input[1], input[5]);
-	merge8(d[3], other[1], other[5]);
-	merge8(d[4], input[2], input[6]);
-	merge8(d[5], other[2], other[6]);
-	merge8(d[6], input[3], input[7]);
-	merge8(d[7], other[3], other[7]);
+	merge8(output[0], input[0], input[4]);
+	merge8(output[1], other[0], other[4]);
+	merge8(output[2], input[1], input[5]);
+	merge8(output[3], other[1], other[5]);
+	merge8(output[4], input[2], input[6]);
+	merge8(output[5], other[2], other[6]);
+	merge8(output[6], input[3], input[7]);
+	merge8(output[7], other[3], other[7]);
 
-	SWAP1(d[0], d[1]);
-	SWAP1(d[2], d[3]);
-	SWAP1(d[4], d[5]);
-	SWAP1(d[6], d[7]);
+	SWAP1(output[0], output[1]);
+	SWAP1(output[2], output[3]);
+	SWAP1(output[4], output[5]);
+	SWAP1(output[6], output[7]);
 
-	SWAP2(d[0], d[2]);
-	SWAP2(d[1], d[3]);
-	SWAP2(d[4], d[6]);
-	SWAP2(d[5], d[7]);
+	SWAP2(output[0], output[2]);
+	SWAP2(output[1], output[3]);
+	SWAP2(output[4], output[6]);
+	SWAP2(output[5], output[7]);
 
-	SWAP4(d[0], d[4]);
-	SWAP4(d[1], d[5]);
-	SWAP4(d[2], d[6]);
-	SWAP4(d[3], d[7]);
-
-	output[0] = d[0];
-	output[1] = d[1];
-	output[2] = d[2];
-	output[3] = d[3];
-	output[4] = d[4];
-	output[5] = d[5];
-	output[6] = d[6];
-	output[7] = d[7];
+	SWAP4(output[0], output[4]);
+	SWAP4(output[1], output[5]);
+	SWAP4(output[2], output[6]);
+	SWAP4(output[3], output[7]);
 }
 
 __device__ __forceinline__
