@@ -22,42 +22,37 @@
 __global__ __launch_bounds__(TPB, THF)
 void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
-    // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
+	uint32_t msgBitsliced[8];
+	uint32_t state[8];
+	uint32_t hash[16];
+	// durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
     if (thread < threads)
     {
         // GROESTL
-        uint32_t message[8];
-        uint32_t state[8];
-
         uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
-        int hashPosition = nounce - startNounce;
-        uint32_t *inpHash = &g_hash[hashPosition << 4];
+		uint32_t hashPosition = nounce - startNounce;
+        uint32_t *inpHash = &g_hash[hashPosition * 16];
 
-        const uint16_t thr = threadIdx.x & (THF-1);
+        const uint32_t thr = threadIdx.x & (THF-1);
 
-        #pragma unroll
-        for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
+		uint32_t message[8] =
+		{
+			inpHash[thr], inpHash[(THF)+thr], inpHash[(2 * THF) + thr], inpHash[(3 * THF) + thr],0, 0, 0, 
+		};
+		if (thr == 0) message[4] = 0x80UL;
+		if (thr == 3) message[7] = 0x01000000UL;
 
-        #pragma unroll
-        for(int k=4;k<8;k++) message[k] = 0;
-
-        if (thr == 0) message[4] = 0x80;
-        if (thr == 3) message[7] = 0x01000000;
-
-        uint32_t msgBitsliced[8];
-        to_bitslice_quad(message, msgBitsliced);
+		to_bitslice_quad(message, msgBitsliced);
 
         groestl512_progressMessage_quad(state, msgBitsliced);
 
-        // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
-        uint32_t *outpHash = inpHash;
-        uint32_t hash[16];
-        from_bitslice_quad(state, hash);
-
-		if (thr != 0) return;
-        #pragma unroll
-        for(int k=0;k<16;k++) outpHash[k] = hash[k];
+		from_bitslice_quad(state, hash);
+		if (thr == 0)
+		{
+			#pragma unroll
+			for (int k = 0; k < 16; k++) inpHash[k] = hash[k];
+		}
     }
 }
 
@@ -132,8 +127,8 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
     const int factor = THF;
 
     // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid(factor*((threads + TPB-1)/TPB));
-    dim3 block(TPB);
+	dim3 grid(factor*((threads + TPB - 1) / TPB));
+	dim3 block(TPB);
 
     quark_groestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 
