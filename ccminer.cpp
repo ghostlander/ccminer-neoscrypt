@@ -2230,8 +2230,8 @@ int main(int argc, char *argv[])
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
 #endif
 
-	SetPriorityClass(NULL, REALTIME_PRIORITY_CLASS);
-	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+	SetPriorityClass(NULL, HIGH_PRIORITY_CLASS);
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
 	if (active_gpus == 0) {
 		applog(LOG_ERR, "No CUDA devices found! terminating.");
