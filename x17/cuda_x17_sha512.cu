@@ -104,19 +104,19 @@ static const uint64_t K512[80] = {
 #define SHA3_STEP(ord,r,i) { \
 		uint64_t T1, T2; \
 		int a = 8-ord; \
-		T1 = SPH_T64(r[(7+a)%8] + BSG5_1(r[(4+a)%8]) + CH(r[(4+a)%8], r[(5+a)%8], r[(6+a)%8]) + K_512[i] + W[i]); \
-		T2 = SPH_T64(BSG5_0(r[(0+a)%8]) + MAJ(r[(0+a)%8], r[(1+a)%8], r[(2+a)%8])); \
-		r[(3+a)%8] = SPH_T64(r[(3+a)%8] + T1); \
-		r[(7+a)%8] = SPH_T64(T1 + T2); \
+		T1 = SPH_T64(r[(7+a)&7] + BSG5_1(r[(4+a)&7]) + CH(r[(4+a)&7], r[(5+a)&7], r[(6+a)&7]) + K_512[i] + W[i]); \
+		T2 = SPH_T64(BSG5_0(r[(0+a)&7]) + MAJ(r[(0+a)&7], r[(1+a)&7], r[(2+a)&7])); \
+		r[(3+a)&7] = SPH_T64(r[(3+a)&7] + T1); \
+		r[(7+a)&7] = SPH_T64(T1 + T2); \
 	}
 
 #define SHA3_STEP2(truc,ord,r,i) { \
 		uint64_t T1, T2; \
 		int a = 8-ord; \
 		T1 = Tone(truc,r,W,a,i); \
-		T2 = SPH_T64(BSG5_0(r[(0+a)%8]) + MAJ(r[(0+a)%8], r[(1+a)%8], r[(2+a)%8])); \
-		r[(3+a)%8] = SPH_T64(r[(3+a)%8] + T1); \
-		r[(7+a)%8] = SPH_T64(T1 + T2); \
+		T2 = SPH_T64(BSG5_0(r[(0+a)&7]) + MAJ(r[(0+a)&7], r[(1+a)&7], r[(2+a)&7])); \
+		r[(3+a)&7] = SPH_T64(r[(3+a)&7] + T1); \
+		r[(7+a)&7] = SPH_T64(T1 + T2); \
 	}
 //#define BSG5_0(x)      (ROTR64(x, 28) ^ ROTR64(x, 34) ^ ROTR64(x, 39))
 #define BSG5_0(x)        xor3(ROTR64(x, 28),ROTR64(x, 34),ROTR64(x, 39))
@@ -138,10 +138,10 @@ static const uint64_t K512[80] = {
 __device__ __forceinline__
 uint64_t Tone(const uint64_t* sharedMemory, uint64_t r[8], uint64_t W[80], uint32_t a, uint32_t i)
 {
-	uint64_t h = r[(7+a)%8];
-	uint64_t e = r[(4+a)%8];
-	uint64_t f = r[(5+a)%8];
-	uint64_t g = r[(6+a)%8];
+	uint64_t h = r[(7 + a) & 7];
+	uint64_t e = r[(4 + a) & 7];
+	uint64_t f = r[(5 + a) & 7];
+	uint64_t g = r[(6 + a) & 7];
 	//uint64_t BSG51 = ROTR64(e, 14) ^ ROTR64(e, 18) ^ ROTR64(e, 41);
 	uint64_t BSG51 = xor3(ROTR64(e, 14),ROTR64(e, 18),ROTR64(e, 41));
 	//uint64_t CHl     = (((f) ^ (g)) & (e)) ^ (g);
@@ -150,7 +150,7 @@ uint64_t Tone(const uint64_t* sharedMemory, uint64_t r[8], uint64_t W[80], uint3
 	return result;
 }
 
-__global__ __launch_bounds__(256,2)
+__global__ __launch_bounds__(256,3)
 void x17_sha512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -226,7 +226,7 @@ void x17_sha512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 64;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

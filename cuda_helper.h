@@ -128,13 +128,20 @@ static __device__ uint32_t _LOWORD(const uint64_t x)
 	return result;
 }
 
+// Input:       77665544 33221100
+// Output:      00112233 44556677
 #ifdef __CUDA_ARCH__
 __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 {
-	// Input:       77665544 33221100
-	// Output:      00112233 44556677
-	uint64_t result = __byte_perm((uint32_t) x, 0, 0x0123);
-	return (result << 32) | __byte_perm(_HIWORD(x), 0, 0x0123);
+	uint64_t result;
+	uint2 t;
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(t.x), "=r"(t.y) : "l"(x));
+	t.x=__byte_perm(t.x, 0, 0x0123);
+	t.y=__byte_perm(t.y, 0, 0x0123);
+	asm("mov.b64 %0,{%1,%2}; \n\t"
+		: "=l"(result) : "r"(t.y), "r"(t.x));
+	return result;
 }
 #else
 	/* host */
