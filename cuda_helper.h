@@ -56,23 +56,33 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
 #endif
 
+
 __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 {
-#if __CUDA_ARCH__ >= 130
-	return __double_as_longlong(__hiloint2double(HI, LO));
-#else
-	return (uint64_t)LO | (((uint64_t)HI) << 32);
-#endif
+	uint64_t result;
+	asm("mov.b64 %0,{%1,%2}; \n\t"
+		: "=l"(result) : "r"(LO), "r"(HI));
+	return result;
 }
 
-// das Hi Word in einem 64 Bit Typen ersetzen
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32U);
-}
+__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t y) 
+{
+	uint32_t t,t2=0;
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(t), "=r"(t2) : "l"(x));
+	asm("mov.b64 %0,{%1,%2}; \n\t"
+		: "=l"(x) : "r"(t), "r"(y));
+	return x;
 
-// das Lo Word in einem 64 Bit Typen ersetzen
-__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFF00000000ULL) | ((uint64_t)y);
+}
+__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t y) 
+{
+	uint32_t t,t2;
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(t2), "=r"(t) : "l"(x));
+	asm("mov.b64 %0,{%1,%2}; \n\t"
+		: "=l"(x) : "r"(y), "r"(t));
+	return x;
 }
 
 // Endian Drehung für 32 Bit Typen
