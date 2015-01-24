@@ -38,14 +38,9 @@ extern "C" void myriadhash(void *state, const void *input)
 
 extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
-{	
-    if (opt_benchmark)
-        ((uint32_t*)ptarget)[7] = 0x000000ff;
-
+{
 	uint32_t start_nonce = pdata[19]++;
-
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 17);
-	apiReportThroughput(thr_id, throughput);
+    uint32_t throughput = device_intensity(thr_id, __func__, 1 << 17);
 	throughput = min(throughput, max_nonce - start_nonce);
 
 	if (opt_benchmark)
@@ -61,14 +56,14 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 		cudaMallocHost(&(h_found[thr_id]), 4 * sizeof(uint32_t));
 		init[thr_id] = true;
 	}
-	
+
 	uint32_t endiandata[32];
 	for (int kk=0; kk < 32; kk++)
 		be32enc(&endiandata[kk], pdata[kk]);
 
 	// Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
 	myriadgroestl_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
-	
+
 	do {
 		const uint32_t Htarg = ptarget[7];
 

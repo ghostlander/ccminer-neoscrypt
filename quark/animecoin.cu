@@ -164,8 +164,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
-	apiReportThroughput(thr_id, (uint32_t) throughput);
+	int throughput = (int) device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)

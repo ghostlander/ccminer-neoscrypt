@@ -156,9 +156,9 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	static bool init[MAX_GPUS] = { 0 };
 	uint32_t endiandata[20];
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
-	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
-	apiReportThroughput(thr_id, (uint32_t) throughput);
+	int intensity = 19; // (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 20 : 19;
+	int throughput = (int) device_intensity(thr_id, __func__, 1 << intensity); // 19=256*256*8;
+
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
