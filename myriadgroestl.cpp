@@ -21,26 +21,26 @@ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, 
 
 extern "C" void myriadhash(void *state, const void *input)
 {
-    sph_groestl512_context     ctx_groestl;
+	uint32_t hashA[16], hashB[16];
+	sph_groestl512_context ctx_groestl;
+	SHA256_CTX sha256;
 
-    uint32_t hashA[16], hashB[16];
+	sph_groestl512_init(&ctx_groestl);
+	sph_groestl512 (&ctx_groestl, input, 80);
+	sph_groestl512_close(&ctx_groestl, hashA);
 
-    sph_groestl512_init(&ctx_groestl);
-    sph_groestl512 (&ctx_groestl, input, 80);
-    sph_groestl512_close(&ctx_groestl, hashA);
+	SHA256_Init(&sha256);
+	SHA256_Update(&sha256,(unsigned char *)hashA, 64);
+	SHA256_Final((unsigned char *)hashB, &sha256);
 
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256,(unsigned char *)hashA, 64);
-    SHA256_Final((unsigned char *)hashB, &sha256);
-    memcpy(state, hashB, 32);
+	memcpy(state, hashB, 32);
 }
 
 extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t start_nonce = pdata[19]++;
-    uint32_t throughput = device_intensity(thr_id, __func__, 1 << 17);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 17);
 	throughput = min(throughput, max_nonce - start_nonce);
 
 	if (opt_benchmark)
