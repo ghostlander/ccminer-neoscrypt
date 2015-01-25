@@ -65,27 +65,27 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 	return result;
 }
 
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t y) 
+__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t x, const uint32_t y) 
 {
 	uint64_t result;
 	asm(
 		"{\n\t"
 		".reg .u32 t,t2; \n\t"
 		"mov.b64 {t2,t},%1; \n\t"
-		"mov.b64 %0,t2,%2}; \n\t"
+		"mov.b64 %0,{t2,%2}; \n\t"
 		"}" : "=l"(result) : "l"(x), "r"(y)
 		);
 	return result;
 
 }
-__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t y) 
+__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t x, const uint32_t y) 
 {
 	uint64_t result;
 	asm(
 		"{\n\t"
 		".reg .u32 t,t2; \n\t"
 		"mov.b64 {t2,t},%1; \n\t"
-		"mov.b64 %0,%2,t}; \n\t"
+		"mov.b64 %0,{%2,t}; \n\t"
 		"}" : "=l"(result) : "l"(x) , "r"(y)
 		);
 	return result;
@@ -133,7 +133,7 @@ static __device__ __forceinline__ uint32_t _LOWORD(const uint64_t x)
 // Input:       77665544 33221100
 // Output:      00112233 44556677
 #ifdef __CUDA_ARCH__
-__device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
+__device__ __forceinline__ uint64_t cuda_swab64(const uint64_t x)
 {
 	uint64_t result;
 	uint2 t;
