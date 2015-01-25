@@ -172,7 +172,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00F;
+		((uint32_t*)ptarget)[7] = 0x0fF;
 
 	if (!init[thr_id])
 	{
@@ -237,6 +237,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 					pdata[21] = secNonce;
 					res++;
 				}
+				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
 				pdata[19] = foundNonce;
 				return res;
 			}

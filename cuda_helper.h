@@ -43,12 +43,12 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 
 #ifndef SPH_C32
-#define SPH_C32(x) (x)
+#define SPH_C32(x) ((x ## U))
 // #define SPH_C32(x) ((uint32_t)(x ## U))
 #endif
 
 #ifndef SPH_C64
-#define SPH_C64(x) (x)
+#define SPH_C64(x) ((x ## ULL))
 // #define SPH_C64(x) ((uint64_t)(x ## ULL))
 #endif
 
@@ -61,10 +61,9 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define SPH_T64(x) (x)
 // #define SPH_T64(x) ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 #endif
-
 #if __CUDA_ARCH__ < 320
 // Kepler (Compute 3.0)
-#define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
+#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
 #else
 // Kepler (Compute 3.5, 5.0)
 #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
@@ -107,7 +106,7 @@ __device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t x, const uint3
 
 // Endian Drehung für 32 Bit Typen
 #ifdef __CUDA_ARCH__
-__device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
+__device__ __forceinline__ uint32_t cuda_swab32(const uint32_t x)
 {
 	/* device */
 	return __byte_perm(x, x, 0x0123);
@@ -211,7 +210,7 @@ do {                                                                  \
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
-uint64_t xor1(uint64_t a, uint64_t b)
+uint64_t xor1(const uint64_t a, const uint64_t b)
 {
 	uint64_t result;
 	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a), "l"(b));
@@ -224,7 +223,7 @@ uint64_t xor1(uint64_t a, uint64_t b)
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
-uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
+uint64_t xor3(const uint64_t a, const uint64_t b, const uint64_t c)
 {
 	uint64_t result;
 	asm("xor.b64 %0, %2, %3;\n\t"
@@ -240,7 +239,7 @@ uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
 #if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
-uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t f,uint64_t g, uint64_t h)
+uint64_t xor8(const uint64_t a, const uint64_t b, const uint64_t c, const uint64_t d, const uint64_t e, const uint64_t f, const uint64_t g, const  uint64_t h)
 {
 	uint64_t result;
 	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(g) ,"l"(h));
@@ -258,7 +257,7 @@ uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t
 
 // device asm for x17
 __device__ __forceinline__
-uint64_t xandx(uint64_t a, uint64_t b, uint64_t c)
+uint64_t xandx(const uint64_t a, const uint64_t b, const uint64_t c)
 {
 	uint64_t result;
 	asm("{\n\t"
@@ -268,18 +267,6 @@ uint64_t xandx(uint64_t a, uint64_t b, uint64_t c)
 		"xor.b64 %0, n, %3;"
 	"}\n"
 	: "=l"(result) : "l"(a), "l"(b), "l"(c));
-	return result;
-}
-
-// device asm for x17
-__device__ __forceinline__
-uint64_t sph_t64(uint64_t x)
-{
-	uint64_t result;
-	asm("{\n\t"
-		"and.b64 %0,%1,0xFFFFFFFFFFFFFFFF;\n\t"
-	"}\n"
-	: "=l"(result) : "l"(x));
 	return result;
 }
 
@@ -305,7 +292,6 @@ uint64_t shr_t64(uint64_t x, uint32_t n)
 {
 	uint64_t result;
 	asm("shr.b64 %0,%1,%2;\n\t"
-		"and.b64 %0,%0,0xFFFFFFFFFFFFFFFF;\n\t" /* useful ? */
 	: "=l"(result) : "l"(x), "r"(n));
 	return result;
 }
@@ -316,7 +302,6 @@ uint64_t shl_t64(uint64_t x, uint32_t n)
 {
 	uint64_t result;
 	asm("shl.b64 %0,%1,%2;\n\t"
-		"and.b64 %0,%0,0xFFFFFFFFFFFFFFFF;\n\t" /* useful ? */
 	: "=l"(result) : "l"(x), "r"(n));
 	return result;
 }

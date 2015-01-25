@@ -42,7 +42,7 @@
 
 #define SWAP64(u64) cuda_swab64(u64)
 
-#define SPH_ROTL32(x, n)  SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
+#define SPH_ROTL32(x, n)  ((x) << (n)) | ((x) >> (32 - (n)))
 #define SPH_ROTR32(x, n)  SPH_ROTL32(x, (32 - (n)))
 
 static __constant__ uint64_t H_512[8];
@@ -102,19 +102,19 @@ static const uint64_t K512[80] = {
 #define SHA3_STEP(ord,r,i) { \
 		uint64_t T1, T2; \
 		int a = 8-ord; \
-		T1 = SPH_T64(r[(7+a)&7] + BSG5_1(r[(4+a)&7]) + CH(r[(4+a)&7], r[(5+a)&7], r[(6+a)&7]) + K_512[i] + W[i]); \
-		T2 = SPH_T64(BSG5_0(r[(0+a)&7]) + MAJ(r[(0+a)&7], r[(1+a)&7], r[(2+a)&7])); \
-		r[(3+a)&7] = SPH_T64(r[(3+a)&7] + T1); \
-		r[(7+a)&7] = SPH_T64(T1 + T2); \
+		T1 = r[(7+a)&7] + BSG5_1(r[(4+a)&7]) + CH(r[(4+a)&7], r[(5+a)&7], r[(6+a)&7]) + K_512[i] + W[i]; \
+		T2 = BSG5_0(r[(0+a)&7]) + MAJ(r[(0+a)&7], r[(1+a)&7], r[(2+a)&7]); \
+		r[(3+a)&7] = r[(3+a)&7] + T1; \
+		r[(7+a)&7] = T1 + T2; \
 	}
 
 #define SHA3_STEP2(truc,ord,r,i) { \
 		uint64_t T1, T2; \
 		int a = 8-ord; \
 		T1 = Tone(truc,r,W,a,i); \
-		T2 = SPH_T64(BSG5_0(r[(0+a)&7]) + MAJ(r[(0+a)&7], r[(1+a)&7], r[(2+a)&7])); \
-		r[(3+a)&7] = SPH_T64(r[(3+a)&7] + T1); \
-		r[(7+a)&7] = SPH_T64(T1 + T2); \
+		T2 = BSG5_0(r[(0+a)&7]) + MAJ(r[(0+a)&7], r[(1+a)&7], r[(2+a)&7]); \
+		r[(3+a)&7] = r[(3+a)&7] + T1; \
+		r[(7+a)&7] = T1 + T2; \
 	}
 //#define BSG5_0(x)      (ROTR64(x, 28) ^ ROTR64(x, 34) ^ ROTR64(x, 39))
 #define BSG5_0(x)        xor3(ROTR64(x, 28),ROTR64(x, 34),ROTR64(x, 39))
@@ -144,7 +144,7 @@ uint64_t Tone(const uint64_t* sharedMemory, uint64_t r[8], uint64_t W[80], uint3
 	uint64_t BSG51 = xor3(ROTR64(e, 14),ROTR64(e, 18),ROTR64(e, 41));
 	//uint64_t CHl     = (((f) ^ (g)) & (e)) ^ (g);
 	uint64_t CHl = xandx(e,f,g);
-	uint64_t result = SPH_T64(h+BSG51+CHl+sharedMemory[i]+W[i]);
+	uint64_t result = h+BSG51+CHl+sharedMemory[i]+W[i];
 	return result;
 }
 
@@ -186,8 +186,8 @@ void x17_sha512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_
 
 		#pragma unroll 64
 		for (int i = 16; i < 80; i ++)
-			W[i] = SPH_T64(SSG5_1(W[i - 2]) + W[i - 7]
-			     + SSG5_0(W[i - 15]) + W[i - 16]);
+			W[i] = SSG5_1(W[i - 2]) + W[i - 7]
+			     + SSG5_0(W[i - 15]) + W[i - 16];
 
 		#pragma unroll 10
 		for (int i = 0; i < 80; i += 8) {
@@ -199,7 +199,7 @@ void x17_sha512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_
 
 		#pragma unroll 8
 		for (int i = 0; i < 8; i++) {
-			r[i] = SPH_T64(r[i] + H_512[i]);
+			r[i] = r[i] + H_512[i];
 		}
 
 		#pragma unroll 8

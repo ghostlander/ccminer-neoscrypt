@@ -19,7 +19,7 @@ __constant__ uint32_t groestl_gpu_msg[32];
 #define PC32up(j, r)   ((uint32_t)((j) + (r)))
 #define PC32dn(j, r)   0
 #define QC32up(j, r)   0xFFFFFFFF
-#define QC32dn(j, r)   (((uint32_t)(r) << 24) ^ SPH_T32(~((uint32_t)(j) << 24)))
+#define QC32dn(j, r)   (((uint32_t)(r) << 24) ^ (~((uint32_t)(j) << 24)))
 
 #define B32_0(x)    ((x) & 0xFF)
 #define B32_1(x)    (((x) >> 8) & 0xFF)

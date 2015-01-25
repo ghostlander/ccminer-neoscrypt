@@ -41,11 +41,9 @@
 
 #define USE_SHARED 1
 
-#define SPH_T64(x) ((x) & 0xFFFFFFFFFFFFFFFFULL)
-
 #include "cuda_helper.h"
 
-#define SPH_ROTL32(x, n)   SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
+#define SPH_ROTL32(x, n)   (((x) << (n)) | ((x) >> (32 - (n))))
 #define SPH_ROTR32(x, n)   SPH_ROTL32(x, (32 - (n)))
 
 static __constant__ uint32_t initVector[8];
@@ -285,7 +283,7 @@ static const uint32_t c_initVector[8] = {
 
 #define STEP(n, p, x7, x6, x5, x4, x3, x2, x1, x0, w, c) { \
 		uint32_t t = FP ## n ## _ ## p(x6, x5, x4, x3, x2, x1, x0); \
-		(x7) = SPH_T32(SPH_ROTR32(t, 7) + SPH_ROTR32((x7), 11) \
+		(x7) =(SPH_ROTR32(t, 7) + SPH_ROTR32((x7), 11) \
 			+ (w) + (c)); \
 	}
 
@@ -353,14 +351,13 @@ void x17_haval256_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		PASS4(5, buf);
 		PASS5(5, buf);
 
-		s0 = SPH_T32(s0 + u0);
-		s1 = SPH_T32(s1 + u1);
-		s2 = SPH_T32(s2 + u2);
-		s3 = SPH_T32(s3 + u3);
-		s4 = SPH_T32(s4 + u4);
-		s5 = SPH_T32(s5 + u5);
-		s6 = SPH_T32(s6 + u6);
-		s7 = SPH_T32(s7 + u7);
+		s0 = (s0 + u0);
+		s2 = (s2 + u2);
+		s3 = (s3 + u3);
+		s4 = (s4 + u4);
+		s5 = (s5 + u5);
+		s6 = (s6 + u6);
+		s7 = (s7 + u7);
 
 		hash.h4[0]=s0;
 		hash.h4[1]=s1;

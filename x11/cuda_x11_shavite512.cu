@@ -506,7 +506,7 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	rk[5] ^= rk[1];
 	rk[6] ^= rk[2];
 	rk[7] ^= rk[3];
-	rk[7] ^= SPH_T32(~counter);
+	rk[7] ^= ~counter;
 	x0 ^= rk[4];
 	x1 ^= rk[5];
 	x2 ^= rk[6];
@@ -1780,7 +1780,7 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		rk[5] ^= rk[1];
 		rk[6] ^= rk[2];
 		rk[7] ^= rk[3];
-		rk[7] ^= SPH_T32(~512);
+		rk[7] ^= ~512;
 		x0 ^= rk[4];
 		x1 ^= rk[5];
 		x2 ^= rk[6];
