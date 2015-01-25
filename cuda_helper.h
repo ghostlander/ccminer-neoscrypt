@@ -79,26 +79,30 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 	return result;
 }
 
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t y) 
+__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t x, const uint32_t y)
 {
-	uint32_t t,t2=0;
-	uint64_t t3;
-	asm("mov.b64 {%0,%1},%2; \n\t"
-		: "=r"(t), "=r"(t2) : "l"(x));
-	asm("mov.b64 %0,{%1,%2}; \n\t"
-		: "=l"(t3) : "r"(t), "r"(y));
-	return t3;
+	uint64_t result;
+	asm(
+		"{\n\t"
+		".reg .u32 t,t2; \n\t"
+		"mov.b64 {t2,t},%1; \n\t"
+		"mov.b64 %0,{t2,%2}; \n\t"
+		"}" : "=l"(result) : "l"(x), "r"(y)
+		);
+	return result;
 
 }
-__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t y) 
+__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t x, const uint32_t y)
 {
-	uint32_t t,t2;
-	uint64_t t3;
-	asm("mov.b64 {%0,%1},%2; \n\t"
-		: "=r"(t2), "=r"(t) : "l"(x));
-	asm("mov.b64 %0,{%1,%2}; \n\t"
-		: "=l"(t3) : "r"(y), "r"(t));
-	return t3;
+	uint64_t result;
+	asm(
+		"{\n\t"
+		".reg .u32 t,t2; \n\t"
+		"mov.b64 {t2,t},%1; \n\t"
+		"mov.b64 %0,{%2,t}; \n\t"
+		"}" : "=l"(result) : "l"(x), "r"(y)
+		);
+	return result;
 }
 
 // Endian Drehung für 32 Bit Typen
