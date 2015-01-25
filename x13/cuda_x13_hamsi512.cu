@@ -479,7 +479,7 @@ static __constant__ uint32_t d_T512[64][16] = {
         (a) = (c); \
         (c) = (b); \
         (b) = (d); \
-        (d) = SPH_T32(~t); \
+        (d) = ~t; \
     }
 
 #define HAMSI_L(a, b, c, d) { \

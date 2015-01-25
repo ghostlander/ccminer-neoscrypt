@@ -862,8 +862,8 @@ typedef int_fast64_t sph_s64;
 
 typedef unsigned int sph_u32;
 typedef int sph_s32;
-
-#define SPH_C32(x)    ((sph_u32)(x ## U))
+//(sph_u32)
+#define SPH_C32(x)    ((x ## U))
 
 #else
 
