@@ -144,8 +144,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	int intensity =  256 * 256 * 11;
-	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 19;
+	int intensity =  128 * 256 * 21;
+	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 22;
 
 	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
 
