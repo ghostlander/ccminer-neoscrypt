@@ -2229,8 +2229,8 @@ int main(int argc, char *argv[])
 #else
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
 
-	SetPriorityClass(NULL, HIGH_PRIORITY_CLASS);
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+//	SetPriorityClass(NULL,REALTIME_PRIORITY_CLASS);// HIGH_PRIORITY_CLASS
+//	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 #endif
 
 	if (active_gpus == 0) {
