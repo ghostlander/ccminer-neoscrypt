@@ -836,7 +836,7 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, u
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cudaMemset(d_nonce[thr_id], 0xffffffff, sizeof(uint32_t));
+	cudaMemset(d_nonce[thr_id], 0xff, sizeof(uint32_t));
 
 	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
 	uint32_t res;
