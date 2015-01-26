@@ -133,7 +133,7 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
     quark_groestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 
     // Strategisches Sleep Kommando zur Senkung der CPU Last
-//	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

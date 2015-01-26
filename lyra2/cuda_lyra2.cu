@@ -290,6 +290,6 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint6
 
 	lyra2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
-	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 

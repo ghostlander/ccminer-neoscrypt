@@ -313,7 +313,7 @@ void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNo
 
 	pentablake_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
-	cudaDeviceSynchronize();
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 
@@ -368,7 +368,7 @@ void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, 
 
 	pentablake_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_outputHash);
 
-	cudaDeviceSynchronize();
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 #if 0
@@ -528,6 +528,5 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	cudaDeviceSynchronize();
 	return rc;
 }

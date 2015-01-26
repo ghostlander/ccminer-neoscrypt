@@ -660,7 +660,7 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 	if (device_sm[device_map[thr_id]] >= 500) 
 	{
 		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-		MyStreamSynchronize(NULL, order, thr_id);
+		//MyStreamSynchronize(NULL, order, thr_id);
 	}
 	else 
 	{
