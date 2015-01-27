@@ -121,9 +121,9 @@ typedef unsigned char uchar;
 
 static inline bool is_windows(void) {
 #ifdef WIN32
-        return 1;
+        return true;
 #else
-        return 0;
+        return false;
 #endif
 }
 
