@@ -15,7 +15,7 @@ extern "C"
 #include "cuda_helper.h"
 
 static uint32_t *d_hash[MAX_GPUS];
-static uint32_t *h_nounce[8];
+static uint32_t *h_nounce[MAX_GPUS];
 
 extern void keccak256_cpu_init(int thr_id, uint32_t threads);
 extern void keccak256_setBlock_80(void *pdata,const void *ptarget);

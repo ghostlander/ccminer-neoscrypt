@@ -30,7 +30,7 @@ extern "C"
 
 
 uint32_t *d_hash[MAX_GPUS];
-uint32_t *h_found[8];
+uint32_t *h_found[MAX_GPUS];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);

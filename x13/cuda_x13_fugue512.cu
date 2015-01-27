@@ -12,7 +12,7 @@
 
 
 __constant__ uint32_t pTarget[8];
-static uint32_t *d_nonce[8];
+static uint32_t *d_nonce[MAX_GPUS];
 
 
 /*

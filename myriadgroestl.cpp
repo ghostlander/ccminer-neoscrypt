@@ -9,7 +9,7 @@
 #include <cuda_runtime.h>
 
 static bool init[MAX_GPUS] = { 0 };
-static uint32_t *h_found[8];
+static uint32_t *h_found[MAX_GPUS];
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);

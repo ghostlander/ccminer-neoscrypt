@@ -5,8 +5,8 @@
 
 #include "cuda_x11_aes.cu"
 
-static uint2 *d_nonce[8];
-static uint32_t *d_found[8];
+static uint2 *d_nonce[MAX_GPUS];
+static uint32_t *d_found[MAX_GPUS];
 
 __device__ __forceinline__ void AES_2ROUND(
 	const uint32_t*const __restrict__ sharedMemory,
