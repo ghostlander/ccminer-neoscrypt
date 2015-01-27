@@ -26,7 +26,7 @@ extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t s
 
 extern void quark_skein512_cpu_init(int thr_id);
 extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_found, int order);
+extern void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_found, uint32_t target, int order);
 
 
 // Original nist5hash Funktion aus einem miner Quelltext
@@ -76,7 +76,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00FF;
+		((uint32_t*)ptarget)[7] = 0x0Fu;
 
 	if (!init[thr_id])
 	{
@@ -111,7 +111,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		quark_skein512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], h_found[thr_id], order++);
+		quark_skein512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], h_found[thr_id], ptarget[7], order++);
 
 		if (h_found[thr_id][0] != 0xffffffff)
 		{

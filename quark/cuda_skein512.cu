@@ -4,15 +4,14 @@
 
 #include "cuda_helper.h"
 #define TPB 128 
-#define TPBf 448
+#define TPBf 128
 
 // Take a look at: https://www.schneier.com/skein1.3.pdf
 
 #define SHL(x, n)			((x) << (n))
 #define SHR(x, n)			((x) >> (n))
 
-__constant__ uint32_t pTarget[8];
-static uint32_t *d_nonce[8];
+static uint32_t *d_nonce[MAX_GPUS];
 
 /*
  * M9_ ## s ## _ ## i  evaluates to s+i mod 9 (0 <= s <= 18, 0 <= i <= 7).
@@ -388,7 +387,12 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 }
 
 __global__ 
-void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce)
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(TPBf, 2)
+#else
+__launch_bounds__(TPBf, 1)
+#endif
+void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce, uint32_t target)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -488,9 +492,9 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		p[3] = ROL2(p[3], 29) ^ (p[6] + p[5] + p[3]);
 		p[3] = (ROL2(p[3], 22) ^ (p[4] + p[7] + p[1] + p[3])) + h3;
 
-		if (p[3].y <= pTarget[7])
+		if (p[3].y <= target)
 		{
-			uint32_t tmp = atomicExch(&(d_nonce[0]), nounce);
+			uint32_t tmp = atomicExch(&d_nonce[0], nounce);
 			if (tmp != 0xffffffff)
 				d_nonce[1] = tmp;
 		}
@@ -505,11 +509,9 @@ __host__ void quark_skein512_cpu_init(int thr_id)
 
 __host__ void quark_skein512_setTarget(const void *ptarget)
 {
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
 }
 __host__ void quark_skein512_cpu_free(int32_t thr_id)
 {
-	cudaFree(pTarget);
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
@@ -526,14 +528,14 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 
 
 __host__
-void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_nonce, int order)
+void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_nonce, uint32_t target, int order)
 {
 	dim3 grid((threads + TPBf - 1) / TPBf);
 	dim3 block(TPBf);
 
 	cudaMemset(d_nonce[thr_id], 0xff, 2*sizeof(uint32_t));
 
-	quark_skein512_gpu_hash_64_final<< <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
+	quark_skein512_gpu_hash_64_final<< <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id], target);
 	cudaMemcpy(h_nonce, d_nonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
 
