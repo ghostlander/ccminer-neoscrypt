@@ -1,18 +1,19 @@
+// Original version written by Schleicher (KlausT @github)
+// Redistribution and use in source and binary forms, with or without modification, are permitted
+
 #include <stdint.h>
 #include "miner.h"
 #include "cuda_helper.h"
 
 void bitcoin_cpu_init(int thr_id);
-void bitcoin_setBlock(void *pdata, const void *ptarget);
 void bitcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, const uint32_t *const ms, uint32_t merkle, uint32_t time, uint32_t compacttarget, uint32_t *const h_nounce);
 void bitcoin_midstate(const uint32_t *data, uint32_t *midstate);
 
-//__constant__ uint32_t c_PaddedMessage80[10];
 __constant__ uint32_t pTarget[8];
-static uint32_t *d_KNonce[MAX_GPUS];
+static uint32_t *d_result[MAX_GPUS];
 
 #define TPB 512
-#define NONCES_PER_THREAD 1
+#define NONCES_PER_THREAD 256
 
 #if __CUDA_ARCH__ < 320
 #define rrot(x, n) ((x >> n) | (x << (32 - n)))
@@ -29,7 +30,7 @@ void bitcoin_gpu_hash(const uint32_t threads, const uint32_t startNounce, uint32
 		uint32_t t1, a, b, c, d, e, f, g, h;
 		uint32_t w[64];
 		const uint32_t numberofthreads = blockDim.x*gridDim.x;
-		const uint32_t maxnonce = startNounce + threads - 1;
+		const uint32_t maxnonce = startNounce + threadindex + numberofthreads*NONCES_PER_THREAD - 1;
 		const uint32_t threadindex = blockIdx.x*blockDim.x + threadIdx.x;
 		
 		for (uint32_t nonce = startNounce + threadindex; nonce <= maxnonce; nonce += numberofthreads)
@@ -50,34 +51,9 @@ void bitcoin_gpu_hash(const uint32_t threads, const uint32_t startNounce, uint32
 			w[31] = 0x280U + w[24] + (rrot(w16, 7) ^ rrot(w16, 18) ^ (w16 >> 3)) + (rrot(w[29], 17) ^ rrot(w[29], 19) ^ (w[29] >> 10));
 			w[32] = w16 + w[25] + (rrot(w17, 7) ^ rrot(w17, 18) ^ (w17 >> 3)) + (rrot(w[30], 17) ^ rrot(w[30], 19) ^ (w[30] >> 10));
 			w[33] = w17 + w[26] + (rrot(w[18], 7) ^ rrot(w[18], 18) ^ (w[18] >> 3)) + (rrot(w[31], 17) ^ rrot(w[31], 19) ^ (w[31] >> 10));
-			w[34] = w[18] + w[27] + (rrot(w[19], 7) ^ rrot(w[19], 18) ^ (w[19] >> 3)) + (rrot(w[32], 17) ^ rrot(w[32], 19) ^ (w[32] >> 10));
-			w[35] = w[19] + w[28] + (rrot(w[20], 7) ^ rrot(w[20], 18) ^ (w[20] >> 3)) + (rrot(w[33], 17) ^ rrot(w[33], 19) ^ (w[33] >> 10));
-			w[36] = w[20] + w[29] + (rrot(w[21], 7) ^ rrot(w[21], 18) ^ (w[21] >> 3)) + (rrot(w[34], 17) ^ rrot(w[34], 19) ^ (w[34] >> 10));
-			w[37] = w[21] + w[30] + (rrot(w[22], 7) ^ rrot(w[22], 18) ^ (w[22] >> 3)) + (rrot(w[35], 17) ^ rrot(w[35], 19) ^ (w[35] >> 10));
-			w[38] = w[22] + w[31] + (rrot(w[23], 7) ^ rrot(w[23], 18) ^ (w[23] >> 3)) + (rrot(w[36], 17) ^ rrot(w[36], 19) ^ (w[36] >> 10));
-			w[39] = w[23] + w[32] + (rrot(w[24], 7) ^ rrot(w[24], 18) ^ (w[24] >> 3)) + (rrot(w[37], 17) ^ rrot(w[37], 19) ^ (w[37] >> 10));
-			w[40] = w[24] + w[33] + (rrot(w[25], 7) ^ rrot(w[25], 18) ^ (w[25] >> 3)) + (rrot(w[38], 17) ^ rrot(w[38], 19) ^ (w[38] >> 10));
-			w[41] = w[25] + w[34] + (rrot(w[26], 7) ^ rrot(w[26], 18) ^ (w[26] >> 3)) + (rrot(w[39], 17) ^ rrot(w[39], 19) ^ (w[39] >> 10));
-			w[42] = w[26] + w[35] + (rrot(w[27], 7) ^ rrot(w[27], 18) ^ (w[27] >> 3)) + (rrot(w[40], 17) ^ rrot(w[40], 19) ^ (w[40] >> 10));
-			w[43] = w[27] + w[36] + (rrot(w[28], 7) ^ rrot(w[28], 18) ^ (w[28] >> 3)) + (rrot(w[41], 17) ^ rrot(w[41], 19) ^ (w[41] >> 10));
-			w[44] = w[28] + w[37] + (rrot(w[29], 7) ^ rrot(w[29], 18) ^ (w[29] >> 3)) + (rrot(w[42], 17) ^ rrot(w[42], 19) ^ (w[42] >> 10));
-			w[45] = w[29] + w[38] + (rrot(w[30], 7) ^ rrot(w[30], 18) ^ (w[30] >> 3)) + (rrot(w[43], 17) ^ rrot(w[43], 19) ^ (w[43] >> 10));
-			w[46] = w[30] + w[39] + (rrot(w[31], 7) ^ rrot(w[31], 18) ^ (w[31] >> 3)) + (rrot(w[44], 17) ^ rrot(w[44], 19) ^ (w[44] >> 10));
-			w[47] = w[31] + w[40] + (rrot(w[32], 7) ^ rrot(w[32], 18) ^ (w[32] >> 3)) + (rrot(w[45], 17) ^ rrot(w[45], 19) ^ (w[45] >> 10));
-			w[48] = w[32] + w[41] + (rrot(w[33], 7) ^ rrot(w[33], 18) ^ (w[33] >> 3)) + (rrot(w[46], 17) ^ rrot(w[46], 19) ^ (w[46] >> 10));
-			w[49] = w[33] + w[42] + (rrot(w[34], 7) ^ rrot(w[34], 18) ^ (w[34] >> 3)) + (rrot(w[47], 17) ^ rrot(w[47], 19) ^ (w[47] >> 10));
-			w[50] = w[34] + w[43] + (rrot(w[35], 7) ^ rrot(w[35], 18) ^ (w[35] >> 3)) + (rrot(w[48], 17) ^ rrot(w[48], 19) ^ (w[48] >> 10));
-			w[51] = w[35] + w[44] + (rrot(w[36], 7) ^ rrot(w[36], 18) ^ (w[36] >> 3)) + (rrot(w[49], 17) ^ rrot(w[49], 19) ^ (w[49] >> 10));
-			w[52] = w[36] + w[45] + (rrot(w[37], 7) ^ rrot(w[37], 18) ^ (w[37] >> 3)) + (rrot(w[50], 17) ^ rrot(w[50], 19) ^ (w[50] >> 10));
-			w[53] = w[37] + w[46] + (rrot(w[38], 7) ^ rrot(w[38], 18) ^ (w[38] >> 3)) + (rrot(w[51], 17) ^ rrot(w[51], 19) ^ (w[51] >> 10));
-			w[54] = w[38] + w[47] + (rrot(w[39], 7) ^ rrot(w[39], 18) ^ (w[39] >> 3)) + (rrot(w[52], 17) ^ rrot(w[52], 19) ^ (w[52] >> 10));
-			w[55] = w[39] + w[48] + (rrot(w[40], 7) ^ rrot(w[40], 18) ^ (w[40] >> 3)) + (rrot(w[53], 17) ^ rrot(w[53], 19) ^ (w[53] >> 10));
-			w[56] = w[40] + w[49] + (rrot(w[41], 7) ^ rrot(w[41], 18) ^ (w[41] >> 3)) + (rrot(w[54], 17) ^ rrot(w[54], 19) ^ (w[54] >> 10));
-			w[57] = w[41] + w[50] + (rrot(w[42], 7) ^ rrot(w[42], 18) ^ (w[42] >> 3)) + (rrot(w[55], 17) ^ rrot(w[55], 19) ^ (w[55] >> 10));
-			w[58] = w[42] + w[51] + (rrot(w[43], 7) ^ rrot(w[43], 18) ^ (w[43] >> 3)) + (rrot(w[56], 17) ^ rrot(w[56], 19) ^ (w[56] >> 10));
-			w[59] = w[43] + w[52] + (rrot(w[44], 7) ^ rrot(w[44], 18) ^ (w[44] >> 3)) + (rrot(w[57], 17) ^ rrot(w[57], 19) ^ (w[57] >> 10));
-			w[60] = w[44] + w[53] + (rrot(w[45], 7) ^ rrot(w[45], 18) ^ (w[45] >> 3)) + (rrot(w[58], 17) ^ rrot(w[58], 19) ^ (w[58] >> 10));
-			w[61] = w[45] + w[54] + (rrot(w[46], 7) ^ rrot(w[46], 18) ^ (w[46] >> 3)) + (rrot(w[59], 17) ^ rrot(w[59], 19) ^ (w[59] >> 10));
+#pragma unroll
+			for (int i = 34; i < 62; i++)
+				w[i] = w[i-16] + w[i-7] + (rrot(w[i-15], 7) ^ rrot(w[i-15], 18) ^ (w[i-15] >> 3)) + (rrot(w[i-2], 17) ^ rrot(w[i-2], 19) ^ (w[i-2] >> 10));
 
 			t1 = t1c + (uint32_t)nonce;
 			a = ms0 + t1;
@@ -342,33 +318,9 @@ void bitcoin_gpu_hash(const uint32_t threads, const uint32_t startNounce, uint32
 			w[29] = w[22] + (rrot(w[27], 17) ^ rrot(w[27], 19) ^ (w[27] >> 10));
 			w[30] = w[23] + (rrot(0x100, 7) ^ rrot(0x100, 18) ^ (0x100 >> 3)) + (rrot(w[28], 17) ^ rrot(w[28], 19) ^ (w[28] >> 10));
 			w[31] = 0x100 + w[24] + (rrot(w[16], 7) ^ rrot(w[16], 18) ^ (w[16] >> 3)) + (rrot(w[29], 17) ^ rrot(w[29], 19) ^ (w[29] >> 10));
-			w[32] = w[16] + w[25] + (rrot(w[17], 7) ^ rrot(w[17], 18) ^ (w[17] >> 3)) + (rrot(w[30], 17) ^ rrot(w[30], 19) ^ (w[30] >> 10));
-			w[33] = w[17] + w[26] + (rrot(w[18], 7) ^ rrot(w[18], 18) ^ (w[18] >> 3)) + (rrot(w[31], 17) ^ rrot(w[31], 19) ^ (w[31] >> 10));
-			w[34] = w[18] + w[27] + (rrot(w[19], 7) ^ rrot(w[19], 18) ^ (w[19] >> 3)) + (rrot(w[32], 17) ^ rrot(w[32], 19) ^ (w[32] >> 10));
-			w[35] = w[19] + w[28] + (rrot(w[20], 7) ^ rrot(w[20], 18) ^ (w[20] >> 3)) + (rrot(w[33], 17) ^ rrot(w[33], 19) ^ (w[33] >> 10));
-			w[36] = w[20] + w[29] + (rrot(w[21], 7) ^ rrot(w[21], 18) ^ (w[21] >> 3)) + (rrot(w[34], 17) ^ rrot(w[34], 19) ^ (w[34] >> 10));
-			w[37] = w[21] + w[30] + (rrot(w[22], 7) ^ rrot(w[22], 18) ^ (w[22] >> 3)) + (rrot(w[35], 17) ^ rrot(w[35], 19) ^ (w[35] >> 10));
-			w[38] = w[22] + w[31] + (rrot(w[23], 7) ^ rrot(w[23], 18) ^ (w[23] >> 3)) + (rrot(w[36], 17) ^ rrot(w[36], 19) ^ (w[36] >> 10));
-			w[39] = w[23] + w[32] + (rrot(w[24], 7) ^ rrot(w[24], 18) ^ (w[24] >> 3)) + (rrot(w[37], 17) ^ rrot(w[37], 19) ^ (w[37] >> 10));
-			w[40] = w[24] + w[33] + (rrot(w[25], 7) ^ rrot(w[25], 18) ^ (w[25] >> 3)) + (rrot(w[38], 17) ^ rrot(w[38], 19) ^ (w[38] >> 10));
-			w[41] = w[25] + w[34] + (rrot(w[26], 7) ^ rrot(w[26], 18) ^ (w[26] >> 3)) + (rrot(w[39], 17) ^ rrot(w[39], 19) ^ (w[39] >> 10));
-			w[42] = w[26] + w[35] + (rrot(w[27], 7) ^ rrot(w[27], 18) ^ (w[27] >> 3)) + (rrot(w[40], 17) ^ rrot(w[40], 19) ^ (w[40] >> 10));
-			w[43] = w[27] + w[36] + (rrot(w[28], 7) ^ rrot(w[28], 18) ^ (w[28] >> 3)) + (rrot(w[41], 17) ^ rrot(w[41], 19) ^ (w[41] >> 10));
-			w[44] = w[28] + w[37] + (rrot(w[29], 7) ^ rrot(w[29], 18) ^ (w[29] >> 3)) + (rrot(w[42], 17) ^ rrot(w[42], 19) ^ (w[42] >> 10));
-			w[45] = w[29] + w[38] + (rrot(w[30], 7) ^ rrot(w[30], 18) ^ (w[30] >> 3)) + (rrot(w[43], 17) ^ rrot(w[43], 19) ^ (w[43] >> 10));
-			w[46] = w[30] + w[39] + (rrot(w[31], 7) ^ rrot(w[31], 18) ^ (w[31] >> 3)) + (rrot(w[44], 17) ^ rrot(w[44], 19) ^ (w[44] >> 10));
-			w[47] = w[31] + w[40] + (rrot(w[32], 7) ^ rrot(w[32], 18) ^ (w[32] >> 3)) + (rrot(w[45], 17) ^ rrot(w[45], 19) ^ (w[45] >> 10));
-			w[48] = w[32] + w[41] + (rrot(w[33], 7) ^ rrot(w[33], 18) ^ (w[33] >> 3)) + (rrot(w[46], 17) ^ rrot(w[46], 19) ^ (w[46] >> 10));
-			w[49] = w[33] + w[42] + (rrot(w[34], 7) ^ rrot(w[34], 18) ^ (w[34] >> 3)) + (rrot(w[47], 17) ^ rrot(w[47], 19) ^ (w[47] >> 10));
-			w[50] = w[34] + w[43] + (rrot(w[35], 7) ^ rrot(w[35], 18) ^ (w[35] >> 3)) + (rrot(w[48], 17) ^ rrot(w[48], 19) ^ (w[48] >> 10));
-			w[51] = w[35] + w[44] + (rrot(w[36], 7) ^ rrot(w[36], 18) ^ (w[36] >> 3)) + (rrot(w[49], 17) ^ rrot(w[49], 19) ^ (w[49] >> 10));
-			w[52] = w[36] + w[45] + (rrot(w[37], 7) ^ rrot(w[37], 18) ^ (w[37] >> 3)) + (rrot(w[50], 17) ^ rrot(w[50], 19) ^ (w[50] >> 10));
-			w[53] = w[37] + w[46] + (rrot(w[38], 7) ^ rrot(w[38], 18) ^ (w[38] >> 3)) + (rrot(w[51], 17) ^ rrot(w[51], 19) ^ (w[51] >> 10));
-			w[54] = w[38] + w[47] + (rrot(w[39], 7) ^ rrot(w[39], 18) ^ (w[39] >> 3)) + (rrot(w[52], 17) ^ rrot(w[52], 19) ^ (w[52] >> 10));
-			w[55] = w[39] + w[48] + (rrot(w[40], 7) ^ rrot(w[40], 18) ^ (w[40] >> 3)) + (rrot(w[53], 17) ^ rrot(w[53], 19) ^ (w[53] >> 10));
-			w[56] = w[40] + w[49] + (rrot(w[41], 7) ^ rrot(w[41], 18) ^ (w[41] >> 3)) + (rrot(w[54], 17) ^ rrot(w[54], 19) ^ (w[54] >> 10));
-			w[57] = w[41] + w[50] + (rrot(w[42], 7) ^ rrot(w[42], 18) ^ (w[42] >> 3)) + (rrot(w[55], 17) ^ rrot(w[55], 19) ^ (w[55] >> 10));
-			w[58] = w[42] + w[51] + (rrot(w[43], 7) ^ rrot(w[43], 18) ^ (w[43] >> 3)) + (rrot(w[56], 17) ^ rrot(w[56], 19) ^ (w[56] >> 10));
+#pragma unroll
+			for (int i = 32; i < 59; i++)
+				w[i] = w[i - 16] + w[i - 7] + (rrot(w[i - 15], 7) ^ rrot(w[i - 15], 18) ^ (w[i - 15] >> 3)) + (rrot(w[i - 2], 17) ^ rrot(w[i - 2], 19) ^ (w[i - 2] >> 10));
 
 			d = 0x98c7e2a2U + w[0];
 			h = 0xfc08884dU + w[0];
@@ -436,7 +388,6 @@ void bitcoin_gpu_hash(const uint32_t threads, const uint32_t startNounce, uint32
 			t1 = h + (rrot(e, 6) ^ rrot(e, 11) ^ rrot(e, 25)) + (g ^ (e & (f ^ g))) + 0xe49b69c1U + w[16];
 			d += t1;
 			h = t1 + (rrot(a, 2) ^ rrot(a, 13) ^ rrot(a, 22)) + ((c & b) | (a & (c | b)));
-			//
 			//
 			t1 = g + (rrot(d, 6) ^ rrot(d, 11) ^ rrot(d, 25)) + (f ^ (d & (e ^ f))) + 0xefbe4786U + w[17];
 			c += t1;
@@ -686,11 +637,9 @@ void bitcoin_midstate(const uint32_t *data, uint32_t *midstate)
 __host__
 void bitcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, const uint32_t *const ms, uint32_t merkle, uint32_t time, uint32_t compacttarget, uint32_t *const h_nounce)
 {
-	dim3 grid((threads + TPB*NONCES_PER_THREAD - 1) / TPB / NONCES_PER_THREAD);
-	dim3 block(TPB);
-	uint32_t b2, c2, d2, f2, g2, h2, t1, w16, w17, t1c, t2c, w16rot, w17rot, first, last;
+	uint32_t b2, c2, d2, f2, g2, h2, t1, w16, w17, t1c, t2c, w16rot, w17rot;
 
-	cudaMemset(d_KNonce[thr_id], 0xff, 2 * sizeof(uint32_t));
+	cudaMemset(d_result[thr_id], 0xff, 2 * sizeof(uint32_t));
 
 	t1 = ms[7] + (rrot(ms[4], 6) ^ rrot(ms[4], 11) ^ rrot(ms[4], 25)) + (ms[6] ^ (ms[4] & (ms[5] ^ ms[6]))) + 0x428a2f98U + merkle;
 	d2 = ms[3] + t1;
@@ -711,23 +660,14 @@ void bitcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, const 
 	t2c = (rrot(f2, 2) ^ rrot(f2, 13) ^ rrot(f2, 22)) + ((h2 & g2) | (f2 & (h2 | g2)));
 	t1c = ms[4] + (rrot(b2, 6) ^ rrot(b2, 11) ^ rrot(b2, 25)) + (d2 ^ (b2 & (c2 ^ d2))) + 0xe9b5dba5U;
 
-
-	bitcoin_gpu_hash << <grid, block >> > (threads, startNounce, d_KNonce[thr_id], t1c, t2c, w16, w16rot, w17, w17rot, b2, c2, d2, f2, g2, h2, ms[0], ms[1], ms[2], ms[3], ms[4], ms[5], ms[6], ms[7], compacttarget);
-	cudaMemcpy(h_nounce, d_KNonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-}
-
-__host__
-void bitcoin_setBlock(void *pdata, const void *pTargetIn)
-{
-/*	unsigned char PaddedMessage[80];
-	memcpy(PaddedMessage, pdata, 80);
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, pTargetIn, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 80, 0, cudaMemcpyHostToDevice));
-*/
+	dim3 grid((threads + TPB*NONCES_PER_THREAD - 1) / TPB / NONCES_PER_THREAD);
+	dim3 block(TPB);
+	bitcoin_gpu_hash << <grid, block >> > (threads, startNounce, d_result[thr_id], t1c, t2c, w16, w16rot, w17, w17rot, b2, c2, d2, f2, g2, h2, ms[0], ms[1], ms[2], ms[3], ms[4], ms[5], ms[6], ms[7], compacttarget);
+	CUDA_SAFE_CALL(cudaMemcpy(h_nounce, d_result[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
 }
 
 __host__
 void bitcoin_cpu_init(int thr_id)
 {
-	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], 4 * sizeof(uint32_t)));
+	CUDA_SAFE_CALL(cudaMalloc(&d_result[thr_id], 4 * sizeof(uint32_t)));
 }

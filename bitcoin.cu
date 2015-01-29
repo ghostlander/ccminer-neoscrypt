@@ -1,16 +1,9 @@
-/*
-* Bitcoin
-*
-*/
-
 #include "miner.h"
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[MAX_GPUS];
 static uint32_t *h_nounce[MAX_GPUS];
 
 extern void bitcoin_cpu_init(int thr_id);
-extern void bitcoin_setBlock(void *pdata, const void *ptarget);
 extern void bitcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, const uint32_t *const ms, uint32_t merkle, uint32_t time, uint32_t compacttarget, uint32_t *const h_nounce);
 extern void bitcoin_midstate(const uint32_t *data, uint32_t *midstate);
 
@@ -149,33 +142,20 @@ int scanhash_bitcoin(int thr_id, uint32_t *pdata,
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 		bitcoin_cpu_init(thr_id);
 		CUDA_SAFE_CALL(cudaMallocHost(&h_nounce[thr_id], 2 * sizeof(uint32_t)));
 		init[thr_id] = true;
 	}
-
-	uint32_t endiandata[20];
-	for (int k = 0; k < 20; k++)
-	{
-		be32enc(&endiandata[k], pdata[k]);
-	}
-
-	bitcoin_setBlock((void*)endiandata, ptarget);
 
 	uint32_t ms[8];
 	bitcoin_midstate(pdata, ms);
 
 	do
 	{
-		int order = 0;
-
 		bitcoin_cpu_hash(thr_id, (int)throughput, pdata[19], ms, pdata[16], pdata[17], pdata[18], h_nounce[thr_id]);
 		if (h_nounce[thr_id][0] != UINT32_MAX)
 		{
-			uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], h_nounce[thr_id][0]);
 			bitcoin_hash(vhash64, pdata, h_nounce[thr_id][0], ms);
 			if (vhash64[7] == 0 && fulltest(vhash64, ptarget))
 			{
