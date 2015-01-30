@@ -13,7 +13,7 @@ __constant__ uint32_t pTarget[8];
 static uint32_t *d_result[MAX_GPUS];
 
 #define TPB 512
-#define NONCES_PER_THREAD 256
+#define NONCES_PER_THREAD 2048
 
 #if __CUDA_ARCH__ < 320
 #define rrot(x, n) ((x >> n) | (x << (32 - n)))
