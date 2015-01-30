@@ -80,6 +80,7 @@ struct workio_cmd {
 
 enum sha_algos {
 	ALGO_ANIME,
+	ALGO_BITCOIN,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
 	ALGO_DEEP,
@@ -111,6 +112,7 @@ enum sha_algos {
 
 static const char *algo_names[] = {
 	"anime",
+	"bitcoin",
 	"blake",
 	"blakecoin",
 	"deep",
@@ -1260,6 +1262,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_BLAKE:
 				minmax = 0x80000000U;
 				break;
+			case ALGO_BITCOIN:
 			case ALGO_KECCAK:
 				minmax = 0x40000000U;
 				break;
@@ -1371,6 +1374,11 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_BITCOIN:
+			rc = scanhash_bitcoin(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
+			break;
+
 		case ALGO_BLAKECOIN:
 			rc = scanhash_blake256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done, 8);
@@ -1451,7 +1459,8 @@ static void *miner_thread(void *userdata)
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
-		if (diff.tv_usec || diff.tv_sec) {
+		if (diff.tv_sec > 0 || (diff.tv_sec==0 && diff.tv_usec>2000)) // avoid totally wrong hash rates
+		{
 			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
 
 			/* hashrate factors for some algos */

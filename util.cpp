@@ -581,25 +581,24 @@ bool hex2bin(uchar *p, const char *hexstr, size_t len)
 int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y)
 {
-	/* Perform the carry for the later subtraction by updating Y. */
-	if (x->tv_usec < y->tv_usec) {
-		int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-		y->tv_usec -= 1000000 * nsec;
-		y->tv_sec += nsec;
-	}
-	if (x->tv_usec - y->tv_usec > 1000000) {
-		int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-		y->tv_usec += 1000000 * nsec;
-		y->tv_sec -= nsec;
-	}
+	uint64_t start, end;
 
-	/* Compute the time remaining to wait.
-	 * `tv_usec' is certainly positive. */
-	result->tv_sec = x->tv_sec - y->tv_sec;
-	result->tv_usec = x->tv_usec - y->tv_usec;
+	end = x->tv_usec + 1000000 * x->tv_sec;
+	start   = y->tv_usec + 1000000 * y->tv_sec;
+	if (start <= end)
+	{
+		uint64_t diff = end - start;
+		result->tv_sec = diff / 1000000;
+		result->tv_usec = diff % 1000000;
+	}
+	else
+	{
+		result->tv_sec = 0;
+		result->tv_usec = 0;
+	}
 
 	/* Return 1 if result is negative. */
-	return x->tv_sec < y->tv_sec;
+	return (start > end);
 }
 
 bool fulltest(const uint32_t *hash, const uint32_t *target)
