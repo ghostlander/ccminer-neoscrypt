@@ -1459,7 +1459,8 @@ static void *miner_thread(void *userdata)
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
-		if (diff.tv_usec || diff.tv_sec) {
+		if (diff.tv_sec > 0 || (diff.tv_sec==0 && diff.tv_usec>2000)) // avoid totally wrong hash rates
+		{
 			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
 
 			/* hashrate factors for some algos */
