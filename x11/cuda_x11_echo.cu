@@ -703,7 +703,7 @@ __host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	cudaMemset(d_found[thr_id], 0xff, 4*sizeof(uint32_t));
+	cudaMemset(d_found[thr_id], 0xffffffff, 4*sizeof(uint32_t));
 
 	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_found[thr_id], target);
 	//MyStreamSynchronize(NULL, order, thr_id);

@@ -56,7 +56,6 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define SPH_T32(x) (x)
 // #define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
 #endif
-
 #ifndef SPH_T64
 #define SPH_T64(x) (x)
 // #define SPH_T64(x) ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
@@ -78,7 +77,7 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 	return result;
 }
 
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t x, const uint32_t y)
+__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t x, const uint32_t y) 
 {
 	uint64_t result;
 	asm(
@@ -91,7 +90,7 @@ __device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t x, const uint3
 	return result;
 
 }
-__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t x, const uint32_t y)
+__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t x, const uint32_t y) 
 {
 	uint64_t result;
 	asm(
@@ -99,7 +98,7 @@ __device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t x, const uint3
 		".reg .u32 t,t2; \n\t"
 		"mov.b64 {t2,t},%1; \n\t"
 		"mov.b64 %0,{%2,t}; \n\t"
-		"}" : "=l"(result) : "l"(x), "r"(y)
+		"}" : "=l"(result) : "l"(x) , "r"(y)
 		);
 	return result;
 }
@@ -119,7 +118,7 @@ __device__ __forceinline__ uint32_t cuda_swab32(const uint32_t x)
 #endif
 
 
-static __device__ uint32_t _HIWORD(const uint64_t x)
+static __device__ __forceinline__ uint32_t _HIWORD(const uint64_t x)
 {
 	uint32_t result;
 	asm(
@@ -131,7 +130,7 @@ static __device__ uint32_t _HIWORD(const uint64_t x)
 	return result;
 }
 
-static __device__ uint32_t _LOWORD(const uint64_t x)
+static __device__ __forceinline__ uint32_t _LOWORD(const uint64_t x)
 {
 	uint32_t result;
 	asm(
@@ -146,7 +145,7 @@ static __device__ uint32_t _LOWORD(const uint64_t x)
 // Input:       77665544 33221100
 // Output:      00112233 44556677
 #ifdef __CUDA_ARCH__
-__device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
+__device__ __forceinline__ uint64_t cuda_swab64(const uint64_t x)
 {
 	uint64_t result;
 	uint2 t;
