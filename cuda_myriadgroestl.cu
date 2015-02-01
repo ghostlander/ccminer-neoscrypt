@@ -7,8 +7,8 @@
 
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
-uint32_t *d_outputHashes[8];
-static uint32_t *d_resultNonce[8];
+uint32_t *d_outputHashes[MAX_GPUS];
+static uint32_t *d_resultNonce[MAX_GPUS];
 
 __constant__ uint32_t myriadgroestl_gpu_msg[32];
 
@@ -269,8 +269,11 @@ __global__ void __launch_bounds__(256, 3)
 // Setup-Funktionen
 __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 {
-    CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-    
+	cudaSetDevice(device_map[thr_id]);
+	cudaDeviceReset();
+	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+
     // Speicher für Gewinner-Nonce belegen
     cudaMalloc(&d_resultNonce[thr_id], 4*sizeof(uint32_t)); 
 

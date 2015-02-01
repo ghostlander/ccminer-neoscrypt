@@ -14,21 +14,21 @@ extern "C" void my_fugue256_close(void *cc, void *dst);
 extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst);
 
 // vorbereitete Kontexte nach den ersten 80 Bytes
-sph_fugue256_context  ctx_fugue_const[8];
+// sph_fugue256_context  ctx_fugue_const[MAX_GPUS];
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t start_nonce = pdata[19]++;
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
-	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << intensity);
-	throughPut = min(throughPut, max_nonce - start_nonce);
+	unsigned int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << intensity); // 256*256*8
+	throughput = min(throughput, max_nonce - start_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;
@@ -36,7 +36,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	// init
 	if(!init[thr_id])
 	{
-		fugue256_cpu_init(thr_id, throughPut);
+		fugue256_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
 
@@ -51,7 +51,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	do {
 		// GPU
 		uint32_t foundNounce = 0xFFFFFFFF;
-		fugue256_cpu_hash(thr_id, throughPut, pdata[19], NULL, &foundNounce);
+		fugue256_cpu_hash(thr_id, throughput, pdata[19], NULL, &foundNounce);
 
 		if(foundNounce < 0xffffffff)
 		{
@@ -74,8 +74,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			}
 		}
 
-		pdata[19] += throughPut;
-	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughPut)));
+		pdata[19] += throughput;
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - start_nonce + 1;
 	return 0;

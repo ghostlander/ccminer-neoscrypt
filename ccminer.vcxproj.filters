@@ -553,5 +553,11 @@
     <CudaCompile Include="quark\cuda_jh512keccak512.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
+    <CudaCompile Include="cuda_bitcoin.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="bitcoin.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -9,7 +9,7 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode);
 extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -49,7 +49,7 @@ extern "C" void wcoinhash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -57,8 +57,8 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
-	throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 19); // 19=256*256*8;
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;

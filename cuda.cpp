@@ -20,10 +20,6 @@
 
 #include "cuda_runtime.h"
 
-#ifdef WIN32
-#include "compat.h" // sleep
-#endif
-
 // CUDA Devices on the System
 int cuda_num_devices()
 {
@@ -112,6 +108,13 @@ int cuda_finddevice(char *name)
 			if (substringsearch(props.name, name, match)) return i;
 	}
 	return -1;
+}
+
+uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
+{
+	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
+	api_set_throughput(thr_id, throughput);
+	return throughput;
 }
 
 // Zeitsynchronisations-Routine von cudaminer mit CPU sleep

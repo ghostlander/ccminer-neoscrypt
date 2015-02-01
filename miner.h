@@ -19,7 +19,8 @@ extern "C" {
 #define strdup(x) _strdup(x)
 #define strncasecmp(x,y,z) _strnicmp(x,y,z)
 #define strcasecmp(x,y) _stricmp(x,y)
-typedef int ssize_t;
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #undef HAVE_ALLOCA_H
 #undef HAVE_SYSLOG_H
 #endif
@@ -50,6 +51,8 @@ extern "C"
 void *alloca (size_t);
 # endif
 #endif
+
+#include "compat.h"
 
 #ifdef __INTELLISENSE__
 /* should be in stdint.h but... */
@@ -119,9 +122,9 @@ typedef unsigned char uchar;
 
 static inline bool is_windows(void) {
 #ifdef WIN32
-        return 1;
+        return true;
 #else
-        return 0;
+        return false;
 #endif
 }
 
@@ -376,8 +379,13 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_bitcoin(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 /* api related */
 void *api_thread(void *userdata);
+void api_set_throughput(int thr_id, uint32_t throughput);
 
 struct cgpu_info {
 	uint8_t gpu_id;
@@ -386,7 +394,7 @@ struct cgpu_info {
 	int rejected;
 	int hw_errors;
 	double khashes;
-	uint8_t intensity;
+	uint8_t intensity_int;
 	uint8_t has_monitoring;
 	float gpu_temp;
 	uint16_t gpu_fan;
@@ -407,6 +415,8 @@ struct cgpu_info {
 
 	char gpu_sn[64];
 	char gpu_desc[64];
+	float intensity;
+	uint32_t throughput;
 };
 
 struct thr_api {
@@ -459,7 +469,6 @@ extern bool opt_debug;
 extern bool opt_quiet;
 extern bool opt_protocol;
 extern bool opt_tracegpu;
-extern int opt_intensity;
 extern int opt_n_threads;
 extern int active_gpus;
 extern int opt_timeout;
@@ -480,14 +489,15 @@ extern int api_thr_id;
 extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;
-extern uint32_t opt_work_size;
 
 extern uint64_t global_hashrate;
 extern double   global_diff;
 
-extern char* device_name[16];
-extern int device_map[16];
-extern long  device_sm[16];
+#define MAX_GPUS 16
+extern char* device_name[MAX_GPUS];
+extern int device_map[MAX_GPUS];
+extern long  device_sm[MAX_GPUS];
+extern uint32_t gpus_intensity[MAX_GPUS];
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
@@ -531,6 +541,7 @@ extern int timeval_subtract(struct timeval *result, struct timeval *x,
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
 extern void diff_to_target(uint32_t *target, double diff);
 extern void get_currentalgo(char* buf, int sz);
+extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 
 struct stratum_job {
 	char *job_id;

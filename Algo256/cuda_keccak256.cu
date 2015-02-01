@@ -9,7 +9,7 @@ extern "C" {
 
 #define UINT2(x,y) make_uint2(x,y)
 
-static uint32_t *d_KNonce[8];
+static uint32_t *d_KNonce[MAX_GPUS];
 
 __constant__ uint32_t pTarget[8];
 __constant__ uint64_t keccak_round_constants[24] = {
@@ -628,7 +628,7 @@ void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, u
 	dim3 block(threadsperblock);
 
 	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
-	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(h_nounce, d_KNonce[thr_id], 4 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
 

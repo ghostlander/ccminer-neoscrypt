@@ -32,8 +32,8 @@ typedef unsigned char BitSequence;
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t c_Target[8];
 
-static uint32_t *h_resNounce[8];
-static uint32_t *d_resNounce[8];
+static uint32_t *h_resNounce[MAX_GPUS];
+static uint32_t *d_resNounce[MAX_GPUS];
 
 #define NBN 1 /* max results, could be 2, see blake32.cu */
 #if NBN > 1
@@ -107,8 +107,7 @@ typedef struct {
 	b0 ^= c1;
 
 /* initial values of chaining variables */
-__constant__ uint32_t c_IV[40];
-const uint32_t h2_IV[40] = {
+__constant__ uint32_t c_IV[40] = {
 	0x6d251e69,0x44b051e0,0x4eaa6fb4,0xdbf78465,
 	0x6e292011,0x90152df4,0xee058139,0xdef610bb,
 	0xc3b44b95,0xd9d2f256,0x70eee9a0,0xde099fa3,
@@ -120,8 +119,7 @@ const uint32_t h2_IV[40] = {
 	0x6c68e9be,0x5ec41e22,0xc825b7c7,0xaffb4363,
 	0xf5df3999,0x0fc688f1,0xb07224cc,0x03e86cea};
 
-__constant__ uint32_t c_CNS[80];
-uint32_t h2_CNS[80] = {
+__constant__ uint32_t c_CNS[80] = {
 	0x303994a6,0xe0337818,0xc0e65299,0x441ba90d,
 	0x6cc33a12,0x7f34d442,0xdc56983e,0x9389217f,
 	0x1e00108f,0xe5a8bce6,0x7800423d,0x5274baf4,
@@ -293,7 +291,7 @@ void rnd512(hashState *state)
 
 
 __device__ __forceinline__
-void Update512(hashState *state, const BitSequence *data)
+void Update512(hashState *const __restrict__ state, const BitSequence *const __restrict__ data)
 {
 #pragma unroll 8
 	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)data)[i]);
@@ -309,7 +307,7 @@ void Update512(hashState *state, const BitSequence *data)
 
 /***************************************************/
 __device__ __forceinline__
-void finalization512(hashState *state, uint32_t *b)
+void finalization512(hashState *const __restrict__ state, uint32_t *const __restrict__ b)
 {
 	int i,j;
 
@@ -447,8 +445,6 @@ void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, voi
 __host__
 void qubit_luffa512_cpu_init(int thr_id, uint32_t threads)
 {
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_IV, h2_IV, sizeof(h2_IV), 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_CNS, h2_CNS, sizeof(h2_CNS), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], NBN * sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], NBN * sizeof(uint32_t)));
 }
@@ -464,9 +460,8 @@ uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t 
 	dim3 block(threadsperblock);
 
 	qubit_luffa512_gpu_finalhash_80 <<<grid, block>>> (threads, startNounce, d_outputHash, d_resNounce[thr_id]);
-	cudaDeviceSynchronize();
+	//MyStreamSynchronize(NULL, order, thr_id);
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], NBN * sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaDeviceSynchronize();
 		result = h_resNounce[thr_id][0];
 #if NBN > 1
 		extra_results[0] = h_resNounce[thr_id][1];

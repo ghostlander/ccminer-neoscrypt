@@ -23,7 +23,7 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -154,10 +154,12 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0 };
+	static bool init[MAX_GPUS] = { 0 };
 	uint32_t endiandata[20];
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
-	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
+	unsigned int intensity = 19; // (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 20 : 19;
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << intensity); // 19=256*256*8;
+
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;

@@ -46,7 +46,6 @@
 #define SPH_ROTL32(x, n)   (((x) << (n)) | ((x) >> (32 - (n))))
 #define SPH_ROTR32(x, n)   SPH_ROTL32(x, (32 - (n)))
 
-
 static __constant__ uint32_t initVector[8];
 
 static const uint32_t c_initVector[8] = {

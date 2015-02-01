@@ -27,7 +27,7 @@ extern "C" {
 #include "cuda_helper.h"
 
 // Memory for the hash functions
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
@@ -147,7 +147,7 @@ extern "C" void x14hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -155,12 +155,9 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	int intensity = 256 * 256 * 9;
-	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 15;
-	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 256*256*8;
 
-
-	 throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 19); // 19=256*256*8;
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000f;
@@ -207,7 +204,7 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-//		MyStreamSynchronize(NULL, 1, thr_id);
+	//	MyStreamSynchronize(NULL, 1, thr_id);
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)

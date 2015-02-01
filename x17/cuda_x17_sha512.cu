@@ -36,6 +36,7 @@
 #include <stdio.h>
 
 #define USE_SHARED 1
+#define SPH_C64(x) ((uint64_t)(x ## ULL))
 
 #include "cuda_helper.h"
 

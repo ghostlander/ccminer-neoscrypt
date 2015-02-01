@@ -19,8 +19,12 @@ void __threadfence(void);
 
 #include <stdint.h>
 
-extern "C" int device_map[16];
-extern "C"  long device_sm[16];
+#ifndef MAX_GPUS
+#define MAX_GPUS 16
+#endif
+
+extern "C" int device_map[MAX_GPUS];
+extern "C"  long device_sm[MAX_GPUS];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
@@ -40,12 +44,22 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 #ifndef SPH_C32
 #define SPH_C32(x) ((x ## U))
+// #define SPH_C32(x) ((uint32_t)(x ## U))
 #endif
 
 #ifndef SPH_C64
 #define SPH_C64(x) ((x ## ULL))
+// #define SPH_C64(x) ((uint64_t)(x ## ULL))
 #endif
 
+#ifndef SPH_T32
+#define SPH_T32(x) (x)
+// #define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
+#endif
+#ifndef SPH_T64
+#define SPH_T64(x) (x)
+// #define SPH_T64(x) ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
+#endif
 #if __CUDA_ARCH__ < 320
 // Kepler (Compute 3.0)
 #define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))

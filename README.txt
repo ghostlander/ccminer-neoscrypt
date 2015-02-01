@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.1-tpruvot (SP-MOD) (11 DEC 2014)  - "Vertcoin Lyra2"
+ccMiner release 1.5.2-tpruvot (SP_MOD) (Jan 2015) - "Happy new Year!"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -119,6 +119,8 @@ its command line interface and options.
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
+      --cpu-affinity    set process affinity to specific cpu core(s) mask
+      --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)
   -c, --config=FILE     load a JSON-format configuration file
       --no-color        disable colored console output
   -V, --version         display version information and exit
@@ -171,13 +173,19 @@ I plan to add a json format later, if requests are formatted in json too..
 >>> Additional Notes <<<
 
 This code should be running on nVidia GPUs ranging from compute capability
-3.0 up to compute capability 3.5. Support for Compute 2.0 has been dropped
+3.0 up to compute capability 5.2. Support for Compute 2.0 has been dropped
 so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
 
+  Jan.      2015  v1.5.2
+                  Allow per device intensity, example: -i 20,19.5
+                  Add process CPU priority and affinity mask parameters
                   Intelligent duplicate shares check feature (enabled if needed)
+                  api: Fan RPM (windows), Cuda threads count, linux kernel ver.
+                  More X11 optimisations from sp and KlausT
+                  SM 3.0 enhancements
 
   Dec. 16th 2014  v1.5.1
                   Add lyra2RE algo for Vertcoin based on djm34/vtc code

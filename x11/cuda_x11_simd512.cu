@@ -11,8 +11,8 @@
 #include <stdio.h>
 
 
-uint32_t *d_state[8];
-uint4 *d_temp4[8];
+uint32_t *d_state[MAX_GPUS];
+uint4 *d_temp4[MAX_GPUS];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
@@ -660,13 +660,14 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 	if (device_sm[device_map[thr_id]] >= 500) 
 	{
 		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+		//MyStreamSynchronize(NULL, order, thr_id);
 	}
 	else 
 	{
 		x11_simd512_gpu_compress1_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 		x11_simd512_gpu_compress2_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+		//	MyStreamSynchronize(NULL, order, thr_id);
 	}
-//	MyStreamSynchronize(NULL, order, thr_id);
 
 	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 //	MyStreamSynchronize(NULL, order, thr_id);

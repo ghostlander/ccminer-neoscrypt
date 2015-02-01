@@ -49,9 +49,9 @@ static uint32_t __align__(32) c_Target[8];
 __constant__
 static uint64_t __align__(32) c_data[32];
 
-static uint32_t *d_hash[8];
-static uint32_t *d_resNounce[8];
-static uint32_t *h_resNounce[8];
+static uint32_t *d_hash[MAX_GPUS];
+static uint32_t *d_resNounce[MAX_GPUS];
+static uint32_t *h_resNounce[MAX_GPUS];
 static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
@@ -313,7 +313,7 @@ void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNo
 
 	pentablake_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
-	cudaDeviceSynchronize();
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 
@@ -368,7 +368,7 @@ void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, 
 
 	pentablake_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_outputHash);
 
-	cudaDeviceSynchronize();
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 #if 0
@@ -453,7 +453,7 @@ void pentablake_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
@@ -461,8 +461,8 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 	int rc = 0;
-	uint32_t throughput = opt_work_size ? opt_work_size : (128 * 2560); // 18.5
-	throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput = device_intensity(thr_id, __func__, 128U * 2560); // 18.5
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000F;
@@ -528,6 +528,5 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	cudaDeviceSynchronize();
 	return rc;
 }

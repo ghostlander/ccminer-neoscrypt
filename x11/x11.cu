@@ -29,8 +29,8 @@ extern "C"
 #include <memory.h>
 
 
-uint32_t *d_hash[8];
-uint32_t *h_found[8];
+uint32_t *d_hash[MAX_GPUS];
+uint32_t *h_found[MAX_GPUS];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -136,7 +136,7 @@ extern "C" void x11hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -146,11 +146,8 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	int intensity =  256 * 256 * 21;
 	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 41;
-
-	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 20=256*256*16;
-
-	throughput = min(throughput, max_nonce - first_nonce);
-
+	uint32_t throughput = device_intensity(thr_id, __func__, intensity); // 19=256*256*8;
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;

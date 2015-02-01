@@ -10,7 +10,7 @@ extern "C" {
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
@@ -32,7 +32,7 @@ extern void doomhash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -40,7 +40,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 22); // 256*256*8*8
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 22); // 256*256*8*8
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
@@ -48,7 +48,10 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
+		cudaSetDevice(device_map[thr_id]);
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 

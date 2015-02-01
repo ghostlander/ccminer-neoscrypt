@@ -40,7 +40,6 @@
 #endif
 #endif
 
-#include "compat.h"
 #include "miner.h"
 
 #ifdef WIN32
@@ -66,52 +65,6 @@ int cuda_finddevice(char *name);
 nvml_handle *hnvml = NULL;
 #endif
 
-#ifdef __linux /* Linux specific policy and affinity management */
-#include <sched.h>
-static inline void drop_policy(void)
-{
-	struct sched_param param;
-	param.sched_priority = 0;
-
-#ifdef SCHED_IDLE
-	if (unlikely(sched_setscheduler(0, SCHED_IDLE, &param) == -1))
-#endif
-#ifdef SCHED_BATCH
-		sched_setscheduler(0, SCHED_BATCH, &param);
-#endif
-}
-
-static inline void affine_to_cpu(int id, int cpu)
-{
-	cpu_set_t set;
-
-	CPU_ZERO(&set);
-	CPU_SET(cpu, &set);
-	sched_setaffinity(0, sizeof(&set), &set);
-}
-#elif defined(__FreeBSD__) /* FreeBSD specific policy and affinity management */
-#include <sys/cpuset.h>
-static inline void drop_policy(void)
-{
-}
-
-static inline void affine_to_cpu(int id, int cpu)
-{
-	cpuset_t set;
-	CPU_ZERO(&set);
-	CPU_SET(cpu, &set);
-	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
-}
-#else
-static inline void drop_policy(void)
-{
-}
-
-static inline void affine_to_cpu(int id, int cpu)
-{
-}
-#endif
-		
 enum workio_commands {
 	WC_GET_WORK,
 	WC_SUBMIT_WORK,
@@ -127,9 +80,11 @@ struct workio_cmd {
 
 enum sha_algos {
 	ALGO_ANIME,
+	ALGO_BITCOIN,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
 	ALGO_DEEP,
+	ALGO_DMD_GR,
 	ALGO_DOOM,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
@@ -153,14 +108,15 @@ enum sha_algos {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
-	ALGO_DMD_GR,
 };
 
 static const char *algo_names[] = {
 	"anime",
+	"bitcoin",
 	"blake",
 	"blakecoin",
 	"deep",
+	"dmd-gr",
 	"doom", /* is luffa */
 	"fresh",
 	"fugue256",
@@ -184,7 +140,6 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
-	"dmd-gr",
 };
 
 bool opt_debug = false;
@@ -209,14 +164,17 @@ static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
+int opt_affinity = -1;
+int opt_priority = 0;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
 int active_gpus;
-char * device_name[16];
-int device_map[16] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15 };
-long  device_sm[16] = { 0 };
+char * device_name[MAX_GPUS];
+int device_map[MAX_GPUS] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15 };
+long  device_sm[MAX_GPUS] = { 0 };
+uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 char *rpc_user = NULL;
 static char *rpc_url;
 static char *rpc_userpass;
@@ -243,9 +201,6 @@ static double *thr_hashrates;
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
 int opt_statsavg = 30;
-int opt_intensity = 0;
-uint32_t opt_work_size = 0; /* default */
-uint32_t opt_work_adds = 0;
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
 char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
@@ -323,6 +278,8 @@ Options:\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n\
+      --cpu-affinity    set process affinity to cpu core(s), mask 0x3 for cores 0 and 1\n\
+      --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)\n\
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n"
 
 #ifdef HAVE_SYSLOG_H
@@ -361,6 +318,8 @@ static struct option const options[] = {
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
 	{ "cputest", 0, NULL, 1006 },
+	{ "cpu-affinity", 1, NULL, 1020 },
+	{ "cpu-priority", 1, NULL, 1021 },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
@@ -396,6 +355,55 @@ static struct option const options[] = {
 static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
+
+
+#ifdef __linux /* Linux specific policy and affinity management */
+#include <sched.h>
+static inline void drop_policy(void) {
+	struct sched_param param;
+	param.sched_priority = 0;
+#ifdef SCHED_IDLE
+	if (unlikely(sched_setscheduler(0, SCHED_IDLE, &param) == -1))
+#endif
+#ifdef SCHED_BATCH
+		sched_setscheduler(0, SCHED_BATCH, &param);
+#endif
+}
+static void affine_to_cpu_mask(int id, uint8_t mask) {
+	cpu_set_t set;
+	CPU_ZERO(&set);
+	for (uint8_t i = 0; i < num_cpus; i++) {
+		// cpu mask
+		if (mask & (1<<i)) { CPU_SET(i, &set); printf("%d \n", i); }
+	}
+	if (id == -1) {
+		// process affinity
+		sched_setaffinity(0, sizeof(&set), &set);
+	} else {
+		// thread only
+		pthread_setaffinity_np(thr_info[id].pth, sizeof(&set), &set);
+	}
+}
+#elif defined(__FreeBSD__) /* FreeBSD specific policy and affinity management */
+#include <sys/cpuset.h>
+static inline void drop_policy(void) { }
+static void affine_to_cpu_mask(int id, uint8_t mask) {
+	cpuset_t set;
+	CPU_ZERO(&set);
+	for (uint8_t i = 0; i < num_cpus; i++) {
+		if (mask & (1<<i)) CPU_SET(i, &set);
+	}
+	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
+}
+#else /* Windows */
+static inline void drop_policy(void) { }
+static void affine_to_cpu_mask(int id, uint8_t mask) {
+	if (id == -1)
+		SetProcessAffinityMask(GetCurrentProcess(), mask);
+	else
+		SetThreadAffinityMask(GetCurrentThread(), mask);
+}
+#endif
 
 static bool get_blocktemplate(CURL *curl, struct work *work);
 
@@ -560,7 +568,7 @@ static int share_result(int result, const char *reason)
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		return 0;
-		if (strncmp(reason, "Duplicate share", 15) == 0) {
+		if (strncmp(reason, "Duplicate share", 15) == 0 && !check_dups) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
 		}
@@ -1098,17 +1106,52 @@ static void *miner_thread(void *userdata)
 	/* Set worker threads to nice 19 and then preferentially to SCHED_IDLE
 	 * and if that fails, then SCHED_BATCH. No need for this to be an
 	 * error if it fails */
-	if (!opt_benchmark) {
-		setpriority(PRIO_PROCESS, 0, 19);
+	if (!opt_benchmark && opt_priority == 0) {
+		setpriority(PRIO_PROCESS, 0, 18);
 		drop_policy();
+	} else {
+		int prio = 0;
+#ifndef WIN32
+		prio = 18;
+		// note: different behavior on linux (-19 to 19)
+		switch (opt_priority) {
+			case 1:
+				prio = 5;
+				break;
+			case 2:
+				prio = 0;
+				break;
+			case 3:
+				prio = -5;
+				break;
+			case 4:
+				prio = -10;
+				break;
+			case 5:
+				prio = -15;
+		}
+		applog(LOG_DEBUG, "Thread %d priority %d (set to %d)", thr_id,
+			opt_priority, prio);
+#endif
+		int ret = setpriority(PRIO_PROCESS, 0, prio);
+		if (opt_priority == 0) {
+			drop_policy();
+		}
 	}
 
 	/* Cpu thread affinity */
-	if (num_cpus > 1 && opt_n_threads > 1) {
-		if (!opt_quiet)
-			applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
-					thr_id % num_cpus);
-		affine_to_cpu(thr_id, thr_id % num_cpus);
+	if (num_cpus > 1) {
+		if (opt_affinity == -1 && opt_n_threads > 1) {
+			if (!opt_quiet)
+				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
+						thr_id % num_cpus, (1 << (thr_id % num_cpus)));
+			affine_to_cpu_mask(thr_id, 1 << (thr_id % num_cpus));
+		} else if (opt_affinity != -1) {
+			if (!opt_quiet)
+				applog(LOG_DEBUG, "Binding thread %d to cpu mask %x", thr_id,
+						opt_affinity);
+			affine_to_cpu_mask(thr_id, opt_affinity);
+		}
 	}
 
 	while (1) 
@@ -1219,6 +1262,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_BLAKE:
 				minmax = 0x80000000U;
 				break;
+			case ALGO_BITCOIN:
 			case ALGO_KECCAK:
 				minmax = 0x40000000U;
 				break;
@@ -1330,6 +1374,11 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_BITCOIN:
+			rc = scanhash_bitcoin(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
+			break;
+
 		case ALGO_BLAKECOIN:
 			rc = scanhash_blake256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done, 8);
@@ -1410,7 +1459,8 @@ static void *miner_thread(void *userdata)
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
-		if (diff.tv_usec || diff.tv_sec) {
+		if (diff.tv_sec > 0 || (diff.tv_sec==0 && diff.tv_usec>2000)) // avoid totally wrong hash rates
+		{
 			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
 
 			/* hashrate factors for some algos */
@@ -1796,16 +1846,32 @@ static void parse_arg(int key, char *arg)
 		v = (uint32_t) d;
 		if (v < 0 || v > 31)
 			show_usage_and_exit(1);
-		opt_intensity = v;
-		if (v > 7) { /* 0 = default */
-			opt_work_size = (1 << v);
-			if ((d - v) > 0.0) {
-				opt_work_adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
-				opt_work_size += opt_work_adds;
-				applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
-					opt_work_adds, v, opt_work_size);
-			} else {
-				applog(LOG_INFO, "Intensity set to %u, %u cuda threads", v, opt_work_size);
+		{
+			int n = 0, adds = 0;
+			int ngpus = cuda_num_devices();
+			char * pch = strtok(arg,",");
+			if (pch == NULL) {
+				for (n=0; n < ngpus; n++)
+					gpus_intensity[n] = (1 << v);
+				break;
+			}
+			while (pch != NULL) {
+				d = atof(pch);
+				v = (uint32_t) d;
+				if (v > 7) { /* 0 = default */
+					gpus_intensity[n] = (1 << v);
+					if ((d - v) > 0.0) {
+						adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
+						gpus_intensity[n] += adds;
+						applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
+							adds, v, gpus_intensity[n]);
+					} else {
+						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
+							v, gpus_intensity[n]);
+					}
+				}
+				n++;
+				pch = strtok(NULL, ",");
 			}
 		}
 		break;
@@ -1973,6 +2039,20 @@ static void parse_arg(int key, char *arg)
 			free(opt_syslog_pfx);
 			opt_syslog_pfx = strdup(arg);
 		}
+		break;
+	case 1020:
+		v = atoi(arg);
+		if (v < -1)
+			v = -1;
+		if (v > (1<<num_cpus)-1)
+			v = -1;
+		opt_affinity = v;
+		break;
+	case 1021:
+		v = atoi(arg);
+		if (v < 0 || v > 5)	/* sanity check */
+			show_usage_and_exit(1);
+		opt_priority = v;
 		break;
 	case 'd': // CB
 		{
@@ -2175,6 +2255,11 @@ int main(int argc, char *argv[])
 	if (num_cpus < 1)
 		num_cpus = 1;
 
+	// default thread to device map
+	for (i = 0; i < MAX_GPUS; i++) {
+		device_map[i] = i;
+	}
+
 	// number of gpus
 	active_gpus = cuda_num_devices();
 	cuda_devicenames();
@@ -2232,7 +2317,11 @@ int main(int argc, char *argv[])
 //	SetPriorityClass(NULL,REALTIME_PRIORITY_CLASS);// HIGH_PRIORITY_CLASS
 //	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 #endif
-
+	if (opt_affinity != -1) {
+		if (!opt_quiet)
+			applog(LOG_DEBUG, "Binding process to cpu mask %x", opt_affinity);
+		affine_to_cpu_mask(-1, opt_affinity);
+	}
 	if (active_gpus == 0) {
 		applog(LOG_ERR, "No CUDA devices found! terminating.");
 		exit(1);

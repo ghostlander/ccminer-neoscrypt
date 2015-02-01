@@ -12,13 +12,13 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
-static uint32_t *d_quarkNonces[8];
-static uint32_t *d_branch1Nonces[8];
-static uint32_t *d_branch2Nonces[8];
-static uint32_t *d_branch3Nonces[8];
+static uint32_t *d_quarkNonces[MAX_GPUS];
+static uint32_t *d_branch1Nonces[MAX_GPUS];
+static uint32_t *d_branch2Nonces[MAX_GPUS];
+static uint32_t *d_branch3Nonces[MAX_GPUS];
 
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
@@ -131,7 +131,7 @@ extern "C" void quarkhash(void *state, const void *input)
     memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -141,7 +141,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	int intensity = 128 * 256 * 30;
 	if (device_sm[device_map[thr_id]] == 520)  intensity = 128 * 256 * 32;
-	uint32_t throughput = opt_work_size ? opt_work_size : intensity; // 256*4096
+	uint32_t throughput = device_intensity(thr_id, __func__, intensity); // 256*4096
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
@@ -155,7 +155,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 		// Konstanten kopieren, Speicher belegen
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id);

@@ -14,7 +14,8 @@ extern "C" {
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
+static uint32_t *h_found[MAX_GPUS];
 
 extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
@@ -29,6 +30,7 @@ extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t start
 
 extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, uint32_t *h_found, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes,
@@ -70,7 +72,7 @@ extern "C" void qubithash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -78,21 +80,25 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 {
 	uint32_t endiandata[20];
 	const uint32_t first_nonce = pdata[19];
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8
-	throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 19); // 256*256*8
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	if (!init[thr_id])
 	{
-		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
+		cudaSetDevice(device_map[thr_id]);
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 		qubit_luffa512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMallocHost(&(h_found[thr_id]), 4 * sizeof(uint32_t)), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -113,29 +119,37 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
+		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], h_found[thr_id], order++);
+		if (h_found[thr_id][0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], h_found[thr_id][0]);
 			qubithash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			{
 				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
+				// check if there was some other ones...
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) {
-					pdata[21] = secNonce;
+				if (h_found[thr_id][1] != 0xffffffff)
+				{
+					pdata[21] = h_found[thr_id][1];
 					res++;
+					if (opt_benchmark)
+						applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, h_found[thr_id][1], vhash64[7], Htarg);
 				}
-				pdata[19] = foundNonce;
+				pdata[19] = h_found[thr_id][0];
+				if (opt_benchmark)
+					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0], vhash64[7], Htarg);
 				return res;
 			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+			else
+			{
+				if (vhash64[7] != Htarg)
+				{
+					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
+				}
 			}
 		}
 
