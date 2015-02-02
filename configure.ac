@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [1.5.33-git(SP-MOD)])
+AC_INIT([ccminer], [1.5.34-git(SP-MOD)])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
@@ -6,7 +6,16 @@ AC_CONFIG_SRCDIR([ccminer.cpp])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_HEADERS([cpuminer-config.h])
 
-dnl Make sure anyone changing configure.ac/Makefile.am has a clue
+dnl Make sure anyone changingquark	4033	4	149	2.1 gh/s	4.5%	0.1702	0.5349	0.1536
+x14	3933	1	21	113.9 mh/s	4.1%	0.1949	0.1522	0.1509
+lyra2	4433	1	13	17.6 mh/s	0.7%	0.5015	0.5257	0.5753
+x15	3733	2	98	141.1 mh/s	4%	0.1859	0.1819	0.1587
+x11	3533	8	594	8.8 gh/s	1.2%	0.1043	0.1327	0.1454
+scryptn	4333	4	31	39.6 mh/s	2.8%	0.6445	0.5820	0.4553
+x13	3633	1	42	181.9 mh/s	1.8%	0.0809	0.1676	0.1880
+scrypt	3433	16	124	1.7 gh/s	0.5%	0.1606	0.1681	0.1873
+all		43	1467					
+ configure.ac/Makefile.am has a clue
 AM_MAINTAINER_MODE
 
 dnl Checks for programs
