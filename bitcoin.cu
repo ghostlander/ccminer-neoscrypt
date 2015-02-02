@@ -112,14 +112,14 @@ void bitcoin_hash(uint32_t *output, const uint32_t *data, uint32_t nonce, const 
 		b = a;
 		a = t1 + t2;
 	}
-	output[0] = a + hc[0];
-	output[1] = b + hc[1];
-	output[2] = c + hc[2];
-	output[3] = d + hc[3];
-	output[4] = e + hc[4];
-	output[5] = f + hc[5];
-	output[6] = g + hc[6];
-	output[7] = h + hc[7];
+	be32enc(&output[0], a + hc[0]);
+	be32enc(&output[1], b + hc[1]);
+	be32enc(&output[2], c + hc[2]);
+	be32enc(&output[3], d + hc[3]);
+	be32enc(&output[4], e + hc[4]);
+	be32enc(&output[5], f + hc[5]);
+	be32enc(&output[6], g + hc[6]);
+	be32enc(&output[7], h + hc[7]);
 }
 
 static bool init[MAX_GPUS] = { 0 };
