@@ -14,6 +14,7 @@ extern "C" {
 
 static uint32_t *d_hash[MAX_GPUS];
 static uint32_t *h_found[MAX_GPUS];
+static uint32_t *h_found2[MAX_GPUS];
 
 extern void x11_shavite512_setBlock_80(void *pdata);
 extern void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
@@ -78,11 +79,11 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 
-	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 20);
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0f;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
@@ -91,11 +92,12 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
-		x11_simd512_cpu_init(thr_id, throughput);
+		x11_simd512_cpu_init(thr_id, throughput>>1);
 		x11_echo512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput + 4), 0);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&(h_found[thr_id]), 4 * sizeof(uint32_t)), 0);
+		CUDA_CALL_OR_RET_X(cudaMallocHost(&(h_found2[thr_id]), 4 * sizeof(uint32_t)), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -114,18 +116,17 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 		int order = 0;
 
 		// GPU Hash
-		x11_shavite512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-#if NULLTEST
-		uint32_t buf[8]; memset(buf, 0, sizeof buf);
-		CUDA_SAFE_CALL(cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost));
-		CUDA_SAFE_CALL(cudaDeviceSynchronize());
-		print_hash((unsigned char*)buf); printf("\n");
-#endif
 
-		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], h_found[thr_id], order++);
+		x11_shavite512_cpu_hash_80(thr_id, throughput >> 1, pdata[19] + (throughput >> 1), d_hash[thr_id] + (throughput * 8), order++);
+		x11_shavite512_cpu_hash_80(thr_id, throughput>>1, pdata[19], d_hash[thr_id], order++);
+		x11_simd512_cpu_hash_64(thr_id, throughput>>1, pdata[19], NULL, d_hash[thr_id], order++);
+		x11_simd512_cpu_hash_64(thr_id, throughput >> 1, pdata[19] + (throughput >> 1), NULL, d_hash[thr_id] + (throughput * 8), order++);
+		x11_shavite512_cpu_hash_64(thr_id, throughput>>1, pdata[19], NULL, d_hash[thr_id], order++);
+		x11_shavite512_cpu_hash_64(thr_id, throughput >> 1, pdata[19] + (throughput >> 1), NULL, d_hash[thr_id] + (throughput * 8), order++);
+		x11_simd512_cpu_hash_64(thr_id, throughput>>1, pdata[19], NULL, d_hash[thr_id], order++);
+		x11_echo512_cpu_hash_64_final(thr_id, throughput>>1, pdata[19], NULL, d_hash[thr_id], ptarget[7], h_found[thr_id], order++);
+
+		cudaDeviceSynchronize();
 		if (h_found[thr_id][0] != 0xffffffff)
 		{
 			uint32_t vhash64[8];
@@ -135,7 +136,6 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
-//				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0], vhash64[7], Htarg);
@@ -153,6 +153,36 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
 			}
 		}
+
+		x11_simd512_cpu_hash_64(thr_id, throughput >> 1, pdata[19] + (throughput >> 1), NULL, d_hash[thr_id] + (throughput * 8), order++);
+		x11_echo512_cpu_hash_64_final(thr_id, throughput >> 1, pdata[19] + (throughput >> 1), NULL, d_hash[thr_id] + (throughput * 8), ptarget[7], h_found2[thr_id], order++);
+		if (h_found2[thr_id][0] != 0xffffffff)
+		{
+			uint32_t vhash64[8];
+			be32enc(&endiandata[19], h_found2[thr_id][0]);
+			fresh_hash(vhash64, endiandata);
+
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			{
+				int res = 1;
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (opt_benchmark)
+					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found2[thr_id][0], vhash64[7], Htarg);
+
+				if (h_found2[thr_id][1] != 0xffffffff)
+				{
+					pdata[21] = h_found2[thr_id][1];
+					res++;
+				}
+				pdata[19] = h_found2[thr_id][0];
+				return res;
+			}
+			else
+			{
+				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found2[thr_id][0]);
+			}
+		}
+
 
 		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
