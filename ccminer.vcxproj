@@ -450,6 +450,7 @@
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_simd512.cu">
       <MaxRegCount>64</MaxRegCount>
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">80</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\fresh.cu">
     </CudaCompile>

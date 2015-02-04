@@ -5,7 +5,7 @@
 //
 // STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
 
-#define TPB 64
+#define TPB 256
 
 #include "cuda_helper.h"
 #include <stdio.h>
@@ -566,7 +566,7 @@ x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, const uint64_t
 	}
 }
 
-__global__ void __launch_bounds__(TPB, 4)
+__global__ void __launch_bounds__(TPB, 1)
 x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -580,7 +580,7 @@ x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 		Compression1(Hash, hashPosition, g_fft4, g_state);
 	}
 }
-__global__ void __launch_bounds__(TPB, 4)
+__global__ void __launch_bounds__(TPB, 1)
 x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -595,7 +595,7 @@ x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 }
 
 
-__global__ void __launch_bounds__(TPB, 4)
+__global__ void __launch_bounds__(TPB, 1)
 x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
