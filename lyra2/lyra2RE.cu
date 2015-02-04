@@ -64,7 +64,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	unsigned int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 25 : 256 * 256 * 14;
-	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity); // 18=256*256*4;
+	uint32_t throughput = device_intensity(thr_id, __func__, intensity); // 18=256*256*4;
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
@@ -103,7 +103,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		//MyStreamSynchronize(NULL, 2, thr_id);
+		MyStreamSynchronize(NULL, 2, thr_id);
 		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++, foundNonce);
 		if (foundNonce[0] != 0)
 		{
