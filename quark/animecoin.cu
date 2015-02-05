@@ -13,7 +13,6 @@ extern "C"
 static uint32_t *d_hash[MAX_GPUS];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
-static uint32_t *d_animeNonces[MAX_GPUS];
 static uint32_t *d_branch1Nonces[MAX_GPUS];
 static uint32_t *d_branch2Nonces[MAX_GPUS];
 static uint32_t *d_branch3Nonces[MAX_GPUS];
@@ -167,7 +166,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 20); // 256*256*8
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
@@ -175,7 +174,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
@@ -188,7 +187,6 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		cuda_check_cpu_init(thr_id, throughput);
 		quark_compactTest_cpu_init(thr_id, throughput);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_animeNonces[thr_id], sizeof(uint32_t)*throughput));
 		CUDA_SAFE_CALL(cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput));
 		CUDA_SAFE_CALL(cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput));
 		CUDA_SAFE_CALL(cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput));
@@ -258,31 +256,37 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		if (foundnonces[0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
-/*			uint32_t vhash64[8];
+			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundnonces[0]);
 			animehash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
-*/			{
+			{
 				int res = 1;
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				// check if there was some other ones...
 				if (foundnonces[1] != 0xffffffff)
 				{
-					pdata[21] = foundnonces[1];
-					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[1]);
+					be32enc(&endiandata[19], foundnonces[1]);
+					animehash(vhash64, endiandata);
+					if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+					{
+
+						pdata[21] = foundnonces[1];
+						res++;
+						if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[1]);
+					}
 				}
 				pdata[19] = foundnonces[0];
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nonce $%08X", thr_id, foundnonces[0]);
 				return res;
 			}
-/*			else
+			else
 			{
 				if (vhash64[7] != Htarg) // don't show message if it is equal but fails fulltest
 					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[0]);
 			}
-*/		}
+		}
 		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
