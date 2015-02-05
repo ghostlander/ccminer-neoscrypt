@@ -187,7 +187,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		cudaDeviceSynchronize();
 
 		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], ptarget[7], h_found[thr_id], order++);
-		h_found[thr_id][0] = 0xffffffff;
+//		h_found[thr_id][0] = 0xffffffff;
 		if (h_found[thr_id][0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
