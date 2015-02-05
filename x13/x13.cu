@@ -204,9 +204,9 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-	//	uint32_t foundNonce = x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
+ 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		foundNonce = 0xffffffff;
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
