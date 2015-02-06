@@ -135,7 +135,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0], vhash64[7], Htarg);
 
-				if (h_found[thr_id][1] != 0xffffffff)
+				if(h_found[thr_id][1] != 0) 
 				{
 					pdata[21] =h_found[thr_id][1];
 					res++;
