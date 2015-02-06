@@ -439,7 +439,7 @@ void proper_exit(int reason)
 
 	try
 	{
-		sleep(1);			//make sure that the gpu threads are stopped when updating the stats.
+		sleep(6);			//make sure that the gpu threads are stopped when updating the stats.
 		exit(0);
 	}
 	catch (...)
