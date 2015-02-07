@@ -2,8 +2,7 @@
 #include <stdint.h>
 #include <memory.h>
 
-#include "cuda_helper.h"
-#define TPB 128 
+#include "cuda_helper.h" 
 #define TPBf 128
 
 // Take a look at: https://www.schneier.com/skein1.3.pdf
@@ -284,9 +283,9 @@ static uint32_t *d_nonce[MAX_GPUS];
 
 __global__
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(TPB, 2)
+__launch_bounds__(448, 2)
 #else
-__launch_bounds__(TPB, 1)
+__launch_bounds__(128)
 #endif
 void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
@@ -518,12 +517,15 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + TPB-1)/TPB);
-	dim3 block(TPB);
+	int t = 128;
+	if (device_sm[device_map[thr_id]] > 500)
+	{
+		t = 448;
+	}
+	dim3 grid((threads + t - 1) / t);
+	dim3 block(t);
+	quark_skein512_gpu_hash_64 << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 
-	quark_skein512_gpu_hash_64 << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-//	MyStreamSynchronize(NULL, order, thr_id);
 }
 
 
