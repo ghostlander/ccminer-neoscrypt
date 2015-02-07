@@ -48,11 +48,11 @@ void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, u
         groestl512_progressMessage_quad(state, msgBitsliced);
 
 		from_bitslice_quad(state, hash);
-		if (thr == 0)
-		{
-			#pragma unroll
-			for (int k = 0; k < 16; k++) inpHash[k] = hash[k];
-		}
+
+		if (thr != 0) return;
+
+		#pragma unroll
+		for (int k = 0; k < 16; k++) inpHash[k] = hash[k];
     }
 }
 

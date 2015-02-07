@@ -45,18 +45,23 @@ void to_bitslice_quad(uint32_t *const __restrict__ input, uint32_t *const __rest
     uint32_t other[8];
 	uint32_t t;
 
+	uint32_t t1 = threadIdx.x & 1;
+	uint32_t t2 = threadIdx.x & 2;
+	uint32_t t3 = (threadIdx.x + 1) & 3;
+	const unsigned int n = threadIdx.x & 3;
+
     #pragma unroll
     for (int i = 0; i < 8; i++) 
 	{
-		const unsigned int n = threadIdx.x & 3;
 		input[i] = __shfl((int)input[i], n ^ (3 * (n >= 1 && n <= 2)), 4);
-        other[i] = __shfl((int)input[i], (threadIdx.x + 1) & 3, 4);
-        input[i] = __shfl((int)input[i], threadIdx.x & 2, 4);
-        other[i] = __shfl((int)other[i], threadIdx.x & 2, 4);
-        if (threadIdx.x & 1) {
-            input[i] = __byte_perm(input[i], 0, 0x1032);
-            other[i] = __byte_perm(other[i], 0, 0x1032);
-        }
+        other[i] = __shfl((int)input[i], t3, 4);
+        input[i] = __shfl((int)input[i], t2, 4);
+        other[i] = __shfl((int)other[i], t2, 4);
+        if (t1) 
+		{
+           input[i] = __byte_perm(input[i], 0, 0x1032);
+           other[i] = __byte_perm(other[i], 0, 0x1032);
+        } 
     }
 
 	merge8(output[0], input[0], input[4]);
@@ -117,7 +122,7 @@ void from_bitslice_quad(const uint32_t *const __restrict__ input, uint32_t *cons
 	output[12] = output[8];
 	output[14] = output[10];
 
-	if (threadIdx.x & 1) 
+/*	if (threadIdx.x & 1) 
 	{
 		output[0] = __byte_perm(output[0], 0, 0x1032);
 		output[2] = __byte_perm(output[2], 0, 0x1032);
@@ -128,7 +133,7 @@ void from_bitslice_quad(const uint32_t *const __restrict__ input, uint32_t *cons
 		output[12] = __byte_perm(output[12], 0, 0x3232);
 		output[14] = __byte_perm(output[14], 0, 0x3232);
 	}
-
+*/
 	output[0] = __byte_perm(output[0], __shfl((int)output[0], (threadIdx.x + 1) & 3, 4), 0x7610);
 	output[0 + 1] = __shfl((int)output[0], (threadIdx.x + 2) & 3, 4);
 
