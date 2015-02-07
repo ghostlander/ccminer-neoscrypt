@@ -275,7 +275,7 @@ void groestl256_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order, uint32_t *resultnonces)
+void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, uint32_t *resultnonces)
 {
 	cudaMemset(d_GNonce[thr_id], 0, 2*sizeof(uint32_t));
 	const uint32_t threadsperblock = 256;

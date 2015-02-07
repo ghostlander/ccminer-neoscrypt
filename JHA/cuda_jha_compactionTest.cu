@@ -326,8 +326,7 @@ __host__ void jackpot_compactTest_cpu_dualCompaction(int thr_id, uint32_t thread
 
 __host__ void jackpot_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
 											uint32_t *d_nonces1, uint32_t *nrm1,
-											uint32_t *d_nonces2, uint32_t *nrm2,
-											int order)
+											uint32_t *d_nonces2, uint32_t *nrm2)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
 	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!

@@ -516,7 +516,7 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 }
 
 __host__
-void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + TPB-1)/TPB);
@@ -528,7 +528,7 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 
 
 __host__
-void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_nonce, uint32_t target, int order)
+void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_nonce, uint32_t target)
 {
 	dim3 grid((threads + TPBf - 1) / TPBf);
 	dim3 block(TPBf);

@@ -647,7 +647,7 @@ void x11_simd512_cpu_free(int thr_id)
 	cudaFree(&d_temp4[thr_id]);
 }
 __host__
-void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
 	dim3 block(TPB);
 	dim3 grid8(((threads + TPB-1)/TPB)*8);

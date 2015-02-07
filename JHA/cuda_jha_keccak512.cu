@@ -522,7 +522,7 @@ __host__ void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
                         0, cudaMemcpyHostToDevice);
 }
 
-__host__ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
+__host__ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 256;
 

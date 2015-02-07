@@ -12,18 +12,18 @@ extern "C" {
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
-extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
+extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
-extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
 extern void keccak256_cpu_init(int thr_id, uint32_t threads);
-extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
-extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
 extern void lyra2_cpu_init(int thr_id, uint32_t threads);
 
 extern void groestl256_setTarget(const void *ptarget);
-extern void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order, uint32_t *resultnonces);
+extern void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, uint32_t *resultnonces);
 extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 
 extern "C" void lyra2_hash(void *state, const void *input)
@@ -96,15 +96,14 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	groestl256_setTarget(ptarget);
 
 	do {
-		int order = 0;
 		uint32_t foundNonce[2] = { 0, 0 };
 
-		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 //		MyStreamSynchronize(NULL, 2, thr_id);
-		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++, foundNonce);
+		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
 		if (foundNonce[0] != 0)
 		{
 			CUDA_SAFE_CALL(cudaGetLastError());

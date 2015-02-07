@@ -306,14 +306,14 @@ void pentablake_gpu_hash_80(uint32_t threads, const uint32_t startNounce, void *
 }
 
 __host__
-void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNounce, uint32_t *d_outputHash, int order)
+void pentablake_cpu_hash_80(int thr_id, uint32_t threads, const uint32_t startNounce, uint32_t *d_outputHash)
 {
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
 
 	pentablake_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
-	//MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, thr_id);
 }
 
 
@@ -361,14 +361,14 @@ void pentablake_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_
 }
 
 __host__
-void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+void pentablake_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 	dim3 grid((threads + TPB - 1) / TPB);
 	dim3 block(TPB);
 
 	pentablake_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_outputHash);
 
-	//MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, thr_id);
 }
 
 #if 0
@@ -414,7 +414,7 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 }
 
 __host__ static
-uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
+uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash)
 {
 	uint32_t result = UINT32_MAX;
 
@@ -484,17 +484,16 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 	pentablake_cpu_setBlock_80(endiandata, ptarget);
 
 	do {
-		int order = 0;
 
 		// GPU HASH
-		pentablake_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		pentablake_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
 
-		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 
-		uint32_t foundNonce = pentablake_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		uint32_t foundNonce = pentablake_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];

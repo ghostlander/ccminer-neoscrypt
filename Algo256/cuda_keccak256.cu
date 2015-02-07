@@ -619,7 +619,7 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputH
 }
 
 __host__
-void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order, uint32_t *h_nounce)
+void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, uint32_t *h_nounce)
 {
 	cudaMemset(d_KNonce[thr_id], 0xff, 4*sizeof(uint32_t));
 	const uint32_t threadsperblock = 128;
@@ -673,7 +673,7 @@ void keccak256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *out
 }
 
 __host__
-void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
 {
 	const uint32_t threadsperblock = 256;
 

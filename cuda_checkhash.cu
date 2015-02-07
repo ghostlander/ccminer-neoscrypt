@@ -191,7 +191,7 @@ void cuda_check_quarkcoin_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 }
 
 __host__
-uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
+uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash)
 {
 	uint32_t result = 0xffffffff;
 	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
@@ -210,7 +210,7 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 	return result;
 }
 __host__
-void cuda_check_quarkcoin(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order, uint32_t *resNonces)
+void cuda_check_quarkcoin(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, uint32_t *resNonces)
 {
 	cudaMemset(d_resNonces[thr_id], 0xff, 2*sizeof(uint32_t));
 

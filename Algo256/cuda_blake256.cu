@@ -210,7 +210,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 }
 
 __host__
-void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order)
+void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash)
 {
 	const uint32_t threadsperblock = 64;
 

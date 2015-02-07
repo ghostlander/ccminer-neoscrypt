@@ -283,7 +283,7 @@ void lyra2_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
 {
 	dim3 grid((threads + TPB - 1) / TPB);
 	dim3 block(TPB);
