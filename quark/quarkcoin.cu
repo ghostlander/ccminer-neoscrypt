@@ -32,7 +32,7 @@ extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 extern void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 
 extern void quark_skein512_cpu_init(int thr_id);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+extern void quark_skein512_cpu_hash_64_quark(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 
 extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 extern void quark_keccak512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
@@ -191,7 +191,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			d_branch3Nonces[thr_id], &nrm3);
 
 		// nur den Skein Branch weiterverfolgen
-		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
+		quark_skein512_cpu_hash_64_quark(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
 
 		// das ist der unbedingte Branch für Groestl512
 		quark_groestl512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
@@ -214,7 +214,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_keccak512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
 
 		// das ist der unbedingte Branch für Skein512
-		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
+		quark_skein512_cpu_hash_64_quark(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
 
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
