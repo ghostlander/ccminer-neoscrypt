@@ -344,7 +344,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 
 
 __global__ __launch_bounds__(256, 4)
-void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
+void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -353,7 +353,7 @@ void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *c
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+        uint32_t nounce = (startNounce + thread);
         int hashPosition = nounce - startNounce;
         uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 		cuda_echo_round(sharedMemory, Hash);
@@ -367,14 +367,14 @@ __host__ void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 	CUDA_SAFE_CALL(cudaMalloc(&(d_found[thr_id]), 4 * sizeof(uint32_t)));
 }
 
-__host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	uint32_t threadsperblock = 256;
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+    x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
@@ -384,7 +384,7 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 }
 
 __global__ __launch_bounds__(256, 4)
-void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_found, uint32_t target)
+void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 	__shared__ uint32_t sharedMemory[1024];
 	echo_gpu_init(sharedMemory);
@@ -392,7 +392,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce = (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition *8];
@@ -709,7 +709,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		}
 	}
 }
-__host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, uint32_t *h_found)
+__host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t target, uint32_t *h_found)
 {
 	uint32_t threadsperblock = 256;
 
@@ -718,7 +718,7 @@ __host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32
 	dim3 block(threadsperblock);
 	cudaMemset(d_found[thr_id], 0xffffffff, 4*sizeof(uint32_t));
 
-	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_found[thr_id], target);
+	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_found[thr_id], target);
 	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(h_found, d_found[thr_id], 4*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

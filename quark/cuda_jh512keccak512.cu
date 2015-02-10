@@ -393,15 +393,15 @@ keccak_block(uint2 *s) {
 }
 
 __global__ __launch_bounds__(256,3)
-void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+        uint32_t nounce =  (startNounce + thread);
 
         int hashPosition = nounce - startNounce;
-        uint32_t *Hash = &g_hash[16 * hashPosition];
+        uint32_t *Hash = &g_hash[16 * hashPosition]; 
 		uint32_t x[8][4] = {
 				{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
 				{ 0x8d5e228a, 0x0bef970c, 0x591234e9, 0x61c3b3f2 },
@@ -458,7 +458,7 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 }
 
 
-__host__ void cuda_jh512Keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void cuda_jh512Keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 256;
 
@@ -466,7 +466,7 @@ __host__ void cuda_jh512Keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-	quark_jh512Keccak512_gpu_hash_64 << <grid, block>> >(threads, startNounce, d_hash, d_nonceVector);
+	quark_jh512Keccak512_gpu_hash_64 << <grid, block>> >(threads, startNounce, d_hash);
 //    MyStreamSynchronize(NULL, order, thr_id);
 }
 

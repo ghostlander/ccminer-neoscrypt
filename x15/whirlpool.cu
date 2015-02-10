@@ -12,11 +12,11 @@ extern "C"
 static uint32_t *d_hash[MAX_GPUS];
 
 extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode);
-extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,  uint32_t *d_hash);
 
 extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
 extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce,  uint32_t *d_hash);
 
 
 // CPU Hash function
@@ -82,10 +82,10 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 		uint32_t foundNonce;
 
 		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
-		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
+		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 
-		foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
+		foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19],  d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];

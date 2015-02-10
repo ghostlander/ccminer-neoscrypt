@@ -289,12 +289,12 @@ static const uint32_t c_initVector[8] = {
 
 
 __global__
-void x17_haval256_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x17_haval256_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce =  (startNounce + thread);
 		int hashPosition = nounce - startNounce;
 		uint32_t *inpHash = (uint32_t*)&g_hash[8 * hashPosition];
 		union {
@@ -381,7 +381,7 @@ void x17_haval256_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,  uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
 
@@ -389,6 +389,6 @@ void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x17_haval256_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x17_haval256_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 
 }

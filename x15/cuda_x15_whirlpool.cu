@@ -2380,7 +2380,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 }
 
 __global__ 
-void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2400,7 +2400,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce =  (startNounce + thread);
 		uint32_t hashPosition = (nounce - startNounce) << 3;
 		uint64_t hash[8], state[8], n[8], h[8] = { 0 };
 		uint8_t i;
@@ -2456,7 +2456,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 }
 
 __global__ 
-void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *resNounce)
+void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resNounce)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2477,7 +2477,7 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce =  (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint64_t *inpHash = (uint64_t*) &g_hash[8 * hashPosition];
@@ -2587,17 +2587,17 @@ extern void x15_whirlpool_cpu_free(int thr_id)
 }
 
 __host__
-extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	x15_whirlpool_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x15_whirlpool_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__
-extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	uint32_t result = 0xffffffff;
 
@@ -2606,7 +2606,7 @@ extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint
 
 	cudaMemset(d_WNonce[thr_id], 0xff, sizeof(uint32_t));
 
-	oldwhirlpool_gpu_finalhash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector,d_WNonce[thr_id]);
+	oldwhirlpool_gpu_finalhash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash,d_WNonce[thr_id]);
 	//MyStreamSynchronize(NULL, order, thr_id);
 
 	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);

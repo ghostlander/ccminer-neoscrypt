@@ -541,12 +541,12 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 
 /***************************************************/
 __global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint4 *const __restrict__ g_temp4)
+x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, uint4 *const __restrict__ g_temp4)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)/8;
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce = (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 
@@ -567,12 +567,12 @@ x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, const uint64_t
 }
 
 __global__ void __launch_bounds__(TPB, 1)
-x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash,  uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce = (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
@@ -581,12 +581,12 @@ x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 	}
 }
 __global__ void __launch_bounds__(TPB, 1)
-x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce =  (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 
@@ -596,12 +596,12 @@ x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 
 
 __global__ void __launch_bounds__(TPB, 1)
-x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce = (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
@@ -613,12 +613,12 @@ x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint
 
 
 __global__ void  __launch_bounds__(TPB, 4)
-x11_simd512_gpu_final_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+x11_simd512_gpu_final_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce = (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
@@ -647,28 +647,28 @@ void x11_simd512_cpu_free(int thr_id)
 	cudaFree(&d_temp4[thr_id]);
 }
 __host__
-void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	dim3 block(TPB);
 	dim3 grid8(((threads + TPB-1)/TPB)*8);
 
-	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
+	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id]);
 	//MyStreamSynchronize(NULL, order, thr_id);
 
 	dim3 grid((threads + TPB-1)/TPB);
 
 	if (device_sm[device_map[thr_id]] >= 500) 
 	{
-		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
 		//MyStreamSynchronize(NULL, order, thr_id);
 	}
 	else 
 	{
-		x11_simd512_gpu_compress1_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-		x11_simd512_gpu_compress2_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+		x11_simd512_gpu_compress1_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
+		x11_simd512_gpu_compress2_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
 		//	MyStreamSynchronize(NULL, order, thr_id);
 	}
 
-	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash,d_temp4[thr_id], d_state[thr_id]);
 //	MyStreamSynchronize(NULL, order, thr_id);
 }

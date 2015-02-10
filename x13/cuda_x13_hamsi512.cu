@@ -582,12 +582,12 @@ static __constant__ uint32_t d_T512[64][16] = {
 	}
 
 __global__ __launch_bounds__(512,2)
-void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash )
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+        uint32_t nounce = (startNounce + thread);
 
         int hashPosition = nounce - startNounce;
         uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
@@ -678,12 +678,12 @@ __host__ void x13_hamsi512_cpu_init(int thr_id, uint32_t threads)
 {
 }
 
-__host__ void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 128;
 
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    x13_hamsi512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+    x13_hamsi512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 }

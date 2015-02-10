@@ -558,7 +558,7 @@ static const uint32_t mixtab0_cpu[] = {
 
 //__launch_bounds__(128, 6)
 __global__ __launch_bounds__(128,8)
-void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	__shared__ uint32_t mixtabs[1024];
 	
@@ -576,7 +576,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
 		*((uint32_t*)mixtabs + (896 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x+128);
 		}
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		uint32_t nounce =  (startNounce + thread);
 		
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
@@ -668,7 +668,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 }
 
 __global__ __launch_bounds__(128, 7)
-void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_nonce)
+void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_nonce)
 {
 	__shared__ uint32_t mixtabs[1024];
 
@@ -686,7 +686,7 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint
 			*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
 			*((uint32_t*)mixtabs + (768 + 128 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x + 128);
 		}
-			uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+			uint32_t nounce =  (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint32_t *h = (uint32_t*)&g_hash[hashPosition * 8];
@@ -815,7 +815,7 @@ __host__ void  x13_fugue512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-__host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 128;
 
@@ -825,10 +825,10 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-	x13_fugue512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x13_fugue512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 //	MyStreamSynchronize(NULL, order, thr_id);
 }
-__host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 128;
 
@@ -838,7 +838,7 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, u
 
 	cudaMemset(d_nonce[thr_id], 0xff, sizeof(uint32_t));
 
-	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_nonce[thr_id]);
+	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonce[thr_id]);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
