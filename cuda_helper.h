@@ -518,8 +518,8 @@ __device__ __inline__ uint2 ROR2(const uint2 v, const int n)
 	}
 	else 
 	{
-		result.y = ((v.x >> (n - 32)) | (v.y << (32 - n)));
-		result.x = ((v.y >> (n - 32)) | (v.x << (32 - n)));
+		result.y = ((v.x >> (n - 32)) | (v.y << (64 - n)));
+		result.x = ((v.y >> (n - 32)) | (v.x << (64 - n)));
 	}
 	return result;
 }
@@ -551,6 +551,7 @@ __inline__ __device__ uint2 ROL2(const uint2 v, const int n)
 		{
 			result.y = ((v.x << (n - 32)) | (v.y >> (64 - n)));
 			result.x = ((v.y << (n - 32)) | (v.x >> (64 - n)));
+
 		}
 		return result;
 }
