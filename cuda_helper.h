@@ -420,23 +420,12 @@ void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x) {
 		: "=r"(lo), "=r"(hi) : "l"(x));
 }
 
-__device__ __forceinline__ uint64_t devectorize(uint2 x)
-{
-	uint64_t result;
-	asm("mov.b64 %0,{%1,%2}; \n\t"
-		: "=l"(result) : "r"(x.x), "r"(x.y));
-	return result;
-}
-
-
-__device__ __forceinline__ uint2 vectorize(uint64_t x)
-{
+static __device__ __forceinline__ uint64_t devectorize(uint2 v) { return MAKE_ULONGLONG(v.x, v.y); }
+static __device__ __forceinline__ uint2 vectorize(uint64_t v) {
 	uint2 result;
-	asm("mov.b64 {%0,%1},%2; \n\t"
-		: "=r"(result.x), "=r"(result.y) : "l"(x));
+	LOHI(result.x, result.y, v);
 	return result;
 }
-
 static __device__ __forceinline__ uint2 vectorizelow(uint32_t v) {
 	uint2 result;
 	result.x = v;
@@ -704,25 +693,6 @@ static __device__ __forceinline__ uint2 vectorizeswap(uint64_t v) {
 	result.y = cuda_swab32(result.y);
 	return result;
 }
-
-
-__device__ __forceinline__ uint32_t devectorize16(ushort2 x)
-{
-	uint32_t result;
-	asm("mov.b32 %0,{%1,%2}; \n\t"
-		: "=r"(result) : "h"(x.x) , "h"(x.y));
-	return result;
-}
-
-
-__device__ __forceinline__ ushort2 vectorize16(uint32_t x)
-{
-	ushort2 result;
-	asm("mov.b32 {%0,%1},%2; \n\t"
-		: "=h"(result.x), "=h"(result.y) : "r"(x));
-	return result;
-}
-
 
 #endif // #ifndef CUDA_HELPER_H
 
