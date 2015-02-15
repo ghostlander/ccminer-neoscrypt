@@ -540,7 +540,7 @@ static const uint32_t mixtab3_cpu[] = {
 #define S34   (sc[34])
 #define S35   (sc[35])
 
-#define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
+//#define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 /* GPU - FUNKTIONEN */
 
 #if USE_SHARED
@@ -558,7 +558,7 @@ fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outp
 	*(mixtabs + (512+threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
 	*(mixtabs + (768+threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
 
-	__syncthreads();
+//	__syncthreads();
 #endif
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -679,11 +679,11 @@ fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outp
 		uint32_t hash[8];
 	#pragma unroll 4
 		for(int i=0;i<4;i++)
-			((uint32_t*)hash)[i] = SWAB32(sc[19+i]);
+			((uint32_t*)hash)[i] = cuda_swab32(sc[19+i]);
 
 	#pragma unroll 4
 		for(int i=0;i<4;i++)
-			((uint32_t*)hash)[i+4] = SWAB32(sc[3+i]);
+			((uint32_t*)hash)[i + 4] = cuda_swab32(sc[3 + i]);
 
 		int i;
 		bool rc = true;

@@ -46,17 +46,17 @@ static uint32_t *d_nonce[MAX_GPUS];
  * @author   phm <phm@inbox.com>
  */
 
-#define mixtab0(x) (*((uint32_t*)mixtabs + (    (x))))
-#define mixtab1(x) (*((uint32_t*)mixtabs + (256+(x))))
-#define mixtab2(x) (*((uint32_t*)mixtabs + (512+(x))))
-#define mixtab3(x) (*((uint32_t*)mixtabs + (768+(x))))
+#define mixtab0(x) (*(mixtabs + (    (x))))
+#define mixtab1(x) (*(mixtabs + (256+(x))))
+#define mixtab2(x) (*(mixtabs + (512+(x))))
+#define mixtab3(x) (*(mixtabs + (768+(x))))
 
-texture<unsigned int, 1, cudaReadModeElementType> mixTab0Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab1Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab2Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab3Tex;
+//texture<unsigned int, 1, cudaReadModeElementType> mixTab0Tex;
+//texture<unsigned int, 1, cudaReadModeElementType> mixTab1Tex;
+//texture<unsigned int, 1, cudaReadModeElementType> mixTab2Tex;
+//texture<unsigned int, 1, cudaReadModeElementType> mixTab3Tex;
 
-static const uint32_t mixtab0_cpu[] = {
+__constant__ uint32_t mixTab0Tex[] = {
 	SPH_C32(0x63633297), SPH_C32(0x7c7c6feb), SPH_C32(0x77775ec7),
 	SPH_C32(0x7b7b7af7), SPH_C32(0xf2f2e8e5), SPH_C32(0x6b6b0ab7),
 	SPH_C32(0x6f6f16a7), SPH_C32(0xc5c56d39), SPH_C32(0x303090c0),
@@ -145,7 +145,7 @@ static const uint32_t mixtab0_cpu[] = {
 	SPH_C32(0x16166258)
 };
 
- static const uint32_t mixtab1_cpu[] = {
+__constant__ uint32_t mixTab1Tex[] = {
 	SPH_C32(0x97636332), SPH_C32(0xeb7c7c6f), SPH_C32(0xc777775e),
 	SPH_C32(0xf77b7b7a), SPH_C32(0xe5f2f2e8), SPH_C32(0xb76b6b0a),
 	SPH_C32(0xa76f6f16), SPH_C32(0x39c5c56d), SPH_C32(0xc0303090),
@@ -234,7 +234,7 @@ static const uint32_t mixtab0_cpu[] = {
 	SPH_C32(0x58161662)
 };
 
- static const uint32_t mixtab2_cpu[] = {
+__constant__ uint32_t mixTab2Tex[] = {
 	SPH_C32(0x32976363), SPH_C32(0x6feb7c7c), SPH_C32(0x5ec77777),
 	SPH_C32(0x7af77b7b), SPH_C32(0xe8e5f2f2), SPH_C32(0x0ab76b6b),
 	SPH_C32(0x16a76f6f), SPH_C32(0x6d39c5c5), SPH_C32(0x90c03030),
@@ -323,7 +323,7 @@ static const uint32_t mixtab0_cpu[] = {
 	SPH_C32(0x62581616)
 };
 
- static const uint32_t mixtab3_cpu[] = {
+__constant__ uint32_t mixTab3Tex[] = {
 	SPH_C32(0x63329763), SPH_C32(0x7c6feb7c), SPH_C32(0x775ec777),
 	SPH_C32(0x7b7af77b), SPH_C32(0xf2e8e5f2), SPH_C32(0x6b0ab76b),
 	SPH_C32(0x6f16a76f), SPH_C32(0xc56d39c5), SPH_C32(0x3090c030),
@@ -430,29 +430,20 @@ static const uint32_t mixtab0_cpu[] = {
 		x20 ^= x06; \
 	}
 #define SMIX(x0, x1, x2, x3) { \
-		uint32_t c0 = 0; \
-		uint32_t c1 = 0; \
-		uint32_t c2 = 0; \
-		uint32_t c3 = 0; \
-		uint32_t r0 = 0; \
-		uint32_t r1 = 0; \
-		uint32_t r2 = 0; \
-		uint32_t r3 = 0; \
-		uint32_t tmp; \
-		tmp = mixtab0(__byte_perm(x0, 0, 0x4443)); \
-		c0 ^= tmp; \
+		uint32_t tmp = mixtab0(__byte_perm(x0, 0, 0x4443)); \
+		uint32_t c0 = tmp; \
 		tmp = mixtab1(__byte_perm(x0, 0, 0x4442)); \
 		c0 ^= tmp; \
-		r1 ^= tmp; \
+		uint32_t r1 = tmp; \
 		tmp = mixtab2(__byte_perm(x0, 0, 0x4441)); \
 		c0 ^= tmp; \
-		r2 ^= tmp; \
+		uint32_t r2= tmp; \
 		tmp = mixtab3(__byte_perm(x0, 0, 0x4440)); \
 		c0 ^= tmp; \
-		r3 ^= tmp; \
+		uint32_t r3= tmp; \
 		tmp = mixtab0(__byte_perm(x1, 0, 0x4443)); \
-		c1 ^= tmp; \
-		r0 ^= tmp; \
+		uint32_t c1 = tmp; \
+		uint32_t r0 = tmp; \
 		tmp = mixtab1(__byte_perm(x1, 0, 0x4442)); \
 		c1 ^= tmp; \
 		tmp = mixtab2(__byte_perm(x1, 0, 0x4441)); \
@@ -462,7 +453,7 @@ static const uint32_t mixtab0_cpu[] = {
 		c1 ^= tmp; \
 		r3 ^= tmp; \
 		tmp = mixtab0(__byte_perm(x2, 0, 0x4443)); \
-		c2 ^= tmp; \
+		uint32_t c2 = tmp; \
 		r0 ^= tmp; \
 		tmp = mixtab1(__byte_perm(x2, 0, 0x4442)); \
 		c2 ^= tmp; \
@@ -473,7 +464,7 @@ static const uint32_t mixtab0_cpu[] = {
 		c2 ^= tmp; \
 		r3 ^= tmp; \
 		tmp = mixtab0(__byte_perm(x3, 0, 0x4443)); \
-		c3 ^= tmp; \
+		uint32_t c3 = tmp; \
 		r0 ^= tmp; \
 		tmp = mixtab1(__byte_perm(x3, 0, 0x4442)); \
 		c3 ^= tmp; \
@@ -483,23 +474,36 @@ static const uint32_t mixtab0_cpu[] = {
 		r2 ^= tmp; \
 		tmp = mixtab3(__byte_perm(x3, 0, 0x4440)); \
 		c3 ^= tmp; \
-		x0 = ((c0 ^ r0) & SPH_C32(0xFF000000)) \
-			| ((c1 ^ r1) & SPH_C32(0x00FF0000)) \
-			| ((c2 ^ r2) & SPH_C32(0x0000FF00)) \
-			| ((c3 ^ r3) & SPH_C32(0x000000FF)); \
-		x1 = ((c1 ^ (r0 << 8)) & SPH_C32(0xFF000000)) \
-			| ((c2 ^ (r1 << 8)) & SPH_C32(0x00FF0000)) \
-			| ((c3 ^ (r2 << 8)) & SPH_C32(0x0000FF00)) \
-			| ((c0 ^ (r3 >> 24)) & SPH_C32(0x000000FF)); \
-		x2 = ((c2 ^ (r0 << 16)) & SPH_C32(0xFF000000)) \
-			| ((c3 ^ (r1 << 16)) & SPH_C32(0x00FF0000)) \
-			| ((c0 ^ (r2 >> 16)) & SPH_C32(0x0000FF00)) \
-			| ((c1 ^ (r3 >> 16)) & SPH_C32(0x000000FF)); \
-		x3 = ((c3 ^ (r0 << 24)) & SPH_C32(0xFF000000)) \
-			| ((c0 ^ (r1 >> 8)) & SPH_C32(0x00FF0000)) \
-			| ((c1 ^ (r2 >> 8)) & SPH_C32(0x0000FF00)) \
-			| ((c2 ^ (r3 >> 8)) & SPH_C32(0x000000FF)); \
+		x0 = ((c0 ^ r0) & 0xFF000000) \
+			| ((c1 ^ r1) & 0x00FF0000) \
+			| ((c2 ^ r2) & 0x0000FF00) \
+			| ((c3 ^ r3) & 0x000000FF); \
+		r0 = ROTL32(r0, 8); \
+		r1 = ROTL32(r1, 8); \
+		r2 = ROTL32(r2, 8); \
+		r3 = ROTL32(r3, 8); \
+		x1 = ((c1 ^ r0) & 0xFF000000) \
+			| ((c2 ^ r1) & 0x00FF0000) \
+			| ((c3 ^ r2) & 0x0000FF00) \
+			| ((c0 ^ r3) & 0x000000FF); \
+		r0 = ROTL32(r0, 8); \
+		r1 = ROTL32(r1, 8); \
+		r2 = ROTL32(r2, 8); \
+		r3 = ROTL32(r3, 8); \
+		x2 = ((c2 ^ r0) & 0xFF000000) \
+			| ((c3 ^ r1) & 0x00FF0000) \
+			| ((c0 ^ r2) & 0x0000FF00) \
+			| ((c1 ^ r3) & 0x000000FF); \
+		r0 = ROTL32(r0, 8); \
+		r1 = ROTL32(r1, 8); \
+		r2 = ROTL32(r2, 8); \
+		r3 = ROTL32(r3, 8); \
+		x3 = ((c3 ^ r0) & 0xFF000000) \
+			| ((c0 ^ r1) & 0x00FF0000) \
+			| ((c1 ^ r2) & 0x0000FF00) \
+			| ((c2 ^ r3) & 0x000000FF); \
 		}
+
 #define ROR3 { \
 	B33 = S33, B34 = S34, B35 = S35; \
     S35 = S32; S34 = S31; S33 = S30; S32 = S29; S31 = S28; S30 = S27; S29 = S26; S28 = S25; S27 = S24; \
@@ -556,9 +560,8 @@ static const uint32_t mixtab0_cpu[] = {
         SMIX(S00, S01, S02, S03); \
 	}
 
-//__launch_bounds__(128, 6)
 __global__ __launch_bounds__(128,8)
-void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
 	__shared__ uint32_t mixtabs[1024];
 	
@@ -567,24 +570,23 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 	{
 		if (threadIdx.x < 128) 
 		{
-		*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
-		*((uint32_t*)mixtabs + (128 + threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x+128);
-		*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
-		*((uint32_t*)mixtabs + (384 + threadIdx.x)) = tex1Dfetch(mixTab1Tex , threadIdx.x+128);
-		*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
-		*((uint32_t*)mixtabs + (640 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x+128);
-		*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
-		*((uint32_t*)mixtabs + (896 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x+128);
+			mixtabs[threadIdx.x] = mixTab0Tex[threadIdx.x];
+			mixtabs[threadIdx.x+128] = mixTab0Tex[threadIdx.x+128];
+			mixtabs[256 + threadIdx.x] = mixTab1Tex[threadIdx.x];
+			mixtabs[256 + threadIdx.x+128] = mixTab1Tex[threadIdx.x+128];
+			mixtabs[(512 + threadIdx.x)] = mixTab2Tex[threadIdx.x];
+			mixtabs[(512 + threadIdx.x)+128] = mixTab2Tex[threadIdx.x+128];
+			mixtabs[(768 + threadIdx.x)] = mixTab3Tex[threadIdx.x];
+			mixtabs[(768 + threadIdx.x)+128] = mixTab3Tex[threadIdx.x+128];
 		}
 		uint32_t nounce =  (startNounce + thread);
 		
 		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
+		uint32_t *Hash = &g_hash[hashPosition*16];
 
 		#pragma unroll 16
 		for (int i = 0; i < 16; i++)
 			Hash[i] = cuda_swab32(Hash[i]);
-		__syncthreads(); 
 
 		uint32_t S00, S01, S02, S03, S04, S05, S06, S07, S08, S09;
 		uint32_t S10, S11, S12, S13, S14, S15, S16, S17, S18, S19;
@@ -592,21 +594,19 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		uint32_t S30, S31, S32, S33, S34, S35;
 
 		uint32_t B27, B28, B29, B30, B31, B32, B33, B34, B35;
-		uint64_t bc = (uint64_t) 64 << 3;
-		uint32_t bclo = (uint32_t)(bc & 0xFFFFFFFFULL);
-		uint32_t bchi = (uint32_t)(bc >> 32);
+		uint32_t bclo = 64 << 3;
+		uint32_t bchi = 0;
 
 		S00 = S01 = S02 = S03 = S04 = S05 = S06 = S07 = S08 = S09 = S10 = S11 = S12 = S13 = S14 = S15 = S16 = S17 = S18 = S19 = 0;
-		S20 = SPH_C32(0x8807a57e); S21 = SPH_C32(0xe616af75); S22 = SPH_C32(0xc5d3e4db); S23 = SPH_C32(0xac9ab027); 
-		S24 = SPH_C32(0xd915f117); S25 = SPH_C32(0xb6eecc54); S26 = SPH_C32(0x06e8020b); S27 = SPH_C32(0x4a92efd1); 
-		S28 = SPH_C32(0xaac6e2c9); S29 = SPH_C32(0xddb21398); S30 = SPH_C32(0xcae65838); S31 = SPH_C32(0x437f203f);
-		S32 = SPH_C32(0x25ea78e7); S33 = SPH_C32(0x951fddd6); S34 = SPH_C32(0xda6ed11d); S35 = SPH_C32(0xe13e3567);
+		S20 = 0x8807a57e; S21 = 0xe616af75; S22 = 0xc5d3e4db; S23 = 0xac9ab027; 
+		S24 = 0xd915f117; S25 = 0xb6eecc54; S26 = 0x06e8020b; S27 = 0x4a92efd1; 
+		S28 = 0xaac6e2c9; S29 = 0xddb21398; S30 = 0xcae65838; S31 = 0x437f203f;
+		S32 = 0x25ea78e7; S33 = 0x951fddd6; S34 = 0xda6ed11d; S35 = 0xe13e3567;
 
-		FUGUE512_3((Hash[0x0]), (Hash[0x1]), (Hash[0x2]));
-		FUGUE512_3((Hash[0x3]), (Hash[0x4]), (Hash[0x5]));
-		FUGUE512_3((Hash[0x6]), (Hash[0x7]), (Hash[0x8]));
-		FUGUE512_3((Hash[0x9]), (Hash[0xA]), (Hash[0xB]));
-		FUGUE512_3((Hash[0xC]), (Hash[0xD]), (Hash[0xE]));
+		for (int i = 0; i < 5*3; i+=3)
+		{
+			FUGUE512_3((Hash[i]), (Hash[i+1]), (Hash[i+2]));
+		}
 		FUGUE512_3((Hash[0xF]), bchi, bclo);
 		
 	//#pragma unroll
@@ -617,7 +617,8 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		}
 
 	//#pragma	unroll
-		for (int i = 0; i < 13; i++) {
+		for (int i = 0; i < 13; i++) 
+		{
 			S04 ^= S00;
 			S09 ^= S00;
 			S18 ^= S00;
@@ -667,29 +668,29 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 	}
 }
 
-__global__ __launch_bounds__(128, 7)
-void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_nonce)
+__global__ __launch_bounds__(128,6)
+void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_nonce)
 {
 	__shared__ uint32_t mixtabs[1024];
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread< threads)
 	{
-		if(threadIdx.x < 128)
+		if (threadIdx.x < 128)
 		{
-			*((uint32_t*)mixtabs + (threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
-			*((uint32_t*)mixtabs + (128 + threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x + 128);
-			*((uint32_t*)mixtabs + (256 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
-			*((uint32_t*)mixtabs + (256 + 128 + threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x + 128);
-			*((uint32_t*)mixtabs + (512 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
-			*((uint32_t*)mixtabs + (512 + 128 + threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x + 128);
-			*((uint32_t*)mixtabs + (768 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
-			*((uint32_t*)mixtabs + (768 + 128 + threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x + 128);
+			mixtabs[threadIdx.x] = mixTab0Tex[threadIdx.x];
+			mixtabs[threadIdx.x + 128] = mixTab0Tex[threadIdx.x + 128];
+			mixtabs[256 + threadIdx.x] = mixTab1Tex[threadIdx.x];
+			mixtabs[256 + threadIdx.x + 128] = mixTab1Tex[threadIdx.x + 128];
+			mixtabs[(512 + threadIdx.x)] = mixTab2Tex[threadIdx.x];
+			mixtabs[(512 + threadIdx.x) + 128] = mixTab2Tex[threadIdx.x + 128];
+			mixtabs[(768 + threadIdx.x)] = mixTab3Tex[threadIdx.x];
+			mixtabs[(768 + threadIdx.x) + 128] = mixTab3Tex[threadIdx.x + 128];
 		}
 			uint32_t nounce =  (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
-		uint32_t *h = (uint32_t*)&g_hash[hashPosition * 8];
+		uint32_t *h = &g_hash[hashPosition * 16];
 		uint32_t Hash[16];
 #pragma unroll 16
 		for (int i = 0; i < 16; i++)
@@ -701,22 +702,19 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint
 		uint32_t S30, S31, S32, S33, S34, S35;
 
 		uint32_t B27, B28, B29, B30, B31, B32, B33, B34, B35;
-		uint64_t bc = (uint64_t)64 << 3;
-		uint32_t bclo = (uint32_t)(bc & 0xFFFFFFFFULL);
-		uint32_t bchi = (uint32_t)(bc >> 32);
+		uint32_t bclo = 64 << 3;
+		uint32_t bchi = 0;
 
 		S00 = S01 = S02 = S03 = S04 = S05 = S06 = S07 = S08 = S09 = S10 = S11 = S12 = S13 = S14 = S15 = S16 = S17 = S18 = S19 = 0;
-		S20 = SPH_C32(0x8807a57e); S21 = SPH_C32(0xe616af75); S22 = SPH_C32(0xc5d3e4db); S23 = SPH_C32(0xac9ab027);
-		S24 = SPH_C32(0xd915f117); S25 = SPH_C32(0xb6eecc54); S26 = SPH_C32(0x06e8020b); S27 = SPH_C32(0x4a92efd1);
-		S28 = SPH_C32(0xaac6e2c9); S29 = SPH_C32(0xddb21398); S30 = SPH_C32(0xcae65838); S31 = SPH_C32(0x437f203f);
-		S32 = SPH_C32(0x25ea78e7); S33 = SPH_C32(0x951fddd6); S34 = SPH_C32(0xda6ed11d); S35 = SPH_C32(0xe13e3567);
-		__syncthreads();
+		S20 = 0x8807a57e; S21 = 0xe616af75; S22 = 0xc5d3e4db; S23 = 0xac9ab027;
+		S24 = 0xd915f117; S25 = 0xb6eecc54; S26 = 0x06e8020b; S27 = 0x4a92efd1;
+		S28 = 0xaac6e2c9; S29 = 0xddb21398; S30 = 0xcae65838; S31 = 0x437f203f;
+		S32 = 0x25ea78e7; S33 = 0x951fddd6; S34 = 0xda6ed11d; S35 = 0xe13e3567;
 
-		FUGUE512_3((Hash[0x0]), (Hash[0x1]), (Hash[0x2]));
-		FUGUE512_3((Hash[0x3]), (Hash[0x4]), (Hash[0x5]));
-		FUGUE512_3((Hash[0x6]), (Hash[0x7]), (Hash[0x8]));
-		FUGUE512_3((Hash[0x9]), (Hash[0xA]), (Hash[0xB]));
-		FUGUE512_3((Hash[0xC]), (Hash[0xD]), (Hash[0xE]));
+		for (int i = 0; i < 5 * 3; i += 3)
+		{
+			FUGUE512_3((Hash[i]), (Hash[i + 1]), (Hash[i + 2]));
+		}
 		FUGUE512_3((Hash[0xF]), bchi, bclo);
 
 	//#pragma unroll 32
@@ -785,22 +783,8 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint
 	}
 }
 
-#define texDef(texname, texmem, texsource, texsize) \
-	unsigned int *texmem; \
-	cudaMalloc(&texmem, texsize); \
-	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
-	texname.normalized = 0; \
-	texname.filterMode = cudaFilterModePoint; \
-	texname.addressMode[0] = cudaAddressModeClamp; \
-	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
-	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
-
 __host__ void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
 {
-	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
-	texDef(mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
-	texDef(mixTab2Tex, mixTab2m, mixtab2_cpu, sizeof(uint32_t)*256);
-	texDef(mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
 	cudaMalloc(&d_nonce[thr_id], sizeof(uint32_t));
 }
 __host__ void x13_fugue512_cpu_setTarget(const void *ptarget)
@@ -825,7 +809,7 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-	x13_fugue512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
+	x13_fugue512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_hash);
 //	MyStreamSynchronize(NULL, order, thr_id);
 }
 __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
@@ -838,7 +822,7 @@ __host__ uint32_t x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, u
 
 	cudaMemset(d_nonce[thr_id], 0xff, sizeof(uint32_t));
 
-	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_nonce[thr_id]);
+	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, d_hash, d_nonce[thr_id]);
 	uint32_t res;
 	cudaMemcpy(&res, d_nonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	return res;
