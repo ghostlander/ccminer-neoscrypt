@@ -222,7 +222,7 @@ Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
 			anime       Animecoin\n\
-			bitcoin     use to mine Bitcoin\n\
+			bitcoin     Bitcoin\n\
 			blake       Blake 256 (SFR/NEOS)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
 			deep        Deepcoin\n\
@@ -439,7 +439,7 @@ void proper_exit(int reason)
 
 	try
 	{
-		sleep(6);			//make sure that the gpu threads are stopped when updating the stats.
+		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
 		exit(0);
 	}
 	catch (...)
@@ -2313,9 +2313,58 @@ int main(int argc, char *argv[])
 	signal(SIGINT, signal_handler);
 #else
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
+	if (opt_priority > 0)
+	{
+		DWORD prio = NORMAL_PRIORITY_CLASS;
+		prio = REALTIME_PRIORITY_CLASS;//default realtime
 
-//	SetPriorityClass(NULL,REALTIME_PRIORITY_CLASS);// HIGH_PRIORITY_CLASS
-//	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+		switch (opt_priority) {
+		case 1:
+			prio = BELOW_NORMAL_PRIORITY_CLASS;
+			break;
+		case 3:
+			prio = ABOVE_NORMAL_PRIORITY_CLASS;
+			break;
+		case 4:
+			prio = HIGH_PRIORITY_CLASS;
+			break;
+		case 5:
+			prio = REALTIME_PRIORITY_CLASS;
+		}
+		if (SetPriorityClass(GetCurrentProcess(), prio) == 0)
+		{
+			LPSTR messageBuffer = nullptr;
+			size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+			applog(LOG_ERR, "Error while trying to set the priority:");
+			applog(LOG_ERR, "%s", messageBuffer);
+			LocalFree(messageBuffer);
+		}
+		prio = GetPriorityClass(GetCurrentProcess());
+		switch (prio)
+		{
+			case NORMAL_PRIORITY_CLASS:
+				applog(LOG_INFO, "CPU priority: %s", "normal");
+				break;
+			case BELOW_NORMAL_PRIORITY_CLASS:
+				applog(LOG_INFO, "CPU priority: %s", "below normal");
+				break;
+			case ABOVE_NORMAL_PRIORITY_CLASS:
+				applog(LOG_INFO, "CPU priority: %s", "above normal");
+				break;
+			case HIGH_PRIORITY_CLASS:
+				applog(LOG_INFO, "CPU priority: %s", "high");
+				break;
+			case REALTIME_PRIORITY_CLASS:
+				applog(LOG_INFO, "CPU priority: %s", "realtime");
+				break;
+			case IDLE_PRIORITY_CLASS:
+				applog(LOG_INFO, "CPU priority: %s", "idle");
+				break;
+			default:
+				applog(LOG_INFO, "CPU priority class: %d", prio);
+		}
+	}
 #endif
 	if (opt_affinity != -1) {
 		if (!opt_quiet)
@@ -2454,6 +2503,10 @@ int main(int argc, char *argv[])
 
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
+
+#ifdef WIN32
+	timeEndPeriod(1); // be nice and forego high timer precision
+#endif
 
 	applog(LOG_INFO, "workio thread dead, exiting.");
 
