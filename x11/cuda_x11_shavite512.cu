@@ -1,30 +1,24 @@
 #include "cuda_helper.h"
 #include <memory.h> // memcpy()
 
-#define TPB 128
+#define TPB 256
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
 #include "cuda_x11_aes.cu"
 
 __device__ __forceinline__
-static void AES_ROUND_NOKEY(
+ void AES_ROUND_NOKEY(
 	const uint32_t* __restrict__ sharedMemory,
 	uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3)
 {
-	uint32_t y0, y1, y2, y3;
 	aes_round(sharedMemory,
 		x0, x1, x2, x3,
-		y0, y1, y2, y3);
-
-	x0 = y0;
-	x1 = y1;
-	x2 = y2;
-	x3 = y3;
+		x0, x1, x2, x3);
 }
 
 __device__ __forceinline__
-static void KEY_EXPAND_ELT(
+void KEY_EXPAND_ELT(
 	const uint32_t* __restrict__ sharedMemory,
 	uint32_t &k0, uint32_t &k1, uint32_t &k2, uint32_t &k3)
 {
@@ -40,14 +34,14 @@ static void KEY_EXPAND_ELT(
 }
 
 __device__ __forceinline__
-static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const __restrict__  state, uint32_t *const __restrict__  msg, const uint32_t count)
+static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const __restrict__  state, uint32_t *const __restrict__  msg)
 {
 	uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
 	uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
 	uint32_t x0, x1, x2, x3;
 	uint32_t rk[32];
 	uint32_t i;
-	const uint32_t counter = count;
+	const uint32_t counter = 640;
 
 	p0 = state[0x0];
 	p1 = state[0x1];
@@ -88,42 +82,12 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	p1 ^= x1;
 	p2 ^= x2;
 	p3 ^= x3;
-	if (count == 512)
-	{
-		rk[16] = 0x80U;
-		x0 = pC ^ 0x80U;
-		rk[17] = 0;
-		x1 = pD;
-		rk[18] = 0;
-		x2 = pE;
-		rk[19] = 0;
-		x3 = pF;
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-		rk[20] = 0;
-		rk[21] = 0;
-		rk[22] = 0;
-		rk[23] = 0;
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-		rk[24] = 0;
-		rk[25] = 0;
-		rk[26] = 0;
-		rk[27] = 0x02000000U;
-		x3 ^= 0x02000000U;
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-		rk[28] = 0;
-		rk[29] = 0;
-		rk[30] = 0;
-		rk[31] = 0x02000000;
-		x3 ^= 0x02000000;
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-	}
-	else
-	{
 		x0 = pC;
 		x1 = pD;
 		x2 = pE;
 		x3 = pF;
 
+		#pragma unroll 
 		for (i = 16; i<32; i += 4)
 		{
 			rk[i] = msg[i];
@@ -136,7 +100,6 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 			x3 ^= msg[i + 3];
 			AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 		}
-	}
 	p8 ^= x0;
 	p9 ^= x1;
 	pA ^= x2;
@@ -191,7 +154,6 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	pD ^= x1;
 	pE ^= x2;
 	pF ^= x3;
-
 
 	KEY_EXPAND_ELT(sharedMemory, rk[16], rk[17], rk[18], rk[19]);
 	rk[16] ^= rk[12];
@@ -1288,19 +1250,19 @@ __device__ __forceinline__
 void shavite_gpu_init(uint32_t *sharedMemory)
 {
 	/* each thread startup will fill a uint32 */
-	if (threadIdx.x < 128) {
+	if (threadIdx.x < 256) {
 		sharedMemory[threadIdx.x ] = d_AES0[threadIdx.x];
 		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
 		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
 		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
 
-		sharedMemory[threadIdx.x + 64 * 2 ] = d_AES0[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 ] = d_AES0[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
 	}
 }
-__global__ __launch_bounds__(TPB, 8)
+__global__ __launch_bounds__(TPB, 3)
 void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	__shared__  uint32_t sharedMemory[1024];
@@ -1443,15 +1405,16 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		x3 ^= rk[15];
 
 		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-		pC ^= x0;
-		pD ^= x1;
-		pE ^= x2;
-		pF ^= x3;
 
 		p8 ^= 0x32be246fUL;
 		p9 ^= 0xe33ad1e5UL;
 		pA ^= 0xd659b13eUL;
 		pB ^= 0xb6a1a92cUL;
+
+		pC ^= x0;
+		pD ^= x1;
+		pE ^= x2;
+		pF ^= x3;
 
 		rk[16] = rk[12] ^ 0x63636363UL;
 		rk[17] = rk[13] ^ 0x63636363UL;
@@ -1461,47 +1424,37 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		x1 = p9 ^ rk[17];
 		x2 = pA ^ rk[18];
 		x3 = pB ^ rk[19];
+		rk[20] = 0x63636363UL ^ rk[16];
+		rk[21] = 0x63636363UL ^ rk[17];
+		rk[22] = 0x63636363UL ^ rk[18];
+		rk[23] = 0x63636363UL ^ rk[19];
+		rk[24] = 0x63636363UL ^ rk[20];
+		rk[25] = 0x63636363UL ^ rk[21];
+		rk[26] = 0x63636363UL ^ rk[22];
+		rk[27] = 0x4b5f7777UL ^ rk[23];
+
+		rk[28] = 0x63636363UL ^ rk[24];
+		rk[29] = 0x63636363UL ^ rk[25];
+		rk[30] = 0x63636363UL ^ rk[26];
+		rk[31] = 0x4b5f7777UL ^ rk[27];
+
+
+
 		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 
-		rk[20] = 0x63636363UL;
-		rk[21] = 0x63636363UL;
-		rk[22] = 0x63636363UL;
-		rk[23] = 0x63636363UL;
-
-		rk[20] ^= rk[16];
-		rk[21] ^= rk[17];
-		rk[22] ^= rk[18];
-		rk[23] ^= rk[19];
 		x0 ^= rk[20];
 		x1 ^= rk[21];
 		x2 ^= rk[22];
 		x3 ^= rk[23];
 		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 
-		rk[24] = 0x63636363UL;
-		rk[25] = 0x63636363UL;
-		rk[26] = 0x63636363UL;
-		rk[27] = 0x4b5f7777UL;
 
-		rk[24] ^= rk[20];
-		rk[25] ^= rk[21];
-		rk[26] ^= rk[22];
-		rk[27] ^= rk[23];
 		x0 ^= rk[24];
 		x1 ^= rk[25];
 		x2 ^= rk[26];
 		x3 ^= rk[27];
 		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 
-		rk[28] = 0x63636363UL;
-		rk[29] = 0x63636363UL;
-		rk[30] = 0x63636363UL;
-		rk[31] = 0x4b5f7777UL;
-
-		rk[28] ^= rk[24];
-		rk[29] ^= rk[25];
-		rk[30] ^= rk[26];
-		rk[31] ^= rk[27];
 		x0 ^= rk[28];
 		x1 ^= rk[29];
 		x2 ^= rk[30];
@@ -2559,21 +2512,21 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 }
 
 
-__global__ __launch_bounds__(TPB, 8)
+__global__ __launch_bounds__(TPB, 3)
 void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
-	if (threadIdx.x < 128) {
+	if (threadIdx.x < 256) {
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
 		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
 		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
 		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
 
-		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
+//		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
 	}
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2583,10 +2536,10 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 
 		// kopiere init-state
 		uint32_t state[16] = {
-			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
-			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
-			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
-			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+			0x72FCCDD8, 0x79CA4727, 0x128A077B, 0x40D55AEC,
+			0xD1901A06, 0x430AE307, 0xB29F5CD1, 0xDF07FBFC,
+			0x8E45D73D, 0x681AB538, 0xBDE86578, 0xDD577E47,
+			0xE275EADE, 0x502D9FCD, 0xB9357178, 0x022A4B9A
 		};
 
 		uint32_t msg[32];
@@ -2600,7 +2553,7 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 		msg[27] = 0x2800000;
 		msg[31] = 0x2000000;
 
-		c512(sharedMemory, state, msg, 640);
+		c512(sharedMemory, state, msg);
 
 		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 
