@@ -156,13 +156,13 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	static bool init[MAX_GPUS] = { 0 };
 	uint32_t endiandata[20];
-	unsigned int intensity = 19; // (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 20 : 19;
-	uint32_t throughput = device_intensity(thr_id, __func__, 1 << intensity); // 19=256*256*8;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
+	uint32_t throughput = device_intensity(thr_id, __func__, intensity);
 
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xff;
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{
@@ -203,9 +203,9 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19],  d_hash[thr_id]);
-//		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], d_hash[thr_id], h_found[thr_id]);
 
+	//	h_found[thr_id][0] = 0xffffffff;
 		if (h_found[thr_id][0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];

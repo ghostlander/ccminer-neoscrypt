@@ -555,31 +555,31 @@ __constant__ uint32_t mixTab3Tex[] = {
         SMIX(S00, S01, S02, S03); \
 	}
 
-__global__ __launch_bounds__(128,8)
+__global__ __launch_bounds__(128, 8)
 void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
 	__shared__ uint32_t mixtabs[1024];
-	
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		if (threadIdx.x < 128) 
+		if (threadIdx.x < 128)
 		{
 			mixtabs[threadIdx.x] = mixTab0Tex[threadIdx.x];
-			mixtabs[threadIdx.x+128] = mixTab0Tex[threadIdx.x+128];
+			mixtabs[threadIdx.x + 128] = mixTab0Tex[threadIdx.x + 128];
 			mixtabs[256 + threadIdx.x] = mixTab1Tex[threadIdx.x];
-			mixtabs[256 + threadIdx.x+128] = mixTab1Tex[threadIdx.x+128];
+			mixtabs[256 + threadIdx.x + 128] = mixTab1Tex[threadIdx.x + 128];
 			mixtabs[(512 + threadIdx.x)] = mixTab2Tex[threadIdx.x];
-			mixtabs[(512 + threadIdx.x)+128] = mixTab2Tex[threadIdx.x+128];
+			mixtabs[(512 + threadIdx.x) + 128] = mixTab2Tex[threadIdx.x + 128];
 			mixtabs[(768 + threadIdx.x)] = mixTab3Tex[threadIdx.x];
-			mixtabs[(768 + threadIdx.x)+128] = mixTab3Tex[threadIdx.x+128];
+			mixtabs[(768 + threadIdx.x) + 128] = mixTab3Tex[threadIdx.x + 128];
 		}
-		uint32_t nounce =  (startNounce + thread);
-		
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = &g_hash[hashPosition*16];
+		uint32_t nounce = (startNounce + thread);
 
-		#pragma unroll 16
+		int hashPosition = nounce - startNounce;
+		uint32_t *Hash = &g_hash[hashPosition * 16];
+
+#pragma unroll 16
 		for (int i = 0; i < 16; i++)
 			Hash[i] = cuda_swab32(Hash[i]);
 
@@ -589,30 +589,86 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
 		uint32_t S30, S31, S32, S33, S34, S35;
 
 		uint32_t B27, B28, B29, B30, B31, B32, B33, B34, B35;
-		uint32_t bclo = 64 << 3;
-		uint32_t bchi = 0;
 
-		S00 = S01 = S02 = S03 = S04 = S05 = S06 = S07 = S08 = S09 = S10 = S11 = S12 = S13 = S14 = S15 = S16 = S17 = S18 = S19 = 0;
-		S20 = 0x8807a57e; S21 = 0xe616af75; S22 = 0xc5d3e4db; S23 = 0xac9ab027; 
-		S24 = 0xd915f117; S25 = 0xb6eecc54; S26 = 0x06e8020b; S27 = 0x4a92efd1; 
-		S28 = 0xaac6e2c9; S29 = 0xddb21398; S30 = 0xcae65838; S31 = 0x437f203f;
-		S32 = 0x25ea78e7; S33 = 0x951fddd6; S34 = 0xda6ed11d; S35 = 0xe13e3567;
+		S00 = S02 = S03 = S05 = S06 = S08 = S09 = S10 = S11 = S12 = S13 = S14 = S16 = S17 = S18 = S19 = 0;
+		S20 = 0x8807a57eUL; S21 = 0xe616af75UL; S22 = 0xc5d3e4dbUL; S23 = 0xac9ab027UL;
+		S24 = 0xd915f117UL; S25 = 0xb6eecc54UL; S26 = 0x06e8020bUL; S27 = 0x4a92efd1UL;
+		S28 = 0xaac6e2c9UL; S29 = 0xddb21398UL; S30 = 0xcae65838UL; S31 = 0x437f203fUL;
+		S32 = 0x25ea78e7UL; S33 = 0x4c0a2cc1UL; S34 = 0xda6ed11dUL; S35 = 0xe13e3567UL;
 
-		for (int i = 0; i < 5*3; i+=3)
+		S01 = 0xd915f117UL;
+		S04 = 0x4a92efd1UL;
+		S07 = 0xcae65838UL;
+		S15 = 0xd915f117UL;
+		S00 = (Hash[0]);
+		S08 ^= S00;
+
+		uint32_t c0 = 0x9ae23283UL;
+		uint32_t c1 = 0x0361b92dUL;
+		uint32_t c2 = 0x4c92d8edUL;
+		uint32_t r0 = 0xafaf608aUL;
+		uint32_t r1 = 0x79d5d51dUL;
+		uint32_t r2 = 0xf6274f4fUL;
+		uint32_t r3 = 0x59947f59UL;
+
+		uint32_t tmp = (*((mixtabs)+__byte_perm(S00, 0, 17475)));
+		uint32_t c3 = tmp; r0 ^= tmp; tmp = (*((mixtabs)+((256) + __byte_perm(S00, 0, 17474))));
+		c3 ^= tmp; r1 ^= tmp; tmp = (*((mixtabs)+((512) + __byte_perm(S00, 0, 17473))));
+		//r1r2
+		c3 ^= tmp; r2 ^= tmp; tmp = (*((mixtabs)+((768) + __byte_perm(S00, 0, 17472))));
+		c3 ^= tmp; uint32_t tmp2 = __byte_perm(c0 ^ r0, c1 ^ r1, 13878); tmp = __byte_perm(c2 ^ r2, c3 ^ r3, 5140);
+		S33 = __byte_perm(tmp2, tmp, 12884); r0 = ((r0 << 8) | (r0 >> (32 - 8))); r1 = ((r1 << 8) | (r1 >> (32 - 8)));
+		r2 = ((r2 << 8) | (r2 >> (32 - 8))); r3 = ((r3 << 8) | (r3 >> (32 - 8))); tmp2 = __byte_perm(c1 ^ r0, c2 ^ r1, 13878);
+		tmp = __byte_perm(c3 ^ r2, c0 ^ r3, 5140); S34 = __byte_perm(tmp2, tmp, 12884); r0 = ((r0 << 8) | (r0 >> (32 - 8)));
+		r1 = ((r1 << 8) | (r1 >> (32 - 8))); r2 = ((r2 << 8) | (r2 >> (32 - 8))); r3 = ((r3 << 8) | (r3 >> (32 - 8)));
+		tmp2 = __byte_perm(c2 ^ r0, c3 ^ r1, 13878); tmp = __byte_perm(c0 ^ r2, c1 ^ r3, 5140);
+		S35 = __byte_perm(tmp2, tmp, 12884); r0 = ((r0 << 8) | (r0 >> (32 - 8)));
+		r1 = ((r1 << 8) | (r1 >> (32 - 8))); r2 = ((r2 << 8) | (r2 >> (32 - 8)));
+		r3 = ((r3 << 8) | (r3 >> (32 - 8))); tmp2 = __byte_perm(c3 ^ r0, c0 ^ r1, 13878);
+		tmp = __byte_perm(c1 ^ r2, c2 ^ r3, 5140); S00 = __byte_perm(tmp2, tmp, 12884);
+
+		CMIX36(S30, S31, S32, S34, S35, S00, S12, S13, S14);
+		SMIX(S30, S31, S32, S33);
+		CMIX36(S27, S28, S29, S31, S32, S33, S09, S10, S11);
+		SMIX(S27, S28, S29, S30);
+		CMIX36(S24, S25, S26, S28, S29, S30, S06, S07, S08);
+		SMIX(S24, S25, S26, S27);
+
+		TIX4(Hash[1], S24, S25, S28, S31, S32, S10, S12, S15, S18);
+		CMIX36(S21, S22, S23, S25, S26, S27, S03, S04, S05);
+		SMIX(S21, S22, S23, S24);
+		CMIX36(S18, S19, S20, S22, S23, S24, S00, S01, S02);
+		SMIX(S18, S19, S20, S21);
+		CMIX36(S15, S16, S17, S19, S20, S21, S33, S34, S35);
+		SMIX(S15, S16, S17, S18);
+		CMIX36(S12, S13, S14, S16, S17, S18, S30, S31, S32);
+		SMIX(S12, S13, S14, S15);
+
+		TIX4(Hash[2], S12, S13, S16, S19, S20, S34, S00, S03, S06);
+		CMIX36(S09, S10, S11, S13, S14, S15, S27, S28, S29);
+		SMIX(S09, S10, S11, S12);
+		CMIX36(S06, S07, S08, S10, S11, S12, S24, S25, S26);
+		SMIX(S06, S07, S08, S09);
+		CMIX36(S03, S04, S05, S07, S08, S09, S21, S22, S23);
+		SMIX(S03, S04, S05, S06);
+		CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20);
+		SMIX(S00, S01, S02, S03);
+#pragma unroll
+		for (int i = 3; i < (5 * 3); i += 3)
 		{
-			FUGUE512_3((Hash[i]), (Hash[i+1]), (Hash[i+2]));
+			FUGUE512_3((Hash[i]), (Hash[i + 1]), (Hash[i + 2]));
 		}
-		FUGUE512_3((Hash[0xF]), bchi, bclo);
-		
-	//#pragma unroll
+		FUGUE512_3((Hash[0xF]), 0, 64 << 3);
+
+		//#pragma unroll
 		for (int i = 0; i < 32; i++) {
 			ROR3;
 			CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20);
 			SMIX(S00, S01, S02, S03);
 		}
 
-	//#pragma	unroll
-		for (int i = 0; i < 13; i++) 
+		//#pragma	unroll
+		for (int i = 0; i < 13; i++)
 		{
 			S04 ^= S00;
 			S09 ^= S00;
@@ -664,11 +720,11 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
 }
 
 __global__ __launch_bounds__(128,6)
-void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint32_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_nonce)
+void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, const uint32_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_nonce)
 {
 	__shared__ uint32_t mixtabs[1024];
 
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread< threads)
 	{
 		if (threadIdx.x < 128)
@@ -683,7 +739,6 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, cons
 			mixtabs[(768 + threadIdx.x) + 128] = mixTab3Tex[threadIdx.x + 128];
 		}
 			uint32_t nounce =  (startNounce + thread);
-
 		int hashPosition = nounce - startNounce;
 		const uint32_t *h = &g_hash[hashPosition * 16];
 		uint32_t Hash[16];
@@ -697,20 +752,79 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, cons
 		uint32_t S30, S31, S32, S33, S34, S35;
 
 		uint32_t B27, B28, B29, B30, B31, B32, B33, B34, B35;
-		uint32_t bclo = 64 << 3;
-		uint32_t bchi = 0;
+		uint32_t backup = pTarget[7];
 
-		S00 = S01 = S02 = S03 = S04 = S05 = S06 = S07 = S08 = S09 = S10 = S11 = S12 = S13 = S14 = S15 = S16 = S17 = S18 = S19 = 0;
-		S20 = 0x8807a57e; S21 = 0xe616af75; S22 = 0xc5d3e4db; S23 = 0xac9ab027;
-		S24 = 0xd915f117; S25 = 0xb6eecc54; S26 = 0x06e8020b; S27 = 0x4a92efd1;
-		S28 = 0xaac6e2c9; S29 = 0xddb21398; S30 = 0xcae65838; S31 = 0x437f203f;
-		S32 = 0x25ea78e7; S33 = 0x951fddd6; S34 = 0xda6ed11d; S35 = 0xe13e3567;
+		S00 = S02 = S03 = S05 = S06 = S08 = S09 = S10 = S11 = S12 = S13 = S14 = S16 = S17 = S18 = S19 = 0;
+		S20 = 0x8807a57eUL; S21 = 0xe616af75UL; S22 = 0xc5d3e4dbUL; S23 = 0xac9ab027UL;
+		S24 = 0xd915f117UL; S25 = 0xb6eecc54UL; S26 = 0x06e8020bUL; S27 = 0x4a92efd1UL;
+		S28 = 0xaac6e2c9UL; S29 = 0xddb21398UL; S30 = 0xcae65838UL; S31 = 0x437f203fUL;
+		S32 = 0x25ea78e7UL; S33 = 0x4c0a2cc1UL; S34 = 0xda6ed11dUL; S35 = 0xe13e3567UL;
 
-		for (int i = 0; i < 5 * 3; i += 3)
+		S01 = 0xd915f117UL;
+		S04 = 0x4a92efd1UL;
+		S07 = 0xcae65838UL;
+		S15 = 0xd915f117UL;
+		S00 = (Hash[0]);
+		S08 ^= S00;
+
+		uint32_t c0 = 0x9ae23283UL;
+		uint32_t c1 = 0x0361b92dUL;
+		uint32_t c2 = 0x4c92d8edUL;
+		uint32_t r0 = 0xafaf608aUL;
+		uint32_t r1 = 0x79d5d51dUL;
+		uint32_t r2 = 0xf6274f4fUL;
+		uint32_t r3 = 0x59947f59UL;
+
+		uint32_t tmp = (*((mixtabs)+__byte_perm(S00, 0, 17475)));
+		uint32_t c3 = tmp; r0 ^= tmp; tmp = (*((mixtabs)+((256) + __byte_perm(S00, 0, 17474))));
+		//r3c3r0
+		c3 ^= tmp; r1 ^= tmp; tmp = (*((mixtabs)+((512) + __byte_perm(S00, 0, 17473))));
+		//r1r2
+		c3 ^= tmp; r2 ^= tmp; tmp = (*((mixtabs)+((768) + __byte_perm(S00, 0, 17472))));
+		c3 ^= tmp; uint32_t tmp2 = __byte_perm(c0 ^ r0, c1 ^ r1, 13878); tmp = __byte_perm(c2 ^ r2, c3 ^ r3, 5140);
+		S33 = __byte_perm(tmp2, tmp, 12884); r0 = ((r0 << 8) | (r0 >> (32 - 8))); r1 = ((r1 << 8) | (r1 >> (32 - 8)));
+		r2 = ((r2 << 8) | (r2 >> (32 - 8))); r3 = ((r3 << 8) | (r3 >> (32 - 8))); tmp2 = __byte_perm(c1 ^ r0, c2 ^ r1, 13878);
+		tmp = __byte_perm(c3 ^ r2, c0 ^ r3, 5140); S34 = __byte_perm(tmp2, tmp, 12884); r0 = ((r0 << 8) | (r0 >> (32 - 8)));
+		r1 = ((r1 << 8) | (r1 >> (32 - 8))); r2 = ((r2 << 8) | (r2 >> (32 - 8))); r3 = ((r3 << 8) | (r3 >> (32 - 8)));
+		tmp2 = __byte_perm(c2 ^ r0, c3 ^ r1, 13878); tmp = __byte_perm(c0 ^ r2, c1 ^ r3, 5140);
+		S35 = __byte_perm(tmp2, tmp, 12884); r0 = ((r0 << 8) | (r0 >> (32 - 8)));
+		r1 = ((r1 << 8) | (r1 >> (32 - 8))); r2 = ((r2 << 8) | (r2 >> (32 - 8)));
+		r3 = ((r3 << 8) | (r3 >> (32 - 8))); tmp2 = __byte_perm(c3 ^ r0, c0 ^ r1, 13878);
+		tmp = __byte_perm(c1 ^ r2, c2 ^ r3, 5140); S00 = __byte_perm(tmp2, tmp, 12884);
+
+		CMIX36(S30, S31, S32, S34, S35, S00, S12, S13, S14);
+		SMIX(S30, S31, S32, S33);
+		CMIX36(S27, S28, S29, S31, S32, S33, S09, S10, S11);
+		SMIX(S27, S28, S29, S30);
+		CMIX36(S24, S25, S26, S28, S29, S30, S06, S07, S08);
+		SMIX(S24, S25, S26, S27);
+
+		TIX4(Hash[1], S24, S25, S28, S31, S32, S10, S12, S15, S18);
+		CMIX36(S21, S22, S23, S25, S26, S27, S03, S04, S05);
+		SMIX(S21, S22, S23, S24);
+		CMIX36(S18, S19, S20, S22, S23, S24, S00, S01, S02);
+		SMIX(S18, S19, S20, S21); 
+		CMIX36(S15, S16, S17, S19, S20, S21, S33, S34, S35);
+		SMIX(S15, S16, S17, S18);
+		CMIX36(S12, S13, S14, S16, S17, S18, S30, S31, S32);
+		SMIX(S12, S13, S14, S15);
+			
+		TIX4(Hash[2], S12, S13, S16, S19, S20, S34, S00, S03, S06); 
+		CMIX36(S09, S10, S11, S13, S14, S15, S27, S28, S29); 
+		SMIX(S09, S10, S11, S12); 
+		CMIX36(S06, S07, S08, S10, S11, S12, S24, S25, S26); 
+		SMIX(S06, S07, S08, S09); 
+		CMIX36(S03, S04, S05, S07, S08, S09, S21, S22, S23); 
+		SMIX(S03, S04, S05, S06); 
+		CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20); 
+		SMIX(S00, S01, S02, S03); 
+
+#pragma unroll
+		for (int i = 3; i < (5 * 3); i += 3)
 		{
 			FUGUE512_3((Hash[i]), (Hash[i + 1]), (Hash[i + 2]));
 		}
-		FUGUE512_3((Hash[0xF]), bchi, bclo);
+		FUGUE512_3((Hash[0xF]), 0, 64 << 3);
 
 	//#pragma unroll 32
 		for (int i = 0; i < 32; i++) {
@@ -780,7 +894,7 @@ void x13_fugue512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, cons
 		SMIX(S01, S02, S03, S04);
 
 		S05 ^= S01;
-		if (cuda_swab32(S05) <= pTarget[7])
+		if (cuda_swab32(S05) <= backup)
 		{
 			uint32_t tmp = atomicExch(d_nonce, nounce);
 			if (tmp != 0xffffffff)
