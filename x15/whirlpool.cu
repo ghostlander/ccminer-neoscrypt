@@ -57,11 +57,11 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 19); // 19=256*256*8;
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 20); // 19=256*256*8;
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		((uint32_t*)ptarget)[7] = 0x0f;
 
 	if (!init[thr_id]) {
 		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
@@ -103,7 +103,10 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 					res++;
 				}
 				#endif
+
 				pdata[19] = foundNonce;
+				if (opt_benchmark) applog(LOG_INFO, "found nounce", thr_id, foundNonce, vhash64[7], Htarg);
+
 				return res;
 			}
 			else if (vhash64[7] > Htarg) {

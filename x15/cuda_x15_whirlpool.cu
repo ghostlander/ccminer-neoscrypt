@@ -17,7 +17,7 @@ __constant__ uint32_t pTarget[8];
 uint32_t *d_wnounce[MAX_GPUS];
 uint32_t *d_WNonce[MAX_GPUS];
 
-#define USE_ALL_TABLES 1
+#define USE_ALL_TABLES 0
 
 __constant__ static uint64_t mixTob0Tox[256];
 #if USE_ALL_TABLES
@@ -193,6 +193,7 @@ static const uint64_t old1_T0[256] = {
 	SPH_C64(0x3F6B933FF815F8F8), SPH_C64(0xA4C244A486978686)
 };
 
+#if USE_ALL_TABLES
 
 static const uint64_t old1_T1[256] = {
 	SPH_C64(0xD8C0781828181878), SPH_C64(0x2605AF23652323AF),
@@ -1110,7 +1111,10 @@ static const uint64_t old1_T7[256] = {
 	SPH_C64(0x2888755D88287828), SPH_C64(0x5C3186DA315CE45C),
 	SPH_C64(0xF83F6B933FF815F8), SPH_C64(0x86A4C244A4869786)
 };
+#endif
 
+
+/*
 static const uint64_t old1_RC[10] = {
 	SPH_C64(0x4F01B887E8C62318),
 	SPH_C64(0x52916F79F5D2A636),
@@ -1123,6 +1127,7 @@ static const uint64_t old1_RC[10] = {
 	SPH_C64(0x9E4717DD667CEEFB),
 	SPH_C64(0x33835AAD07BF2DCA)
 };
+*/
 
 static const uint64_t plain_T0[256] = {
 	SPH_C64(0xD83078C018601818), SPH_C64(0x2646AF05238C2323),
@@ -1254,6 +1259,8 @@ static const uint64_t plain_T0[256] = {
 	SPH_C64(0x7550885D28A02828), SPH_C64(0x86B831DA5C6D5C5C),
 	SPH_C64(0x6BED3F93F8C7F8F8), SPH_C64(0xC211A44486228686)
 };
+
+#if USE_ALL_TABLES
 
 static const uint64_t plain_T1[256] = {
 	SPH_C64(0x3078C018601818D8), SPH_C64(0x46AF05238C232326),
@@ -2175,72 +2182,31 @@ static const uint64_t plain_T7[256] = {
 /**
  * Round constants.
  */
-__constant__ uint64_t InitVector_RC[10];
-
-static const uint64_t plain_RC[10] = {
-	SPH_C64(0x4F01B887E8C62318),
-	SPH_C64(0x52916F79F5D2A636),
-	SPH_C64(0x357B0CA38E9BBC60),
-	SPH_C64(0x57FE4B2EC2D7E01D),
-	SPH_C64(0xDA4AF09FE5377715),
-	SPH_C64(0x856BA0B10A29C958),
-	SPH_C64(0x67053ECBF4105DBD),
-	SPH_C64(0xD8957DA78B4127E4),
-	SPH_C64(0x9E4717DD667CEEFB),
-	SPH_C64(0x33835AAD07BF2DCA)
-};
-
-/* ====================================================================== */
-
-
-#define TRANSFER(dst, src) { \
-	dst[0] = src ## 0; \
-	dst[1] = src ## 1; \
-	dst[2] = src ## 2; \
-	dst[3] = src ## 3; \
-	dst[4] = src ## 4; \
-	dst[5] = src ## 5; \
-	dst[6] = src ## 6; \
-	dst[7] = src ## 7; \
-}
+#endif
 
 #if !USE_ALL_TABLES
-#define BYTE(x, n) ((unsigned)((x) >> (8 * (n))) & 0xFF)
-
-/* method disabled to reduce code size */
-__device__ __forceinline__
-static uint64_t table_skew(uint64_t val, int num) {
-	return ROTL64(val, 8 * num);
-}
 
 __device__ __forceinline__
-static uint64_t ROUND_ELT(const uint64_t* sharedMemory, uint64_t* __restrict__ in,
+static uint2 ROUND_ELT(const uint2* sharedMemory, uint2* __restrict__ in,
 	int i0,int i1,int i2,int i3,int i4,int i5,int i6,int i7)
 {
 	uint32_t idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7;
-	idx0 = BYTE(in[i0], 0);
-	idx1 = BYTE(in[i1], 1);
-	idx2 = BYTE(in[i2], 2);
-	idx3 = BYTE(in[i3], 3);
-	idx4 = BYTE(in[i4], 4);
-	idx5 = BYTE(in[i5], 5);
-	idx6 = BYTE(in[i6], 6);
-	idx7 = BYTE(in[i7], 7);
+	uint32_t* in32 = (uint32_t*)in;
+	idx0 = __byte_perm(in32[(i0 << 1)], 0, 0x4440);
+	idx1 = __byte_perm(in32[(i1 << 1)], 0, 0x4441);
+	idx2 = __byte_perm(in32[(i2 << 1)], 0, 0x4442);
+	idx3 = __byte_perm(in32[(i3 << 1)], 0, 0x4443);
+	idx4 = __byte_perm(in32[(i4 << 1)+1], 0, 0x4440);
+	idx5 = __byte_perm(in32[(i5 << 1)+1], 0, 0x4441);
+	idx6 = __byte_perm(in32[(i6 << 1)+1], 0, 0x4442);
+	idx7 = __byte_perm(in32[(i7 << 1)+1], 0, 0x4443);
 
-	return xor8(
-		sharedMemory[idx0],
-		table_skew(sharedMemory[idx1], 1),
-		table_skew(sharedMemory[idx2], 2),
-		table_skew(sharedMemory[idx3], 3),
-		table_skew(sharedMemory[idx4], 4),
-		table_skew(sharedMemory[idx5], 5),
-		table_skew(sharedMemory[idx6], 6),
-		table_skew(sharedMemory[idx7], 7)
-	);
+	return(
+		sharedMemory[idx0] ^ ROL2(sharedMemory[idx1], 8) ^ ROL2(sharedMemory[idx2], 16) ^
+		ROL2(sharedMemory[idx3], 24) ^ SWAPDWORDS2(sharedMemory[idx4]) ^ ROL2(sharedMemory[idx5], 40) ^
+		ROL2(sharedMemory[idx6], 48)^ROL2(sharedMemory[idx7], 56));
 }
-
 #else
-
 __device__ __forceinline__
 static uint64_t ROUND_ELT(const uint64_t* sharedMemory, uint64_t* __restrict__ in,
 const int i0, const int i1, const int i2, const int i3, const int i4, const int i5, const int i6, const int i7)
@@ -2253,293 +2219,504 @@ const int i0, const int i1, const int i2, const int i3, const int i4, const int 
 }
 #endif /* USE_ALL_TABLES */
 
-#define ROUND(table, in, out, c0, c1, c2, c3, c4, c5, c6, c7) { \
-	out ## 0 = xor1(ROUND_ELT(table, in, 0, 7, 6, 5, 4, 3, 2, 1), c0); \
-	out ## 1 = xor1(ROUND_ELT(table, in, 1, 0, 7, 6, 5, 4, 3, 2), c1); \
-	out ## 2 = xor1(ROUND_ELT(table, in, 2, 1, 0, 7, 6, 5, 4, 3), c2); \
-	out ## 3 = xor1(ROUND_ELT(table, in, 3, 2, 1, 0, 7, 6, 5, 4), c3); \
-	out ## 4 = xor1(ROUND_ELT(table, in, 4, 3, 2, 1, 0, 7, 6, 5), c4); \
-	out ## 5 = xor1(ROUND_ELT(table, in, 5, 4, 3, 2, 1, 0, 7, 6), c5); \
-	out ## 6 = xor1(ROUND_ELT(table, in, 6, 5, 4, 3, 2, 1, 0, 7), c6); \
-	out ## 7 = xor1(ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0), c7); \
-} 
-
-#define ROUND1(table, in, out,c) { \
-	out ## 0 = xor1(ROUND_ELT(table, in, 0, 7, 6, 5, 4, 3, 2, 1),c); \
-	out ## 1 = ROUND_ELT(table, in, 1, 0, 7, 6, 5, 4, 3, 2); \
-	out ## 2 = ROUND_ELT(table, in, 2, 1, 0, 7, 6, 5, 4, 3); \
-	out ## 3 = ROUND_ELT(table, in, 3, 2, 1, 0, 7, 6, 5, 4); \
-	out ## 4 = ROUND_ELT(table, in, 4, 3, 2, 1, 0, 7, 6, 5); \
-	out ## 5 = ROUND_ELT(table, in, 5, 4, 3, 2, 1, 0, 7, 6); \
-	out ## 6 = ROUND_ELT(table, in, 6, 5, 4, 3, 2, 1, 0, 7); \
-	out ## 7 = ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0); \
-} 
-
-#define ROUND_KSCHED(table, in, out, c) \
-	ROUND1(table, in, out,c) \
-	TRANSFER(in, out)
-
-#define ROUND_WENC(table, in, key, out) \
-	ROUND(table, in, out, key[0], key[1], key[2],key[3], key[4], key[5], key[6], key[7]) \
-	TRANSFER(in, out)
 
 
-__global__
+__global__ 
 void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
-	__shared__ uint64_t sharedMemory[2048];
+#if USE_ALL_TABLES
+	__shared__ uint2 sharedMemory[2048];
+#else
+	__shared__ uint2 sharedMemory[256];
+#endif
 
 	if (threadIdx.x < 256) {
-		sharedMemory[threadIdx.x] = mixTob0Tox[threadIdx.x];
-		#if USE_ALL_TABLES
-			sharedMemory[threadIdx.x+256]  = mixTob1Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+512]  = mixTob2Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+768]  = mixTob3Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1024] = mixTob4Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1280] = mixTob5Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1536] = mixTob6Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1792] = mixTob7Tox[threadIdx.x];
-		#endif
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
+#if USE_ALL_TABLES
+		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = vectorize(mixTob2Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 768] = vectorize(mixTob3Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 1024] = vectorize(mixTob4Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 1280] = vectorize(mixTob5Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 1536] = vectorize(mixTob6Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 1792] = vectorize(mixTob7Tox[threadIdx.x]);
+#endif
 	}
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		const uint2 InitVector_RC[10] =
+		{
+			vectorize(SPH_C64(0x4F01B887E8C62318)),
+			vectorize(SPH_C64(0x52916F79F5D2A636)),
+			vectorize(SPH_C64(0x357B0CA38E9BBC60)),
+			vectorize(SPH_C64(0x57FE4B2EC2D7E01D)),
+			vectorize(SPH_C64(0xDA4AF09FE5377715)),
+			vectorize(SPH_C64(0x856BA0B10A29C958)),
+			vectorize(SPH_C64(0x67053ECBF4105DBD)),
+			vectorize(SPH_C64(0xD8957DA78B4127E4)),
+			vectorize(SPH_C64(0x9E4717DD667CEEFB)),
+			vectorize(SPH_C64(0x33835AAD07BF2DCA))
+		};
+
+
 		uint32_t nounce = startNounce + thread;
 		union {
 			uint8_t h1[64];
 			uint32_t h4[16];
-			uint64_t h8[8];
+			uint2 h8[8];
 		} hash;
 
-		uint64_t state[8];
-		uint64_t n[8];
-		uint64_t h[8];
+		uint2 state[8];
+		uint2 n[8];
+		uint2 h[8];
 
-		#pragma unroll 8
-		for (int i=0; i<8; i++) {
-			n[i] = c_PaddedMessage80[i];  // read data
-			h[i] = 0;                     // read state
+#pragma unroll 8
+		for (int i = 0; i<8; i++) {
+			n[i] = vectorize(c_PaddedMessage80[i]);  // read data
+			h[i] = vectorizelow(0);                     // read state
 		}
 
-		#pragma unroll 10
-		for (unsigned r=0; r < 10; r++) {
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
-			ROUND_WENC(sharedMemory, n, h, tmp);
+#pragma unroll 10
+		for (int i = 0; i < 10; i++)
+		{
+			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[i];
+			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
+			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
+			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
+			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5);
+			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6);
+			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7);
+			tmp7 = ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0);
+			h[0] = tmp0;
+			h[1] = tmp1;
+			h[2] = tmp2;
+			h[3] = tmp3;
+			h[4] = tmp4;
+			h[5] = tmp5;
+			h[6] = tmp6;
+			h[7] = tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ h[7];
+			n[0] = tmp0;
+			n[1] = tmp1;
+			n[2] = tmp2;
+			n[3] = tmp3;
+			n[4] = tmp4;
+			n[5] = tmp5;
+			n[6] = tmp6;
+			n[7] = tmp7;
 		}
 
-		#pragma unroll 8
-		for (int i=0; i < 8; i++) {
-			state[i] = xor1(n[i],c_PaddedMessage80[i]);
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {
+			state[i] = n[i]^vectorize(c_PaddedMessage80[i]);
 		}
 
 		/// round 2 ///////
 		//////////////////////////////////
 
-		#pragma unroll 8
-		for (int i=0; i<8; i++) {
+#pragma unroll 8
+		for (int i = 0; i<8; i++) {
 			h[i] = state[i];   //read state
 		}
-		n[0] = xor1(c_PaddedMessage80[8], h[0]);
-		n[1] = xor1(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)), h[1]);
-		n[2] = xor1(0x0000000000000080, h[2]);
+		n[0] = vectorize(c_PaddedMessage80[8])^ h[0];
+		n[1] = vectorize(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)))^ h[1];
+		n[2] = vectorizelow(0x0000000000000080)^h[2];
 		n[3] = h[3];
 		n[4] = h[4];
 		n[5] = h[5];
 		n[6] = h[6];
-		n[7] = xor1(0x8002000000000000, h[7]);
+		n[7] = vectorize(0x8002000000000000)^ h[7];
 
-		#pragma unroll 10
-		for (unsigned r=0; r < 10; r++) {
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
-			ROUND_WENC(sharedMemory, n, h, tmp);
+#pragma unroll 10
+		for (int i = 0; i < 10; i++)
+		{
+			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^InitVector_RC[i];
+			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
+			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
+			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
+			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5);
+			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6);
+			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7);
+			tmp7 = ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0);
+			h[0] = tmp0;
+			h[1] = tmp1;
+			h[2] = tmp2;
+			h[3] = tmp3;
+			h[4] = tmp4;
+			h[5] = tmp5;
+			h[6] = tmp6;
+			h[7] = tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ h[7];
+			n[0] = tmp0;
+			n[1] = tmp1;
+			n[2] = tmp2;
+			n[3] = tmp3;
+			n[4] = tmp4;
+			n[5] = tmp5;
+			n[6] = tmp6;
+			n[7] = tmp7;
 		}
 
-		state[0] = xor3(state[0], n[0], c_PaddedMessage80[8]);
-		state[1] = xor3(state[1], n[1], REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)) );
-		state[2] = xor3(state[2], n[2], 0x0000000000000080);
-		state[3] = xor1(state[3], n[3]);
-		state[4] = xor1(state[4], n[4]);
-		state[5] = xor1(state[5], n[5]);
-		state[6] = xor1(state[6], n[6]);
-		state[7] = xor3(state[7], n[7], 0x8002000000000000);
+		state[0] = state[0]^ n[0]^vectorize(c_PaddedMessage80[8]);
+		state[1] = state[1]^ n[1]^vectorize(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)));
+		state[2] = state[2]^ n[2]^vectorizelow(0x0000000000000080);
+		state[3] = state[3]^ n[3];
+		state[4] = state[4]^ n[4];
+		state[5] = state[5]^ n[5];
+		state[6] = state[6]^ n[6];
+		state[7] = state[7]^ n[7]^vectorize(0x8002000000000000);
 
-		#pragma unroll 8
+#pragma unroll 8
 		for (unsigned i = 0; i < 8; i++)
 			hash.h8[i] = state[i];
 
 		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 
-		#pragma unroll 16
-		for (int i=0; i<16; i++)
+#pragma unroll 16
+		for (int i = 0; i<16; i++)
 			outHash[i] = hash.h4[i];
-
 	} // thread < threads
 }
-
-__global__ 
+__global__ __launch_bounds__(256,2)
 void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-	__shared__ uint64_t sharedMemory[2048];
-
-	if (threadIdx.x < 256) {
-		sharedMemory[threadIdx.x] = mixTob0Tox[threadIdx.x];
-		#if USE_ALL_TABLES
-			sharedMemory[threadIdx.x+256]  = mixTob1Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+512]  = mixTob2Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+768]  = mixTob3Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1024] = mixTob4Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1280] = mixTob5Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1536] = mixTob6Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1792] = mixTob7Tox[threadIdx.x];
-		#endif
+#if USE_ALL_TABLES
+	__shared__ uint2 sharedMemory[2048];
+#else
+	__shared__ uint2 sharedMemory[256];
+#endif
+	if (threadIdx.x < 256) 
+	{
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
+#if USE_ALL_TABLES
+		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+512]  =vectorize( mixTob2Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+768]  = vectorize(mixTob3Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1024] = vectorize(mixTob4Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1280] = vectorize(mixTob5Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1536] = vectorize(mixTob6Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1792] = vectorize(mixTob7Tox[threadIdx.x]);
+#endif
 	}
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce =  (startNounce + thread);
+
+		uint32_t nounce = (startNounce + thread);
 		uint32_t hashPosition = (nounce - startNounce) << 3;
-		uint64_t hash[8], state[8], n[8], h[8] = { 0 };
+		uint2 hash[8], state[8], n[8], h[8] = { 0 };
 		uint8_t i;
 
-		#pragma unroll 8
-		for (i=0; i<8; i++)
-			n[i] = hash[i] = g_hash[hashPosition + i];
+		const uint2 InitVector_RC[10] =
+		{
+			vectorize(SPH_C64(0x4F01B887E8C62318)),
+			vectorize(SPH_C64(0x52916F79F5D2A636)),
+			vectorize(SPH_C64(0x357B0CA38E9BBC60)),
+			vectorize(SPH_C64(0x57FE4B2EC2D7E01D)),
+			vectorize(SPH_C64(0xDA4AF09FE5377715)),
+			vectorize(SPH_C64(0x856BA0B10A29C958)),
+			vectorize(SPH_C64(0x67053ECBF4105DBD)),
+			vectorize(SPH_C64(0xD8957DA78B4127E4)),
+			vectorize(SPH_C64(0x9E4717DD667CEEFB)),
+			vectorize(SPH_C64(0x33835AAD07BF2DCA))
+		};
 
-		#pragma unroll 10
-		for (i=0; i < 10; i++) {
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[i]);
-			ROUND_WENC(sharedMemory, n, h, tmp);
+
+#pragma unroll 8
+		for (i = 0; i<8; i++)
+			n[i] = hash[i] = vectorize(g_hash[hashPosition + i]);
+
+#pragma unroll 10
+		for (i = 0; i < 10; i++)
+		{
+			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[i]; 
+			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2); 
+			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3); 
+			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4); 
+			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5); 
+			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6); 
+			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7); 
+			tmp7= ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0); 
+			h[0] = tmp0; 
+			h[1] = tmp1; 
+			h[2] = tmp2; 
+			h[3] = tmp3; 
+			h[4] = tmp4; 
+			h[5] = tmp5; 
+			h[6] = tmp6; 
+			h[7] = tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0]; 
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ h[7];
+		    n[0] = tmp0; 
+			n[1] = tmp1; 
+			n[2] = tmp2; 
+			n[3] = tmp3; 
+			n[4] = tmp4; 
+			n[5] = tmp5; 
+			n[6] = tmp6; 
+			n[7] = tmp7; 
 		}
 
-		#pragma unroll 8
-		for (i=0; i<8; i++)
-			state[i] = xor1(n[i], hash[i]);
+#pragma unroll 8
+		for (i = 0; i<8; i++)
+			state[i] = n[i]^ hash[i];
 
-		#pragma unroll 8
-		for (i=0; i < 8; i++) {
+#pragma unroll 8
+		for (i = 0; i < 8; i++) {
 			h[i] = state[i];
 		}
-		n[0] = xor1(0x80, state[0]);
+		n[0] = vectorizelow(0x80)^state[0];
 		n[1] = state[1];
 		n[2] = state[2];
 		n[3] = state[3];
 		n[4] = state[4];
 		n[5] = state[5];
 		n[6] = state[6];
-		n[7] = xor1(0x2000000000000, state[7]);
+		n[7] = vectorize(0x2000000000000)^ state[7];
 
-		#pragma unroll 10
-		for (i=0; i < 10; i++) {
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[i]);
-			ROUND_WENC(sharedMemory, n, h, tmp);
+#pragma unroll 10
+		for (i = 0; i < 10; i++) 
+		{
+			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[i]; 
+			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2); 
+			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3); 
+			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4); 
+			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5); 
+			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6); 
+			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7); 
+			tmp7 = ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0); 
+			h[0] = tmp0; 
+			h[1] = tmp1; 
+			h[2] = tmp2; 
+			h[3] = tmp3; 
+			h[4] = tmp4; 
+			h[5] = tmp5; 
+			h[6] = tmp6; 
+			h[7] = tmp7; 
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1) ^ h[0];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0)^ h[7]; 
+			n[0] = tmp0; 
+			n[1] = tmp1; 
+			n[2] = tmp2; 
+			n[3] = tmp3; 
+			n[4] = tmp4; 
+			n[5] = tmp5; 
+			n[6] = tmp6; 
+			n[7] = tmp7;
 		}
 
-		state[0] = xor3(state[0], n[0], 0x80);
-		state[1] = xor1(state[1], n[1]);
-		state[2] = xor1(state[2], n[2]);
-		state[3] = xor1(state[3], n[3]);
-		state[4] = xor1(state[4], n[4]);
-		state[5] = xor1(state[5], n[5]);
-		state[6] = xor1(state[6], n[6]);
-		state[7] = xor3(state[7], n[7], 0x2000000000000);
+		state[0] = state[0] ^ n[0]^ vectorizelow(0x80);
+		state[1] = state[1] ^ n[1];
+		state[2] = state[2] ^ n[2];
+		state[3] = state[3] ^ n[3];
+		state[4] = state[4] ^ n[4];
+		state[5] = state[5] ^ n[5];
+		state[6] = state[6] ^ n[6];
+		state[7] = state[7] ^ n[7] ^ vectorize(0x2000000000000);
 
-		#pragma unroll 8
-		for (i=0; i < 8; i++)
-			g_hash[hashPosition + i] = state[i];
+#pragma unroll 8
+		for (i = 0; i < 8; i++)
+			g_hash[hashPosition + i] = devectorize(state[i]);
 	}
 }
 
-__global__ 
+__global__
 void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resNounce)
 {
-	__shared__ uint64_t sharedMemory[2048];
+#if USE_ALL_TABLES
+	__shared__ uint2 sharedMemory[2048];
+#else
+	__shared__ uint2 sharedMemory[256];
+#endif
 
 	if (threadIdx.x < 256)
 	{
-		sharedMemory[threadIdx.x] = mixTob0Tox[threadIdx.x];
-		#if USE_ALL_TABLES
-			sharedMemory[threadIdx.x+256]  = mixTob1Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+512]  = mixTob2Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+768]  = mixTob3Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1024] = mixTob4Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1280] = mixTob5Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1536] = mixTob6Tox[threadIdx.x];
-			sharedMemory[threadIdx.x+1792] = mixTob7Tox[threadIdx.x];
-		#endif
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
+#if USE_ALL_TABLES
+		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+512]  =vectorize( mixTob2Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+768]  = vectorize(mixTob3Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1024] = vectorize(mixTob4Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1280] = vectorize(mixTob5Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1536] = vectorize(mixTob6Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x+1792] = vectorize(mixTob7Tox[threadIdx.x]);
+#endif
 	}
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		const uint64_t target = ((uint64_t*)pTarget)[3];
+
 		uint32_t nounce =  (startNounce + thread);
+		
+		const uint2 InitVector_RC[10] =
+		{
+			vectorize(SPH_C64(0x4F01B887E8C62318)),
+			vectorize(SPH_C64(0x52916F79F5D2A636)),
+			vectorize(SPH_C64(0x357B0CA38E9BBC60)),
+			vectorize(SPH_C64(0x57FE4B2EC2D7E01D)),
+			vectorize(SPH_C64(0xDA4AF09FE5377715)),
+			vectorize(SPH_C64(0x856BA0B10A29C958)),
+			vectorize(SPH_C64(0x67053ECBF4105DBD)),
+			vectorize(SPH_C64(0xD8957DA78B4127E4)),
+			vectorize(SPH_C64(0x9E4717DD667CEEFB)),
+			vectorize(SPH_C64(0x33835AAD07BF2DCA))
+		};
 
 		int hashPosition = nounce - startNounce;
 		uint64_t *inpHash = (uint64_t*) &g_hash[8 * hashPosition];
-		uint64_t h8[8];
+		uint2 h8[8];
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
-			h8[i] = inpHash[i];
+			h8[i] = vectorize(inpHash[i]);
 		}
 
-		uint64_t state[8];
-		uint64_t n[8];
-		uint64_t h[8];
+		uint2 state[8];
+		uint2 n[8];
+		uint2 h[8];
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
 			n[i] = h8[i];
-			h[i] = 0;
+			h[i] = vectorizelow(0);
 		}
 
 		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
-			ROUND_WENC(sharedMemory, n, h, tmp);
+			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[r];
+			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
+			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
+			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
+			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5);
+			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6);
+			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7);
+			tmp7 = ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0);
+			h[0] = tmp0;
+			h[1] = tmp1;
+			h[2] = tmp2;
+			h[3] = tmp3;
+			h[4] = tmp4;
+			h[5] = tmp5;
+			h[6] = tmp6;
+			h[7] = tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2)^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3)^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4)^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5)^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6)^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7)^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0)^ h[7];
+			n[0] = tmp0;
+			n[1] = tmp1;
+			n[2] = tmp2;
+			n[3] = tmp3;
+			n[4] = tmp4;
+			n[5] = tmp5;
+			n[6] = tmp6;
+			n[7] = tmp7;
+		
 		}
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
-			state[i] = xor1(n[i], h8[i]);
+			state[i] =n[i]^h8[i];
 		}
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {
 			h[i] = state[i];
 		}
-		n[0] = xor1(0x80, state[0]);
+		n[0] = vectorizelow(0x80)^state[0];
 		n[1] = state[1];
 		n[2] = state[2];
 		n[3] = state[3];
 		n[4] = state[4];
 		n[5] = state[5];
 		n[6] = state[6];
-		n[7] = xor1(0x2000000000000, state[7]);
+		n[7] = vectorize(0x2000000000000)^state[7];
 
-		#pragma unroll 10
-		for (unsigned r=0; r < 10; r++) {
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
-			ROUND_WENC(sharedMemory, n, h, tmp);
+		#pragma unroll 9
+		for (unsigned r=0; r < 9; r++) 
+		{
+			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^InitVector_RC[r];
+			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
+			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
+			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
+			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5);
+			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6);
+			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7);
+			tmp7 = ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0);
+			h[0] = tmp0;
+			h[1] = tmp1;
+			h[2] = tmp2;
+			h[3] = tmp3;
+			h[4] = tmp4;
+			h[5] = tmp5;
+			h[6] = tmp6;
+			h[7] = tmp7;
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ h[7];
+			n[0] = tmp0;
+			n[1] = tmp1;
+			n[2] = tmp2;
+			n[3] = tmp3;
+			n[4] = tmp4;
+			n[5] = tmp5;
+			n[6] = tmp6;
+			n[7] = tmp7;
 		}
+		uint2 tmp3;
+		tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
+		h[3] = tmp3;
+		tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+		n[3] = tmp3;
 
-		state[0] = xor3(state[0], n[0], 0x80);
-		state[1] = xor1(state[1], n[1]);
-		state[2] = xor1(state[2], n[2]);
-		state[3] = xor1(state[3], n[3]);
-		state[4] = xor1(state[4], n[4]);
-		state[5] = xor1(state[5], n[5]);
-		state[6] = xor1(state[6], n[6]);
-		state[7] = xor3(state[7], n[7], 0x2000000000000);
+		state[3] = state[3] ^ n[3];
 
-		bool rc = (state[3] <= ((uint64_t*)pTarget)[3]);
+		bool rc = devectorize(state[3]) <= target;
 		if (rc && resNounce[0] > nounce)
 			resNounce[0] = nounce;
 	}
@@ -2550,7 +2727,6 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 {
 	switch (mode) {
 	case 0: /* x15 with rotated T1-T7 (based on T0) */
-		cudaMemcpyToSymbol(InitVector_RC, plain_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
 #if USE_ALL_TABLES
 		cudaMemcpyToSymbol(mixTob1Tox, plain_T1, (256*8), 0, cudaMemcpyHostToDevice);
@@ -2564,8 +2740,8 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		break;
 
 	case 1: /* old whirlpool */
-		cudaMemcpyToSymbol(InitVector_RC, old1_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob0Tox, old1_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
+#if USE_ALL_TABLES
 		cudaMemcpyToSymbol(mixTob1Tox, old1_T1, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob2Tox, old1_T2, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob3Tox, old1_T3, (256*8), 0, cudaMemcpyHostToDevice);
@@ -2573,6 +2749,7 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		cudaMemcpyToSymbol(mixTob5Tox, old1_T5, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
+#endif
 		cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t));
 		cudaMallocHost(&d_wnounce[thr_id], sizeof(uint32_t));
 		break;
