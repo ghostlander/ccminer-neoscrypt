@@ -80,14 +80,36 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	uint32_t endiandata[20];
 	const uint32_t first_nonce = pdata[19];
 	int intensity = 256 * 256 * 10;
-	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 20;
+	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 14;
 
-	uint32_t throughput = device_intensity(thr_id, __func__, intensity); 
+	intensity = 256 * 256 * 10;
+
+	cudaDeviceProp props;
+	cudaGetDeviceProperties(&props, device_map[thr_id]);
+	if (strstr(props.name, "970"))
+	{
+		intensity = 256 * 256 * 15;
+	}
+	else if (strstr(props.name, "980"))
+	{
+		intensity = 256 * 256 * 15;
+	}
+	else if (strstr(props.name, "750"))
+	{
+		intensity = 256 * 256 * 10;
+	}
+	else if (strstr(props.name, "960"))
+	{
+		intensity = 256 * 256 * 14;
+	}
+	uint32_t throughput = device_intensity(thr_id, __func__, intensity);
+
+
 
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{
