@@ -719,7 +719,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
 	}
 }
 
-__global__ __launch_bounds__(128,6)
+__global__ __launch_bounds__(256,3)
 void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, const uint32_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_nonce)
 {
 	__shared__ uint32_t mixtabs[1024];
@@ -727,16 +727,12 @@ void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t start
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread< threads)
 	{
-		if (threadIdx.x < 128)
+		if (threadIdx.x < 256)
 		{
 			mixtabs[threadIdx.x] = mixTab0Tex[threadIdx.x];
-			mixtabs[threadIdx.x + 128] = mixTab0Tex[threadIdx.x + 128];
 			mixtabs[256 + threadIdx.x] = mixTab1Tex[threadIdx.x];
-			mixtabs[256 + threadIdx.x + 128] = mixTab1Tex[threadIdx.x + 128];
 			mixtabs[(512 + threadIdx.x)] = mixTab2Tex[threadIdx.x];
-			mixtabs[(512 + threadIdx.x) + 128] = mixTab2Tex[threadIdx.x + 128];
 			mixtabs[(768 + threadIdx.x)] = mixTab3Tex[threadIdx.x];
-			mixtabs[(768 + threadIdx.x) + 128] = mixTab3Tex[threadIdx.x + 128];
 		}
 			uint32_t nounce =  (startNounce + thread);
 		int hashPosition = nounce - startNounce;
@@ -934,7 +930,7 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 }
 __host__ void x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t *res)
 {
-	const uint32_t threadsperblock = 128;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
