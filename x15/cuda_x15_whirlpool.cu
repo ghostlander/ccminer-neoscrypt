@@ -2188,27 +2188,17 @@ static const uint64_t plain_T7[256] = {
 
 __device__ __forceinline__
 static uint2 ROUND_ELT(const uint2* sharedMemory, uint2* __restrict__ in,
-	int i0,int i1,int i2,int i3,int i4,int i5,int i6,int i7)
+const int i0,const int i1,const int i2,const int i3,const int i4,const int i5,const int i6,const int i7)
 {
-	uint32_t idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7;
 	uint32_t* in32 = (uint32_t*)in;
-	idx0 = __byte_perm(in32[(i0 << 1)], 0, 0x4440);
-	idx1 = __byte_perm(in32[(i1 << 1)], 0, 0x4441);
-	idx2 = __byte_perm(in32[(i2 << 1)], 0, 0x4442);
-	idx3 = __byte_perm(in32[(i3 << 1)], 0, 0x4443);
-	idx4 = __byte_perm(in32[(i4 << 1)+1], 0, 0x4440);
-	idx5 = __byte_perm(in32[(i5 << 1)+1], 0, 0x4441);
-	idx6 = __byte_perm(in32[(i6 << 1)+1], 0, 0x4442);
-	idx7 = __byte_perm(in32[(i7 << 1)+1], 0, 0x4443);
-
 	return(
-		sharedMemory[idx0] ^ ROL2(sharedMemory[idx1], 8) ^ ROL2(sharedMemory[idx2], 16) ^
-		ROL2(sharedMemory[idx3], 24) ^ SWAPDWORDS2(sharedMemory[idx4]) ^ ROL2(sharedMemory[idx5], 40) ^
-		ROL2(sharedMemory[idx6], 48)^ROL2(sharedMemory[idx7], 56));
+		sharedMemory[__byte_perm(in32[(i0 << 1)], 0, 0x4440)] ^ ROL2(sharedMemory[__byte_perm(in32[(i1 << 1)], 0, 0x4441)], 8) ^ ROL2(sharedMemory[__byte_perm(in32[(i2 << 1)], 0, 0x4442)], 16) ^
+		ROL2(sharedMemory[__byte_perm(in32[(i3 << 1)], 0, 0x4443)], 24) ^ SWAPDWORDS2(sharedMemory[__byte_perm(in32[(i4 << 1) + 1], 0, 0x4440)]) ^ ROL2(sharedMemory[__byte_perm(in32[(i5 << 1) + 1], 0, 0x4441)], 40) ^
+		ROL2(sharedMemory[__byte_perm(in32[(i6 << 1) + 1], 0, 0x4442)], 48) ^ ROL2(sharedMemory[__byte_perm(in32[(i7 << 1) + 1], 0, 0x4443)], 56));
 }
 #else
 __device__ __forceinline__
-static uint64_t ROUND_ELT(const uint64_t* sharedMemory, uint64_t* __restrict__ in,
+static uint64_t ROUND_ELT(const uint2* sharedMemory, uint2* __restrict__ in,
 const int i0, const int i1, const int i2, const int i3, const int i4, const int i5, const int i6, const int i7)
 {
 	uint32_t* in32 = (uint32_t*)in;
@@ -2277,7 +2267,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			h[i] = vectorizelow(0);                     // read state
 		}
 
-#pragma unroll 10
+//#pragma unroll 10
 		for (int i = 0; i < 10; i++)
 		{
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
@@ -2297,7 +2287,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			h[5] = tmp5;
 			h[6] = tmp6;
 			h[7] = tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1) ^ h[0];
 			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
 			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
 			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
@@ -2336,7 +2326,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 		n[6] = h[6];
 		n[7] = vectorize(0x8002000000000000)^ h[7];
 
-#pragma unroll 10
+//#pragma unroll 10
 		for (int i = 0; i < 10; i++)
 		{
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
