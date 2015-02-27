@@ -79,7 +79,9 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 {
 	uint32_t endiandata[20];
 	const uint32_t first_nonce = pdata[19];
-	int intensity = 256 * 256 * 14;
+	int intensity = 256 * 256 * 10;
+	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 20;
+
 	uint32_t throughput = device_intensity(thr_id, __func__, intensity); 
 
 	throughput = min(throughput, (max_nonce - first_nonce));
