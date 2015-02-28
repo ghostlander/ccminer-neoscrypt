@@ -5,7 +5,7 @@
 
 #include "cuda_helper.h"
 
-#define TPB 256
+#define TPB 512
 #define THF 4
 
 // aus cpu-miner.c
@@ -19,7 +19,7 @@
 #include "groestl_functions_quad.cu"
 #include "bitslice_transformations_quad.cu"
 
-__global__ __launch_bounds__(TPB, THF)
+__global__ __launch_bounds__(TPB, 2)
 void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
 	uint32_t msgBitsliced[8];
@@ -56,7 +56,8 @@ void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, u
     }
 }
 
-__global__ void __launch_bounds__(TPB, THF)
+/*
+__global__ void __launch_bounds__(TPB, 2)
 quark_doublegroestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t * __restrict__ g_hash, uint32_t * __restrict__ g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
@@ -113,6 +114,7 @@ quark_doublegroestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, 
         for(int k=0;k<16;k++) outpHash[k] = hash[k];
     }
 }
+*/
 
 // Setup-Funktionen
 __host__ void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
@@ -136,6 +138,7 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
+/*
 __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
@@ -148,3 +151,4 @@ __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, u
 
     quark_doublegroestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 }
+*/
