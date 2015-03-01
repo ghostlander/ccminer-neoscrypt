@@ -14,8 +14,8 @@
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t pTarget[8];
 
-uint32_t *d_wnounce[MAX_GPUS];
-uint32_t *d_WNonce[MAX_GPUS];
+static uint32_t *h_wnounce[MAX_GPUS];
+static uint32_t *d_WNonce[MAX_GPUS];
 
 #define USE_ALL_TABLES 0
 
@@ -2187,14 +2187,15 @@ static const uint64_t plain_T7[256] = {
 #if !USE_ALL_TABLES
 
 __device__ __forceinline__
-static uint2 ROUND_ELT(const uint2* sharedMemory, uint2* __restrict__ in,
+static uint2 ROUND_ELT(const uint2*const __restrict__  sharedMemory, const uint2* const __restrict__ in,
 const int i0,const int i1,const int i2,const int i3,const int i4,const int i5,const int i6,const int i7)
 {
-	uint32_t* in32 = (uint32_t*)in;
 	return(
-		sharedMemory[__byte_perm(in32[(i0 << 1)], 0, 0x4440)] ^ ROL2(sharedMemory[__byte_perm(in32[(i1 << 1)], 0, 0x4441)], 8) ^ ROL2(sharedMemory[__byte_perm(in32[(i2 << 1)], 0, 0x4442)], 16) ^
-		ROL2(sharedMemory[__byte_perm(in32[(i3 << 1)], 0, 0x4443)], 24) ^ SWAPDWORDS2(sharedMemory[__byte_perm(in32[(i4 << 1) + 1], 0, 0x4440)]) ^ ROL2(sharedMemory[__byte_perm(in32[(i5 << 1) + 1], 0, 0x4441)], 40) ^
-		ROL2(sharedMemory[__byte_perm(in32[(i6 << 1) + 1], 0, 0x4442)], 48) ^ ROL2(sharedMemory[__byte_perm(in32[(i7 << 1) + 1], 0, 0x4443)], 56));
+		sharedMemory[__byte_perm(in[(i0)].x, 0, 0x4440)] ^ ROL2(sharedMemory[__byte_perm(in[(i1)].x, 0, 0x4441)], 8) ^ ROL2(sharedMemory[__byte_perm(in[(i2)].x, 0, 0x4442)], 16) ^
+		ROL2(sharedMemory[__byte_perm(in[(i3)].x, 0, 0x4443)], 24) ^ SWAPDWORDS2(sharedMemory[__byte_perm(in[(i4)].y, 0, 0x4440)]) ^ ROL2(sharedMemory[__byte_perm(in[(i5)].y, 0, 0x4441)], 40) ^
+		ROL2(sharedMemory[__byte_perm(in[(i6)].y, 0, 0x4442)], 48) ^ ROL2(sharedMemory[__byte_perm(in[(i7)].y, 0, 0x4443)], 56));
+
+
 }
 #else
 __device__ __forceinline__
@@ -2237,18 +2238,17 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 	{
 		const uint2 InitVector_RC[10] =
 		{
-			vectorize(SPH_C64(0x4F01B887E8C62318)),
-			vectorize(SPH_C64(0x52916F79F5D2A636)),
-			vectorize(SPH_C64(0x357B0CA38E9BBC60)),
-			vectorize(SPH_C64(0x57FE4B2EC2D7E01D)),
-			vectorize(SPH_C64(0xDA4AF09FE5377715)),
-			vectorize(SPH_C64(0x856BA0B10A29C958)),
-			vectorize(SPH_C64(0x67053ECBF4105DBD)),
-			vectorize(SPH_C64(0xD8957DA78B4127E4)),
-			vectorize(SPH_C64(0x9E4717DD667CEEFB)),
-			vectorize(SPH_C64(0x33835AAD07BF2DCA))
+			{ 0xE8C62318UL, 0x4F01B887UL },
+			{ 0xF5D2A636UL, 0x52916F79UL },
+			{ 0x8E9BBC60UL, 0x357B0CA3UL },
+			{ 0xC2D7E01DUL, 0x57FE4B2EUL },
+			{ 0xE5377715UL, 0xDA4AF09FUL },
+			{ 0x0A29C958UL, 0x856BA0B1UL },
+			{ 0xF4105DBDUL, 0x67053ECBUL },
+			{ 0x8B4127E4UL, 0xD8957DA7UL },
+			{ 0x667CEEFBUL, 0x9E4717DDUL },
+			{ 0x07BF2DCAUL, 0x33835AADUL }
 		};
-
 
 		uint32_t nounce = startNounce + thread;
 		union {
@@ -2264,7 +2264,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 #pragma unroll 8
 		for (int i = 0; i<8; i++) {
 			n[i] = vectorize(c_PaddedMessage80[i]);  // read data
-			h[i] = vectorizelow(0);                     // read state
+			h[i] = make_uint2(0,0);                     // read state
 		}
 
 //#pragma unroll 10
@@ -2319,12 +2319,14 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 		}
 		n[0] = vectorize(c_PaddedMessage80[8])^ h[0];
 		n[1] = vectorize(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)))^ h[1];
-		n[2] = vectorizelow(0x0000000000000080)^h[2];
+		n[2] = h[2];
+		n[2].x ^= 0x80;
 		n[3] = h[3];
 		n[4] = h[4];
 		n[5] = h[5];
 		n[6] = h[6];
-		n[7] = vectorize(0x8002000000000000)^ h[7];
+		n[7] = h[7];
+		n[7].y ^= 0x80020000;
 
 //#pragma unroll 10
 		for (int i = 0; i < 10; i++)
@@ -2366,12 +2368,14 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 
 		state[0] = state[0]^ n[0]^vectorize(c_PaddedMessage80[8]);
 		state[1] = state[1]^ n[1]^vectorize(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)));
-		state[2] = state[2]^ n[2]^vectorizelow(0x0000000000000080);
+		state[2] = state[2]^ n[2];
 		state[3] = state[3]^ n[3];
 		state[4] = state[4]^ n[4];
 		state[5] = state[5]^ n[5];
 		state[6] = state[6]^ n[6];
-		state[7] = state[7]^ n[7]^vectorize(0x8002000000000000);
+		state[7] = state[7]^ n[7];
+		state[2].x ^= 0x80;
+		state[7].y ^= 0x80020000;
 
 #pragma unroll 8
 		for (unsigned i = 0; i < 8; i++)
@@ -2413,22 +2417,21 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		uint32_t nounce = (startNounce + thread);
 		uint32_t hashPosition = (nounce - startNounce) << 3;
 		uint2 hash[8], state[8], n[8], h[8] = { 0 };
-		uint8_t i;
+		int i;
 
 		const uint2 InitVector_RC[10] =
 		{
-			vectorize(SPH_C64(0x4F01B887E8C62318)),
-			vectorize(SPH_C64(0x52916F79F5D2A636)),
-			vectorize(SPH_C64(0x357B0CA38E9BBC60)),
-			vectorize(SPH_C64(0x57FE4B2EC2D7E01D)),
-			vectorize(SPH_C64(0xDA4AF09FE5377715)),
-			vectorize(SPH_C64(0x856BA0B10A29C958)),
-			vectorize(SPH_C64(0x67053ECBF4105DBD)),
-			vectorize(SPH_C64(0xD8957DA78B4127E4)),
-			vectorize(SPH_C64(0x9E4717DD667CEEFB)),
-			vectorize(SPH_C64(0x33835AAD07BF2DCA))
+			{ 0xE8C62318UL, 0x4F01B887UL },
+			{ 0xF5D2A636UL, 0x52916F79UL },
+			{ 0x8E9BBC60UL, 0x357B0CA3UL },
+			{ 0xC2D7E01DUL, 0x57FE4B2EUL },
+			{ 0xE5377715UL, 0xDA4AF09FUL },
+			{ 0x0A29C958UL, 0x856BA0B1UL },
+			{ 0xF4105DBDUL, 0x67053ECBUL },
+			{ 0x8B4127E4UL, 0xD8957DA7UL },
+			{ 0x667CEEFBUL, 0x9E4717DDUL },
+			{ 0x07BF2DCAUL, 0x33835AADUL }
 		};
-
 
 #pragma unroll 8
 		for (i = 0; i<8; i++)
@@ -2527,14 +2530,17 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 			n[7] = tmp7;
 		}
 
-		state[0] = state[0] ^ n[0]^ vectorizelow(0x80);
+		state[0] = state[0] ^ n[0];
 		state[1] = state[1] ^ n[1];
 		state[2] = state[2] ^ n[2];
 		state[3] = state[3] ^ n[3];
 		state[4] = state[4] ^ n[4];
 		state[5] = state[5] ^ n[5];
 		state[6] = state[6] ^ n[6];
-		state[7] = state[7] ^ n[7] ^ vectorize(0x2000000000000);
+		state[7] = state[7] ^ n[7];
+
+		state[0].x ^= 0x80;
+		state[7].y ^= 0x20000;
 
 #pragma unroll 8
 		for (i = 0; i < 8; i++)
@@ -2570,28 +2576,28 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 	{
 		const uint64_t target = ((uint64_t*)pTarget)[3];
 
-		uint32_t nounce =  (startNounce + thread);
-		
+		uint32_t nounce = (startNounce + thread);
+
 		const uint2 InitVector_RC[10] =
 		{
-			vectorize(SPH_C64(0x4F01B887E8C62318)),
-			vectorize(SPH_C64(0x52916F79F5D2A636)),
-			vectorize(SPH_C64(0x357B0CA38E9BBC60)),
-			vectorize(SPH_C64(0x57FE4B2EC2D7E01D)),
-			vectorize(SPH_C64(0xDA4AF09FE5377715)),
-			vectorize(SPH_C64(0x856BA0B10A29C958)),
-			vectorize(SPH_C64(0x67053ECBF4105DBD)),
-			vectorize(SPH_C64(0xD8957DA78B4127E4)),
-			vectorize(SPH_C64(0x9E4717DD667CEEFB)),
-			vectorize(SPH_C64(0x33835AAD07BF2DCA))
+			{ 0xE8C62318UL, 0x4F01B887UL },
+			{ 0xF5D2A636UL, 0x52916F79UL },
+			{ 0x8E9BBC60UL, 0x357B0CA3UL },
+			{ 0xC2D7E01DUL, 0x57FE4B2EUL },
+			{ 0xE5377715UL, 0xDA4AF09FUL },
+			{ 0x0A29C958UL, 0x856BA0B1UL },
+			{ 0xF4105DBDUL, 0x67053ECBUL },
+			{ 0x8B4127E4UL, 0xD8957DA7UL },
+			{ 0x667CEEFBUL, 0x9E4717DDUL },
+			{ 0x07BF2DCAUL, 0x33835AADUL }
 		};
 
 		int hashPosition = nounce - startNounce;
-		uint64_t *inpHash = (uint64_t*) &g_hash[8 * hashPosition];
+		uint64_t *inpHash = (uint64_t*)&g_hash[8 * hashPosition];
 		uint2 h8[8];
 
-		#pragma unroll 8
-		for (int i=0; i<8; i++) {
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {
 			h8[i] = vectorize(inpHash[i]);
 		}
 
@@ -2599,16 +2605,16 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 		uint2 n[8];
 		uint2 h[8];
 
-		#pragma unroll 8
-		for (int i=0; i<8; i++) {
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {
 			n[i] = h8[i];
 			h[i] = vectorizelow(0);
 		}
 
-		#pragma unroll 10
-		for (unsigned r=0; r < 10; r++) {
+#pragma unroll 10
+		for (int r = 0; r < 10; r++) {
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[r];
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1) ^ InitVector_RC[r];
 			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
 			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
 			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
@@ -2624,14 +2630,14 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 			h[5] = tmp5;
 			h[6] = tmp6;
 			h[7] = tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
-			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2)^ h[1];
-			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3)^ h[2];
-			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4)^ h[3];
-			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5)^ h[4];
-			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6)^ h[5];
-			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7)^ h[6];
-			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0)^ h[7];
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1) ^ h[0];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ h[7];
 			n[0] = tmp0;
 			n[1] = tmp1;
 			n[2] = tmp2;
@@ -2640,32 +2646,34 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 			n[5] = tmp5;
 			n[6] = tmp6;
 			n[7] = tmp7;
-		
+
 		}
 
-		#pragma unroll 8
-		for (int i=0; i<8; i++) {
-			state[i] =n[i]^h8[i];
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {
+			state[i] = n[i] ^ h8[i];
 		}
 
-		#pragma unroll 8
-		for (int i=0; i<8; i++) {
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {
 			h[i] = state[i];
 		}
-		n[0] = vectorizelow(0x80)^state[0];
+		n[0] = state[0];
 		n[1] = state[1];
 		n[2] = state[2];
 		n[3] = state[3];
 		n[4] = state[4];
 		n[5] = state[5];
 		n[6] = state[6];
-		n[7] = vectorize(0x2000000000000)^state[7];
+		n[7] = state[7];
 
-		#pragma unroll 9
-		for (unsigned r=0; r < 9; r++) 
+		n[0].x ^= 0x80;
+		n[7].y ^= 0x20000;
+#pragma unroll 9
+		for (int r = 0; r < 9; r++)
 		{
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^InitVector_RC[r];
+			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1) ^ InitVector_RC[r];
 			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2);
 			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3);
 			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4);
@@ -2681,7 +2689,7 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 			h[5] = tmp5;
 			h[6] = tmp6;
 			h[7] = tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0];
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1) ^ h[0];
 			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
 			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
 			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
@@ -2707,8 +2715,13 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 		state[3] = state[3] ^ n[3];
 
 		bool rc = devectorize(state[3]) <= target;
-		if (rc && resNounce[0] > nounce)
-			resNounce[0] = nounce;
+		if (devectorize(state[3]) <= target)
+		{
+			uint32_t tmp = atomicExch(resNounce, nounce);
+			if (tmp != 0xffffffff)
+				resNounce[1] = tmp;
+
+		}
 	}
 }
 
@@ -2740,8 +2753,8 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
 #endif
-		cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t));
-		cudaMallocHost(&d_wnounce[thr_id], sizeof(uint32_t));
+		cudaMalloc(&d_WNonce[thr_id], 2 * sizeof(uint32_t));
+		cudaMallocHost(&h_wnounce[thr_id], 2 * sizeof(uint32_t));
 		break;
 	}
 }
@@ -2750,7 +2763,7 @@ __host__
 extern void x15_whirlpool_cpu_free(int thr_id)
 {
 	cudaFree(d_WNonce[thr_id]);
-	cudaFreeHost(d_wnounce[thr_id]);
+	cudaFreeHost(h_wnounce[thr_id]);
 }
 
 __host__
@@ -2764,21 +2777,18 @@ extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 }
 
 __host__
-extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+extern uint32_t* whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
-	uint32_t result = 0xffffffff;
-
-	dim3 grid((threads + threadsperblock-1) / threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cudaMemset(d_WNonce[thr_id], 0xff, sizeof(uint32_t));
+	cudaMemset(d_WNonce[thr_id], 0xff, 2 * sizeof(uint32_t));
 
-	oldwhirlpool_gpu_finalhash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash,d_WNonce[thr_id]);
+	oldwhirlpool_gpu_finalhash_64 << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_WNonce[thr_id]);
 	//MyStreamSynchronize(NULL, order, thr_id);
 
-	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	result = *d_wnounce[thr_id];
-	return result;
+	CUDA_SAFE_CALL(cudaMemcpy(h_wnounce[thr_id], d_WNonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
+	return h_wnounce[thr_id];
 }
 
 __host__
