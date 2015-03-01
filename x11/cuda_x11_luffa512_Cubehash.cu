@@ -44,6 +44,14 @@ typedef struct {
 #define LROT(x, bits) __funnelshift_l(x, x, bits)
 #endif
 
+#define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
+#define CUBEHASH_BLOCKBYTES 32 /* this is b for CubeHashr/b */
+
+#define ROTATEUPWARDS7(a)  LROT(a,7)
+#define ROTATEUPWARDS11(a) LROT(a,11)
+
+#define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
+
 #define TWEAK(a0,a1,a2,a3,j)\
     a0 = LROT(a0,j);\
     a1 = LROT(a1,j);\
@@ -121,7 +129,6 @@ __device__ __constant__ uint32_t c_IV[40] = {
     0xf5df3999,0x0fc688f1,0xb07224cc,0x03e86cea};
 */
 
-
 __device__ __constant__ uint32_t c_CNS[80] = {
     0x303994a6,0xe0337818,0xc0e65299,0x441ba90d,
     0x6cc33a12,0x7f34d442,0xdc56983e,0x9389217f,
@@ -147,7 +154,7 @@ __device__ __constant__ uint32_t c_CNS[80] = {
 
 /***************************************************/
 __device__ __forceinline__
-void rnd512(hashState *state)
+void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 {
     int i,j;
     uint32_t t[40];
@@ -161,7 +168,7 @@ void rnd512(hashState *state)
 #pragma unroll 5
         for(j=0;j<5;j++) 
 		{
-           t[i] ^= state->chainv[i+8*j];
+           t[i] ^= statechainv[i+8*j];
         }
 	}
 
@@ -171,7 +178,7 @@ void rnd512(hashState *state)
     for(j=0;j<5;j++) {
 #pragma unroll 8
         for(i=0;i<8;i++) {
-            state->chainv[i+8*j] ^= t[i];
+            statechainv[i+8*j] ^= t[i];
         }
     }
 
@@ -179,41 +186,20 @@ void rnd512(hashState *state)
     for(j=0;j<5;j++) {
 #pragma unroll 8
         for(i=0;i<8;i++) {
-            t[i+8*j] = state->chainv[i+8*j];
+            t[i+8*j] = statechainv[i+8*j];
         }
     }
 
 #pragma unroll 5
     for(j=0;j<5;j++) {
-        MULT2(state->chainv, j);
+        MULT2(statechainv, j);
     }
 
 #pragma unroll 5
     for(j=0;j<5;j++) {
 #pragma unroll 8
         for(i=0;i<8;i++) {
-            state->chainv[8*j+i] ^= t[8*((j+1)%5)+i];
-        }
-    }
-
-#pragma unroll 5
-    for(j=0;j<5;j++) {
-#pragma unroll 8
-        for(i=0;i<8;i++) {
-            t[i+8*j] = state->chainv[i+8*j];
-        }
-    }
-
-#pragma unroll 5
-    for(j=0;j<5;j++) {
-        MULT2(state->chainv, j);
-    }
-
-#pragma unroll 5
-    for(j=0;j<5;j++) {
-#pragma unroll 8
-        for(i=0;i<8;i++) {
-            state->chainv[8*j+i] ^= t[8*((j+4)%5)+i];
+            statechainv[8*j+i] ^= t[8*((j+1)%5)+i];
         }
     }
 
@@ -221,14 +207,35 @@ void rnd512(hashState *state)
     for(j=0;j<5;j++) {
 #pragma unroll 8
         for(i=0;i<8;i++) {
-            state->chainv[i+8*j] ^= state->buffer[i];
+            t[i+8*j] = statechainv[i+8*j];
         }
-        MULT2(state->buffer, 0);
+    }
+
+#pragma unroll 5
+    for(j=0;j<5;j++) {
+        MULT2(statechainv, j);
+    }
+
+#pragma unroll 5
+    for(j=0;j<5;j++) {
+#pragma unroll 8
+        for(i=0;i<8;i++) {
+            statechainv[8*j+i] ^= t[8*((j+4)%5)+i];
+        }
+    }
+
+#pragma unroll 5
+    for(j=0;j<5;j++) {
+#pragma unroll 8
+        for(i=0;i<8;i++) {
+            statechainv[i+8*j] ^= statebuffer[i];
+        }
+        MULT2(statebuffer, 0);
     }
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-        chainv[i] = state->chainv[i];
+        chainv[i] = statechainv[i];
     }
 
 #pragma unroll 8
@@ -238,8 +245,8 @@ void rnd512(hashState *state)
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-        state->chainv[i] = chainv[i];
-        chainv[i] = state->chainv[i+8];
+        statechainv[i] = chainv[i];
+        chainv[i] = statechainv[i+8];
     }
 
     TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],1);
@@ -251,8 +258,8 @@ void rnd512(hashState *state)
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-        state->chainv[i+8] = chainv[i];
-        chainv[i] = state->chainv[i+16];
+        statechainv[i+8] = chainv[i];
+        chainv[i] = statechainv[i+16];
     }
 
     TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],2);
@@ -264,8 +271,8 @@ void rnd512(hashState *state)
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-        state->chainv[i+16] = chainv[i];
-        chainv[i] = state->chainv[i+24];
+        statechainv[i+16] = chainv[i];
+        chainv[i] = statechainv[i+24];
     }
 
     TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],3);
@@ -277,8 +284,8 @@ void rnd512(hashState *state)
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-        state->chainv[i+24] = chainv[i];
-        chainv[i] = state->chainv[i+32];
+        statechainv[i+24] = chainv[i];
+        chainv[i] = statechainv[i+32];
     }
 
     TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],4);
@@ -290,7 +297,7 @@ void rnd512(hashState *state)
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-        state->chainv[i+32] = chainv[i];
+        statechainv[i+32] = chainv[i];
     }
 }
 __device__ __forceinline__
@@ -517,87 +524,54 @@ void rnd512_nullhash(uint32_t *state)
 	}
 }
 __device__ __forceinline__
-void Update512(hashState *state, const uint32_t*data)
+void Update512(uint32_t *statebuffer, uint32_t *statechainv, const uint32_t *data)
 {
 #pragma unroll 8
-	for (int i = 0; i < 8; i++) state->buffer[i] = cuda_swab32(data[i]);
-    rnd512_first(state->chainv, state->buffer);
+	for (int i = 0; i < 8; i++) statebuffer[i] = cuda_swab32(data[i]);
+    rnd512_first(statechainv, statebuffer);
 
 #pragma unroll 8
-	for (int i = 0; i < 8; i++) state->buffer[i] = cuda_swab32(data[i + 8]);
-    rnd512(state);
+	for (int i = 0; i < 8; i++) statebuffer[i] = cuda_swab32(data[i + 8]);
+    rnd512(statebuffer, statechainv);
 }
 
 
 /***************************************************/
 __device__ __forceinline__
-void finalization512(hashState *state, uint32_t *b)
+void finalization512(uint32_t *statebuffer, uint32_t *statechainv, uint32_t *b)
 {
     int i,j;
 
-    state->buffer[0] = 0x80000000;
+    statebuffer[0] = 0x80000000;
 	#pragma unroll 7
-    for(int i=1;i<8;i++) state->buffer[i] = 0;
-	rnd512(state);
+    for(int i=1;i<8;i++) statebuffer[i] = 0;
+	rnd512(statebuffer, statechainv);
 
     /*---- blank round with m=0 ----*/
-	rnd512_nullhash(state->chainv);
+	rnd512_nullhash(statechainv);
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-		b[i] = state->chainv[i + 8 * 0];
+		b[i] = statechainv[i + 8 * 0];
 #pragma unroll 4
         for(j=1;j<5;j++) {
-            b[i] ^= state->chainv[i+8*j];
+            b[i] ^= statechainv[i+8*j];
         }
         b[i] = cuda_swab32((b[i]));
     }
 
-	rnd512_nullhash(state->chainv);
+	rnd512_nullhash(statechainv);
 
 #pragma unroll 8
     for(i=0;i<8;i++) {
-		b[8 + i] = state->chainv[i + 8 * 0];
+		b[8 + i] = statechainv[i + 8 * 0];
 #pragma unroll 4
         for(j=1;j<5;j++) {
-            b[8+i] ^= state->chainv[i+8*j];
+            b[8+i] ^= statechainv[i+8*j];
         }
         b[8 + i] = cuda_swab32((b[8 + i]));
     }
 }
-
-
-typedef unsigned char BitSequence;
-
-#define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
-#define CUBEHASH_BLOCKBYTES 32 /* this is b for CubeHashr/b */
-
-#if __CUDA_ARCH__ < 350
-#define LROT(x,bits) ((x << bits) | (x >> (32 - bits)))
-#else
-#define LROT(x, bits) __funnelshift_l(x, x, bits)
-#endif
-
-#define ROTATEUPWARDS7(a)  LROT(a,7)
-#define ROTATEUPWARDS11(a) LROT(a,11)
-
-#define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
-
-__device__ __constant__
-static const uint32_t c_IV_512[32] = {
-
-	0x2AEA2A61, 0x50F494D4, 0x2D538B8B,
-	0x4167D83E, 0x3FEE2313, 0xC701CF8C,
-	0xCC39968E, 0x50AC5695, 0x4D42C787,
-	0xA647A8B3, 0x97CF0BEF, 0x825B4537,
-	0xEEF864D2, 0xF22090C4, 0xD0E5CD33,
-	0xA23911AE, 0xFCD398D9, 0x148FE485,
-	0x1B017BEF, 0xB6444532, 0x6A536159,
-	0x2FF5781C, 0x91FA7934, 0x0DBADEA9,
-	0xD65C8A2B, 0xA5A70E75, 0xB1C62456,
-	0xBC796576, 0x1921C8F7, 0xE7989AF1,
-	0x7795D246, 0xD43E3B44
-};
 
 __device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
 {
@@ -751,47 +725,6 @@ __device__ __forceinline__ void hash_fromx(uint32_t *out, uint32_t x[2][2][2][2]
 					*out++ = x[0][j][k][l][m];
 }
 
-void __device__ __forceinline__ Init(uint32_t x[2][2][2][2][2])
-{
-	int i, j, k, l, m;
-#if 0
-	/* "the first three state words x_00000, x_00001, x_00010" */
-	/* "are set to the integers h/8, b, r respectively." */
-	/* "the remaining state words are set to 0." */
-#pragma unroll 2
-	for (i = 0; i < 2; ++i)
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (l = 0; l < 2; ++l)
-#pragma unroll 2
-					for (m = 0; m < 2; ++m)
-						x[i][j][k][l][m] = 0;
-	x[0][0][0][0][0] = 512 / 8;
-	x[0][0][0][0][1] = CUBEHASH_BLOCKBYTES;
-	x[0][0][0][1][0] = CUBEHASH_ROUNDS;
-
-	/* "the state is then transformed invertibly through 10r identical rounds */
-	for (i = 0; i < 10; ++i) rrounds(x);
-#else
-	const uint32_t *iv = c_IV_512;
-
-#pragma unroll 2
-	for (i = 0; i < 2; ++i)
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (l = 0; l < 2; ++l)
-#pragma unroll 2
-					for (m = 0; m < 2; ++m)
-						x[i][j][k][l][m] = *iv++;
-#endif
-}
-
 void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const uint32_t *data)
 {
 	/* "xor the block into the first b bytes of the state" */
@@ -818,38 +751,56 @@ void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], uint32_t *hashv
 
 /***************************************************/
 // Die Hash-Funktion
-__global__
+__global__ __launch_bounds__(256, 3)
 void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-        uint32_t nounce = (startNounce + thread);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const uint32_t nounce = (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
-        uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+		const int hashPosition = nounce - startNounce;
+		uint32_t *const Hash = (uint32_t*)&g_hash[8 * hashPosition];
 
-        hashState state;
-#pragma unroll 40
-        for(int i=0;i<40;i++) state.chainv[i] = c_IV[i];
+		uint32_t statebuffer[8];
+		uint32_t statechainv[40] =
+		{
+			0x8bb0a761, 0xc2e4aa8b, 0x2d539bc9, 0x381408f8,
+			0x478f6633, 0x255a46ff, 0x581c37f7, 0x601c2e8e,
+			0x266c5f9d, 0xc34715d8, 0x8900670e, 0x51a540be,
+			0xe4ce69fb, 0x5089f4d4, 0x3cc0a506, 0x609bcb02,
+			0xa4e3cd82, 0xd24fd6ca, 0xc0f196dc, 0xcf41eafe,
+			0x0ff2e673, 0x303804f2, 0xa7b3cd48, 0x677addd4,
+			0x66e66a8a, 0x2303208f, 0x486dafb4, 0xc0d37dc6,
+			0x634d15af, 0xe5af6747, 0x10af7e38, 0xee7e6428,
+			0x01262e5d, 0xc92c2e64, 0x82fee966, 0xcea738d3,
+			0x867de2b0, 0xe0714818, 0xda6e831f, 0xa7062529
+		};
 
-		Update512(&state, Hash);
-        finalization512(&state, Hash);
+		Update512(statebuffer, statechainv, Hash);
+		finalization512(statebuffer, statechainv, Hash);
 		//Cubehash
 
-		uint32_t x[2][2][2][2][2];
-		Init(x);
-		// erste Hälfte des Hashes (32 bytes)
+		uint32_t x[2][2][2][2][2] =
+		{
+			0x2AEA2A61, 0x50F494D4, 0x2D538B8B,
+			0x4167D83E, 0x3FEE2313, 0xC701CF8C,
+			0xCC39968E, 0x50AC5695, 0x4D42C787,
+			0xA647A8B3, 0x97CF0BEF, 0x825B4537,
+			0xEEF864D2, 0xF22090C4, 0xD0E5CD33,
+			0xA23911AE, 0xFCD398D9, 0x148FE485,
+			0x1B017BEF, 0xB6444532, 0x6A536159,
+			0x2FF5781C, 0x91FA7934, 0x0DBADEA9,
+			0xD65C8A2B, 0xA5A70E75, 0xB1C62456,
+			0xBC796576, 0x1921C8F7, 0xE7989AF1,
+			0x7795D246, 0xD43E3B44
+		};
 		Update32(x, Hash);
-		// zweite Hälfte des Hashes (32 bytes)
 		Update32(x, &Hash[8]);
 		// Padding Block
-		uint32_t last[8];
-		last[0] = 0x80;
-#pragma unroll 7
-		for (int i = 1; i < 8; i++) last[i] = 0;
+		uint32_t last[8] = { 0x80, 0, 0, 0, 0, 0, 0, 0 };
 		Update32(x, last);
-		Final(x, Hash);	
+		Final(x, Hash);
 	}
 }
 
