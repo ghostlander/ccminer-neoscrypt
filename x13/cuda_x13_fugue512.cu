@@ -705,7 +705,52 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
 		{
 			FUGUE512_3((Hash[i]), (Hash[i + 1]), (Hash[i + 2]));
 		}
-		FUGUE512_3((Hash[0xF]), 0, 64 << 3);
+		TIX4(Hash[0xF], S00, S01, S04, S07, S08, S22, S24, S27, S30);
+		CMIX36(S33, S34, S35, S01, S02, S03, S15, S16, S17);
+		SMIX(S33, S34, S35, S00);
+		CMIX36(S30, S31, S32, S34, S35, S00, S12, S13, S14);
+		SMIX(S30, S31, S32, S33);
+		CMIX36(S27, S28, S29, S31, S32, S33, S09, S10, S11);
+		SMIX(S27, S28, S29, S30);
+		CMIX36(S24, S25, S26, S28, S29, S30, S06, S07, S08);
+		SMIX(S24, S25, S26, S27);
+
+		S10 ^= S24;
+		S25 ^= S12; S28 ^= S15; S31 ^= S18;
+		S21 ^= S25; S22 ^= S26; S23 ^= S27; S03 ^= S25; S04 ^= S26; S05 ^= S27;
+		tmp = (*(mixtabs + ((__byte_perm(S21, 0, 0x4443))))); c0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S21, 0, 0x4442))))); c0 ^= tmp; r1 = tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S21, 0, 0x4441))))); c0 ^= tmp; r2 = tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S21, 0, 0x4440))))); c0 ^= tmp; uint32_t r3 = tmp; tmp = (*(mixtabs + ((__byte_perm(S22, 0, 0x4443))))); c1 = tmp; r0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S22, 0, 0x4442))))); c1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S22, 0, 0x4441))))); c1 ^= tmp; r2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S22, 0, 0x4440))))); c1 ^= tmp; r3 ^= tmp; tmp = (*(mixtabs + ((__byte_perm(S23, 0, 0x4443))))); c2 = tmp; r0 ^= tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S23, 0, 0x4442))))); c2 ^= tmp; r1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S23, 0, 0x4441))))); c2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S23, 0, 0x4440))))); c2 ^= tmp; r3 ^= tmp;
+		r0 ^= 0x63633297UL;
+		r1 ^= 0x97636332UL;
+		r2 ^= 0x32976363UL;
+		c3 = (0x63633297UL ^ 0x97636332UL ^ 0x32976363UL ^ 0x63329763UL);
+		tmp2 = __byte_perm((c0 ^ r0), (c1 ^ r1), 0x3636); tmp = __byte_perm((c2 ^ r2), (c3 ^ r3), 0x1414); S21 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c1 ^ r0), (c2 ^ r1), 0x3636); tmp = __byte_perm((c3 ^ r2), (c0 ^ r3), 0x1414); S22 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c2 ^ r0), (c3 ^ r1), 0x3636); tmp = __byte_perm((c0 ^ r2), (c1 ^ r3), 0x1414); S23 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c3 ^ r0), (c0 ^ r1), 0x3636);
+		tmp = __byte_perm((c1 ^ r2), (c2 ^ r3), 0x1414);
+		S24 = __byte_perm(tmp2, tmp, 0x3254);
+
+		CMIX36(S18, S19, S20, S22, S23, S24, S00, S01, S02);
+		SMIX(S18, S19, S20, S21);
+		CMIX36(S15, S16, S17, S19, S20, S21, S33, S34, S35);
+		SMIX(S15, S16, S17, S18);
+		CMIX36(S12, S13, S14, S16, S17, S18, S30, S31, S32);
+		SMIX(S12, S13, S14, S15);
+
+		S34 ^= S12;
+		S12 = (64 << 3);
+		S20 ^= S12; S13 ^= S00; S16 ^= S03; S19 ^= S06;
+		S09 ^= S13; S10 ^= S14; S11 ^= S15; S27 ^= S13; S28 ^= S14; S29 ^= S15;
+		tmp = (*(mixtabs + ((__byte_perm(S09, 0, 0x4443)))));  c0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S09, 0, 0x4442))))); c0 ^= tmp; r1 = tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S09, 0, 0x4441))))); c0 ^= tmp; r2 = tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S09, 0, 0x4440))))); c0 ^= tmp; r3 = tmp; tmp = (*(mixtabs + ((__byte_perm(S10, 0, 0x4443))))); c1 = tmp; r0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S10, 0, 0x4442))))); c1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S10, 0, 0x4441))))); c1 ^= tmp; r2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S10, 0, 0x4440))))); c1 ^= tmp; r3 ^= tmp; tmp = (*(mixtabs + ((__byte_perm(S11, 0, 0x4443))))); c2 = tmp; r0 ^= tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S11, 0, 0x4442))))); c2 ^= tmp; r1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S11, 0, 0x4441))))); c2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S11, 0, 0x4440))))); c2 ^= tmp; r3 ^= tmp;
+		r0 ^= 0x63633297UL;
+		r1 ^= 0x97636332UL;
+		r2 ^= 0x5ec77777UL;
+		c3 = (0x63633297UL ^ 0x97636332UL ^ 0x5ec77777UL ^ 0x63329763);
+		tmp2 = __byte_perm((c0 ^ r0), (c1 ^ r1), 0x3636); tmp = __byte_perm((c2 ^ r2), (c3 ^ r3), 0x1414); S09 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c1 ^ r0), (c2 ^ r1), 0x3636); tmp = __byte_perm((c3 ^ r2), (c0 ^ r3), 0x1414); S10 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c2 ^ r0), (c3 ^ r1), 0x3636); tmp = __byte_perm((c0 ^ r2), (c1 ^ r3), 0x1414); S11 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c3 ^ r0), (c0 ^ r1), 0x3636); tmp = __byte_perm((c1 ^ r2), (c2 ^ r3), 0x1414); S12 = __byte_perm(tmp2, tmp, 0x3254);
+
+		CMIX36(S06, S07, S08, S10, S11, S12, S24, S25, S26);
+		SMIX(S06, S07, S08, S09);
+		CMIX36(S03, S04, S05, S07, S08, S09, S21, S22, S23);
+		SMIX(S03, S04, S05, S06);
+		CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20);
+		SMIX(S00, S01, S02, S03);
 
 		//#pragma unroll
 		for (int i = 0; i < 32; i++) {
@@ -867,7 +912,52 @@ void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t start
 		{
 			FUGUE512_3((Hash[i]), (Hash[i + 1]), (Hash[i + 2]));
 		}
-		FUGUE512_3((Hash[0xF]), 0, 64 << 3);
+		TIX4(Hash[0xF], S00, S01, S04, S07, S08, S22, S24, S27, S30);
+		CMIX36(S33, S34, S35, S01, S02, S03, S15, S16, S17);
+		SMIX(S33, S34, S35, S00);
+		CMIX36(S30, S31, S32, S34, S35, S00, S12, S13, S14);
+		SMIX(S30, S31, S32, S33);
+		CMIX36(S27, S28, S29, S31, S32, S33, S09, S10, S11);
+		SMIX(S27, S28, S29, S30);
+		CMIX36(S24, S25, S26, S28, S29, S30, S06, S07, S08);
+		SMIX(S24, S25, S26, S27);
+
+		S10 ^= S24;
+		S25 ^= S12; S28 ^= S15; S31 ^= S18;
+		S21 ^= S25; S22 ^= S26; S23 ^= S27; S03 ^= S25; S04 ^= S26; S05 ^= S27;
+		tmp = (*(mixtabs + ((__byte_perm(S21, 0, 0x4443))))); c0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S21, 0, 0x4442))))); c0 ^= tmp; r1 = tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S21, 0, 0x4441))))); c0 ^= tmp; r2 = tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S21, 0, 0x4440))))); c0 ^= tmp; uint32_t r3 = tmp; tmp = (*(mixtabs + ((__byte_perm(S22, 0, 0x4443))))); c1 = tmp; r0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S22, 0, 0x4442))))); c1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S22, 0, 0x4441))))); c1 ^= tmp; r2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S22, 0, 0x4440))))); c1 ^= tmp; r3 ^= tmp; tmp = (*(mixtabs + ((__byte_perm(S23, 0, 0x4443))))); c2 = tmp; r0 ^= tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S23, 0, 0x4442))))); c2 ^= tmp; r1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S23, 0, 0x4441))))); c2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S23, 0, 0x4440))))); c2 ^= tmp; r3 ^= tmp;
+		r0 ^= 0x63633297UL;
+		r1 ^= 0x97636332UL;
+		r2 ^= 0x32976363UL;
+		c3 = (0x63633297UL^0x97636332UL^0x32976363UL^0x63329763UL);
+		tmp2 = __byte_perm((c0 ^ r0), (c1 ^ r1), 0x3636); tmp = __byte_perm((c2 ^ r2), (c3 ^ r3), 0x1414); S21 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c1 ^ r0), (c2 ^ r1), 0x3636); tmp = __byte_perm((c3 ^ r2), (c0 ^ r3), 0x1414); S22 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c2 ^ r0), (c3 ^ r1), 0x3636); tmp = __byte_perm((c0 ^ r2), (c1 ^ r3), 0x1414); S23 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c3 ^ r0), (c0 ^ r1), 0x3636);
+		tmp = __byte_perm((c1 ^ r2), (c2 ^ r3), 0x1414);
+		S24 = __byte_perm(tmp2, tmp, 0x3254);
+
+		CMIX36(S18, S19, S20, S22, S23, S24, S00, S01, S02);
+		SMIX(S18, S19, S20, S21);
+		CMIX36(S15, S16, S17, S19, S20, S21, S33, S34, S35);
+		SMIX(S15, S16, S17, S18);
+		CMIX36(S12, S13, S14, S16, S17, S18, S30, S31, S32);
+		SMIX(S12, S13, S14, S15);
+
+        S34 ^= S12; 
+		S12 = (64 << 3); 
+		S20 ^= S12; S13 ^= S00; S16 ^= S03; S19 ^= S06; 
+		S09 ^= S13; S10 ^= S14; S11 ^= S15; S27 ^= S13; S28 ^= S14; S29 ^= S15;
+		tmp = (*(mixtabs + ((__byte_perm(S09, 0, 0x4443)))));  c0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S09, 0, 0x4442))))); c0 ^= tmp; r1 = tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S09, 0, 0x4441))))); c0 ^= tmp; r2 = tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S09, 0, 0x4440))))); c0 ^= tmp; r3 = tmp; tmp = (*(mixtabs + ((__byte_perm(S10, 0, 0x4443))))); c1 = tmp; r0 = tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S10, 0, 0x4442))))); c1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S10, 0, 0x4441))))); c1 ^= tmp; r2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S10, 0, 0x4440))))); c1 ^= tmp; r3 ^= tmp; tmp = (*(mixtabs + ((__byte_perm(S11, 0, 0x4443))))); c2 = tmp; r0 ^= tmp; tmp = (*(mixtabs + (256 + (__byte_perm(S11, 0, 0x4442))))); c2 ^= tmp; r1 ^= tmp; tmp = (*(mixtabs + (512 + (__byte_perm(S11, 0, 0x4441))))); c2 ^= tmp; tmp = (*(mixtabs + (768 + (__byte_perm(S11, 0, 0x4440))))); c2 ^= tmp; r3 ^= tmp; 
+		r0 ^= 0x63633297UL;
+		r1 ^= 0x97636332UL;
+		r2 ^= 0x5ec77777UL;
+		c3 = (0x63633297UL^0x97636332UL^0x5ec77777UL^0x63329763);
+		tmp2 = __byte_perm((c0 ^ r0), (c1 ^ r1), 0x3636); tmp = __byte_perm((c2 ^ r2), (c3 ^ r3), 0x1414); S09 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c1 ^ r0), (c2 ^ r1), 0x3636); tmp = __byte_perm((c3 ^ r2), (c0 ^ r3), 0x1414); S10 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c2 ^ r0), (c3 ^ r1), 0x3636); tmp = __byte_perm((c0 ^ r2), (c1 ^ r3), 0x1414); S11 = __byte_perm(tmp2, tmp, 0x3254); r0 = __funnelshift_l((r0), (r0), (8)); r1 = __funnelshift_l((r1), (r1), (8)); r2 = __funnelshift_l((r2), (r2), (8)); r3 = __funnelshift_l((r3), (r3), (8)); tmp2 = __byte_perm((c3 ^ r0), (c0 ^ r1), 0x3636); tmp = __byte_perm((c1 ^ r2), (c2 ^ r3), 0x1414); S12 = __byte_perm(tmp2, tmp, 0x3254);
+
+		CMIX36(S06, S07, S08, S10, S11, S12, S24, S25, S26);
+		SMIX(S06, S07, S08, S09);
+		CMIX36(S03, S04, S05, S07, S08, S09, S21, S22, S23);
+		SMIX(S03, S04, S05, S06);
+		CMIX36(S00, S01, S02, S04, S05, S06, S18, S19, S20);
+		SMIX(S00, S01, S02, S03);
 
 	//#pragma unroll 32
 		for (int i = 0; i < 32; i++) {
