@@ -8,7 +8,7 @@
 #define USE_SHUFFLE 0
 
 // die Message it Padding zur Berechnung auf der GPU
-__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
+__constant__ uint2 c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
 
@@ -54,16 +54,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		uint2 block[16] =
 		{
 			vectorizeswap(inpHash[0]), vectorizeswap(inpHash[1]), vectorizeswap(inpHash[2]), vectorizeswap(inpHash[3]),
-			vectorizeswap(inpHash[4]), vectorizeswap(inpHash[5]), vectorizeswap(inpHash[6]), vectorizeswap(inpHash[7])
+			vectorizeswap(inpHash[4]), vectorizeswap(inpHash[5]), vectorizeswap(inpHash[6]), vectorizeswap(inpHash[7]),
+			{ 0, 0x80000000UL }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 1, 0 }, { 0, 0 }, { 0x200, 0 }
 		};
-		block[8] = make_uint2(0, 0x80000000UL);
-		block[9] = make_uint2(0,0);
-		block[10] = make_uint2(0,0);
-		block[11] = make_uint2(0,0);
-		block[12] = make_uint2(0,0);
-		block[13] = make_uint2(1,0);
-		block[14] = make_uint2(0,0);
-		block[15] = make_uint2(0x200,0);
 		const uint2 h[8] =
 		{
 				{ 0xf3bcc908UL, 0x6a09e667UL },
@@ -263,16 +256,14 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 	{
 		uint32_t nounce = startNounce + thread;
 
-		uint2 block[16];
-
-		// Message für die erste Runde in Register holen
-#pragma unroll 16
-		for (int i = 0; i < 16; ++i)
-			block[i] = vectorize(c_PaddedMessage80[i]);
-		// The test Nonce
-			//		((uint32_t*)block)[18] = nounce;
+		uint2 block[16] =
+		{
+			c_PaddedMessage80[0], c_PaddedMessage80[1], c_PaddedMessage80[2], c_PaddedMessage80[3],
+			c_PaddedMessage80[4], c_PaddedMessage80[5], c_PaddedMessage80[6], c_PaddedMessage80[7],
+			c_PaddedMessage80[8], c_PaddedMessage80[9], c_PaddedMessage80[10], c_PaddedMessage80[11],
+			c_PaddedMessage80[12], c_PaddedMessage80[13], c_PaddedMessage80[14], c_PaddedMessage80[15]
+		};
 		block[9].x = nounce;
-//		((uint32_t*)block)[18] = nounce;
 
 		const uint2 u512[16] =
 		{
