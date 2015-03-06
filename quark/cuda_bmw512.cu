@@ -311,11 +311,11 @@ __device__ void Compression512(uint2 *msg, uint2 *hash)
 
 __global__
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(32, 16)
+__launch_bounds__(128, 4)
 #else
-__launch_bounds__(64, 8)
+__launch_bounds__(128, 5)
 #endif
-void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *g_hash, uint32_t *g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -323,7 +323,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
         uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
         int hashPosition = nounce - startNounce;
-        uint64_t *inpHash = &g_hash[8 * hashPosition];
+        uint2 *Hash = &g_hash[8 * hashPosition];
 
         // Init
 		uint2 h[16] = {
@@ -346,20 +346,13 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		};
         // Nachricht kopieren (Achtung, die Nachricht hat 64 Byte,
         // BMW arbeitet mit 128 Byte!!!
-		uint2 message[16];
-#pragma unroll 8
-        for(int i=0;i<8;i++)
-			message[i] = vectorize(inpHash[i]);
-#pragma unroll 6
-        for(int i=9;i<15;i++)
-            message[i] = make_uint2(0,0);
-
-        // Padding einfügen (Byteorder?!?)
-		message[8] = make_uint2(0x80,0);
-        // Länge (in Bits, d.h. 64 Byte * 8 = 512 Bits
-		message[15] = make_uint2(512,0);
-
-        // Compression 1
+		uint2 message[16]=
+		{
+			Hash[0], Hash[1], Hash[2], Hash[3], Hash[4], Hash[5], Hash[6], Hash[7],
+			{ 0x80, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, {512, 0 }
+		};
+		
+		// Compression 1
         Compression512_64_first(message, h);
 
         // Final
@@ -371,12 +364,9 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		}
         Compression512(h, message);
 
-        // fertig
-        uint64_t *outpHash = &g_hash[8 * hashPosition];
-
 #pragma unroll 8
         for(int i=0;i<8;i++)
-            outpHash[i] = devectorize(message[i+8]);
+			Hash[i] = message[i + 8];
     }
 }
 
@@ -460,13 +450,13 @@ __host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
 
 __host__ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-    const uint32_t threadsperblock = 32;
+    const uint32_t threadsperblock = 128;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    quark_bmw512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+    quark_bmw512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint2 *)d_hash, d_nonceVector);
 //	MyStreamSynchronize(NULL, order, thr_id);
 }
 
