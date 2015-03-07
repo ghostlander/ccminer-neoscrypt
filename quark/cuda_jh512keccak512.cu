@@ -273,12 +273,12 @@ __constant__ uint2 c_keccak_round_constants[24] = {
 __global__ __launch_bounds__(256,3)
 void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
-    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
-        uint32_t nounce =  (startNounce + thread);
+        const uint32_t nounce =  (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
+        const int hashPosition = nounce - startNounce;
         uint32_t *Hash = &g_hash[16 * hashPosition]; 
 		uint32_t x[8][4] = {
 				{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
@@ -312,9 +312,11 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		};
 		uint2 bc[5], tmpxor[5], tmp1, tmp2;
 
-#pragma unroll
-		for (uint32_t x = 0; x < 5; x++)
-			tmpxor[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
+		tmpxor[0] = s[0] ^ s[5];
+		tmpxor[1] = s[1] ^ s[6];
+		tmpxor[2] = s[2] ^ s[7];
+		tmpxor[3] = s[3] ^ s[8];
+		tmpxor[4] = s[4];
 
 		bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
 		bc[1] = tmpxor[1] ^ ROL2(tmpxor[3], 1);
@@ -324,30 +326,30 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 
 		tmp1 = s[1] ^ bc[0];
 
-		s[0] ^= bc[4];
+		s[0] = s[0] ^ bc[4];
 		s[1] = ROL2(s[6] ^ bc[0], 44);
-		s[6] = ROL2(s[9] ^ bc[3], 20);
-		s[9] = ROL2(s[22] ^ bc[1], 61);
-		s[22] = ROL2(s[14] ^ bc[3], 39);
-		s[14] = ROL2(s[20] ^ bc[4], 18);
+		s[6] = ROL2(bc[3], 20);
+		s[9] = ROL2(bc[1], 61);
+		s[22] = ROL2(bc[3], 39);
+		s[14] = ROL2(bc[4], 18);
 		s[20] = ROL2(s[2] ^ bc[1], 62);
-		s[2] = ROL2(s[12] ^ bc[1], 43);
-		s[12] = ROL2(s[13] ^ bc[2], 25);
-		s[13] = ROL2(s[19] ^ bc[3], 8);
-		s[19] = ROL2(s[23] ^ bc[2], 56);
-		s[23] = ROL2(s[15] ^ bc[4], 41);
+		s[2] = ROL2(bc[1], 43);
+		s[12] = ROL2(bc[2], 25);
+		s[13] = ROL2(bc[3], 8);
+		s[19] = ROL2(bc[2], 56);
+		s[23] = ROL2(bc[4], 41);
 		s[15] = ROL2(s[4] ^ bc[3], 27);
-		s[4] = ROL2(s[24] ^ bc[3], 14);
-		s[24] = ROL2(s[21] ^ bc[0], 2);
+		s[4] = ROL2(bc[3], 14);
+		s[24] = ROL2(bc[0], 2);
 		s[21] = ROL2(s[8] ^ bc[2], 55);
-		s[8] = ROL2(s[16] ^ bc[0], 45);
+		s[8] = ROL2(bc[0], 45);
 		s[16] = ROL2(s[5] ^ bc[4], 36);
 		s[5] = ROL2(s[3] ^ bc[2], 28);
-		s[3] = ROL2(s[18] ^ bc[2], 21);
-		s[18] = ROL2(s[17] ^ bc[1], 15);
-		s[17] = ROL2(s[11] ^ bc[0], 10);
+		s[3] = ROL2(bc[2], 21);
+		s[18] = ROL2(bc[1], 15);
+		s[17] = ROL2(bc[0], 10);
 		s[11] = ROL2(s[7] ^ bc[1], 6);
-		s[7] = ROL2(s[10] ^ bc[4], 3);
+		s[7] = ROL2(bc[4], 3);
 		s[10] = ROL2(tmp1, 1);
 
 		tmp1 = s[0]; tmp2 = s[1]; s[0] = bitselect(s[0] ^ s[2], s[0], s[1]); s[1] = bitselect(s[1] ^ s[3], s[1], s[2]); s[2] = bitselect(s[2] ^ s[4], s[2], s[3]); s[3] = bitselect(s[3] ^ tmp1, s[3], s[4]); s[4] = bitselect(s[4] ^ tmp2, s[4], tmp1);

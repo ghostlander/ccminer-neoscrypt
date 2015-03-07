@@ -1,10 +1,6 @@
 #include "miner.h"
-
-extern "C" {
 #include <stdint.h>
 #include <memory.h>
-}
-
 #include "cuda_helper.h"
 
 #define UINT2(x,y) make_uint2(x,y)
@@ -294,25 +290,24 @@ static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constan
 #define bitselect(a, b, c) ((a) ^ ((c) & ((b) ^ (a))))
 
 __global__ __launch_bounds__(128,5)
-void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
+void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *const __restrict__ outputHash, uint32_t *const __restrict__ resNounce)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = startNounce + thread;
+		const uint32_t nounce = startNounce + thread;
 		uint2 bc[5], tmpxor[5], tmp1, tmp2;
+		uint2 s[25];
+		
+		s[9] = make_uint2(c_PaddedMessage80[9].x, cuda_swab32(nounce));
+		s[10] = make_uint2(1, 0);
+		s[16] = make_uint2(0, 0x80000000);
 
-		uint2 s[25]=
-		{
-			c_PaddedMessage80[0], c_PaddedMessage80[1], c_PaddedMessage80[2], c_PaddedMessage80[3],
-			c_PaddedMessage80[4], c_PaddedMessage80[5], c_PaddedMessage80[6], c_PaddedMessage80[7],
-			c_PaddedMessage80[8], { c_PaddedMessage80[9].x, cuda_swab32(nounce) }, { 1, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },
-			{ 0, 0x80000000 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }
-		};
-
-#pragma unroll
-		for (uint32_t x = 0; x < 5; x++)
-			tmpxor[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
+		tmpxor[0] = c_PaddedMessage80[0] ^ c_PaddedMessage80[5] ^ s[10];
+		tmpxor[1] = c_PaddedMessage80[1] ^ c_PaddedMessage80[6] ^ s[16];
+		tmpxor[2] = c_PaddedMessage80[2] ^ c_PaddedMessage80[7];
+		tmpxor[3] = c_PaddedMessage80[3] ^ c_PaddedMessage80[8];
+		tmpxor[4] = c_PaddedMessage80[4] ^ s[9];
 
 		bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
 		bc[1] = tmpxor[1] ^ ROL2(tmpxor[3], 1);
@@ -320,31 +315,31 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputH
 		bc[3] = tmpxor[3] ^ ROL2(tmpxor[0], 1);
 		bc[4] = tmpxor[4] ^ ROL2(tmpxor[1], 1);
 
-		tmp1 = s[1] ^ bc[0];
+		tmp1 = c_PaddedMessage80[1] ^ bc[0];
 
-		s[0] ^= bc[4];
-		s[1] = ROL2(s[6] ^ bc[0], 44);
+		s[0] = c_PaddedMessage80[0] ^ bc[4];
+		s[1] = ROL2(c_PaddedMessage80[6] ^ bc[0], 44);
 		s[6] = ROL2(s[9] ^ bc[3], 20);
-		s[9] = ROL2(s[22] ^ bc[1], 61);
-		s[22] = ROL2(s[14] ^ bc[3], 39);
-		s[14] = ROL2(s[20] ^ bc[4], 18);
-		s[20] = ROL2(s[2] ^ bc[1], 62);
-		s[2] = ROL2(s[12] ^ bc[1], 43);
-		s[12] = ROL2(s[13] ^ bc[2], 25);
-		s[13] = ROL2(s[19] ^ bc[3], 8);
-		s[19] = ROL2(s[23] ^ bc[2], 56);
-		s[23] = ROL2(s[15] ^ bc[4], 41);
-		s[15] = ROL2(s[4] ^ bc[3], 27);
-		s[4] = ROL2(s[24] ^ bc[3], 14);
-		s[24] = ROL2(s[21] ^ bc[0], 2);
-		s[21] = ROL2(s[8] ^ bc[2], 55);
+		s[9] = ROL2(bc[1], 61);
+		s[22] = ROL2(bc[3], 39);
+		s[14] = ROL2(bc[4], 18);
+		s[20] = ROL2(c_PaddedMessage80[2] ^ bc[1], 62);
+		s[2] = ROL2(bc[1], 43);
+		s[12] = ROL2(bc[2], 25);
+		s[13] = ROL2(bc[3], 8);
+		s[19] = ROL2(bc[2], 56);
+		s[23] = ROL2(bc[4], 41);
+		s[15] = ROL2(c_PaddedMessage80[4] ^ bc[3], 27);
+		s[4] = ROL2(bc[3], 14);
+		s[24] = ROL2(bc[0], 2);
+		s[21] = ROL2(c_PaddedMessage80[8] ^ bc[2], 55);
 		s[8] = ROL2(s[16] ^ bc[0], 45);
-		s[16] = ROL2(s[5] ^ bc[4], 36);
-		s[5] = ROL2(s[3] ^ bc[2], 28);
-		s[3] = ROL2(s[18] ^ bc[2], 21);
-		s[18] = ROL2(s[17] ^ bc[1], 15);
-		s[17] = ROL2(s[11] ^ bc[0], 10);
-		s[11] = ROL2(s[7] ^ bc[1], 6);
+		s[16] = ROL2(c_PaddedMessage80[5] ^ bc[4], 36);
+		s[5] = ROL2(c_PaddedMessage80[3] ^ bc[2], 28);
+		s[3] = ROL2( bc[2], 21);
+		s[18] = ROL2(bc[1], 15);
+		s[17] = ROL2(bc[0], 10);
+		s[11] = ROL2(c_PaddedMessage80[7] ^ bc[1], 6);
 		s[7] = ROL2(s[10] ^ bc[4], 3);
 		s[10] = ROL2(tmp1, 1);
 
@@ -438,13 +433,13 @@ void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, u
 
 	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
 	//MyStreamSynchronize(NULL, order, thr_id);
-	cudaMemcpy(h_nounce, d_KNonce[thr_id], 4 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	CUDA_SAFE_CALL(cudaMemcpy(h_nounce, d_KNonce[thr_id], 4 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
 }
 
 __global__ __launch_bounds__(256,3)
 void keccak256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 #if __CUDA_ARCH__ >= 350 /* tpr: to double check if faster on SM5+ */
