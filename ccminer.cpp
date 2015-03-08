@@ -103,6 +103,7 @@ enum sha_algos {
 	ALGO_S3,
 	ALGO_SPREADX11,
 	ALGO_WHC,
+	ALGO_WHCX,
 	ALGO_X11,
 	ALGO_X13,
 	ALGO_X14,
@@ -135,6 +136,7 @@ static const char *algo_names[] = {
 	"s3",
 	"spread",
 	"whirl",
+	"whirlpoolx",
 	"x11",
 	"x13",
 	"x14",
@@ -249,7 +251,8 @@ Options:\n\
 			x15         X15\n\
 			x17         X17 (peoplecurrency)\n\
 			whirl       Whirlcoin (old whirlpool)\n\
-  -d, --devices         Comma separated list of CUDA devices to use.\n\
+			whirlpoolx  Vanillacoin \n\
+  -d, --devices         Comma separated list of CUDA devices to use. \n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
@@ -1417,6 +1420,11 @@ static void *miner_thread(void *userdata)
 		case ALGO_WHC:
 			rc = scanhash_whc(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_WHCX:
+			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
 			break;
 
 		case ALGO_X11:

@@ -54,7 +54,8 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x15/whirlpool.cu \
 			  x17/x17.cu x17/cuda_x17_haval512.cu x17/cuda_x17_sha512.cu \
 			  x11/s3.cu \
-			  bitcoin.cu cuda_bitcoin.cu
+			  bitcoin.cu cuda_bitcoin.cu\
+			  x15/cuda_whirlpoolx.cu x15/whirlpoolx.cu
 
 if HAVE_NVML
 nvml_defs = -DUSE_WRAPNVML
