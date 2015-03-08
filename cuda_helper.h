@@ -436,6 +436,55 @@ __device__ __forceinline__ uint2 vectorize(uint64_t x)
 		: "=r"(result.x), "=r"(result.y) : "l"(x));
 	return result;
 }
+__device__ __forceinline__ void devectorize2(uint4 inn, uint2 &x, uint2 &y)
+{
+	x.x = inn.x;
+	x.y = inn.y;
+	y.x = inn.z;
+	y.y = inn.w;
+}
+
+
+__device__ __forceinline__ uint4 vectorize2(uint2 x, uint2 y)
+{
+	uint4 result;
+	result.x = x.x;
+	result.y = x.y;
+	result.z = y.x;
+	result.w = y.y;
+
+	return result;
+}
+
+__device__ __forceinline__ uint4 vectorize2(uint2 x)
+{
+	uint4 result;
+	result.x = x.x;
+	result.y = x.y;
+	result.z = x.x;
+	result.w = x.y;
+	return result;
+}
+
+
+__device__ __forceinline__ uint4 vectorize4(uint64_t x, uint64_t y)
+{
+	uint4 result;
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(result.x), "=r"(result.y) : "l"(x));
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(result.z), "=r"(result.w) : "l"(y));
+	return result;
+}
+__device__ __forceinline__ void devectorize4(uint4 inn, uint64_t &x, uint64_t &y)
+{
+	asm("mov.b64 %0,{%1,%2}; \n\t"
+		: "=l"(x) : "r"(inn.x), "r"(inn.y));
+	asm("mov.b64 %0,{%1,%2}; \n\t"
+		: "=l"(y) : "r"(inn.z), "r"(inn.w));
+}
+
+
 
 static __device__ __forceinline__ uint2 vectorizelow(uint32_t v) {
 	uint2 result;
@@ -460,6 +509,14 @@ static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
 	return result;
 }
+
+
+static __device__ __forceinline__ uint4 operator^ (uint4 a, uint4 b) { return make_uint4(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w); }
+static __device__ __forceinline__ uint4 operator& (uint4 a, uint4 b) { return make_uint4(a.x & b.x, a.y & b.y, a.z & b.z, a.w & b.w); }
+static __device__ __forceinline__ uint4 operator| (uint4 a, uint4 b) { return make_uint4(a.x | b.x, a.y | b.y, a.z | b.z, a.w | b.w); }
+static __device__ __forceinline__ uint4 operator~ (uint4 a) { return make_uint4(~a.x, ~a.y, ~a.z, ~a.w); }
+static __device__ __forceinline__ void operator^= (uint4 &a, uint4 b) { a = a ^ b; }
+static __device__ __forceinline__ uint4 operator^ (uint4 a, uint2 b) { return make_uint4(a.x ^ b.x, a.y ^ b.y, a.z ^ b.x, a.w ^ b.y); }
 
 
 static __device__ __forceinline__ uint2 operator- (uint2 a, uint2 b)
@@ -626,6 +683,11 @@ __device__ __forceinline__
 uint2 SWAPDWORDS2(uint2 value)
 {
 	return make_uint2(value.y, value.x);
+}
+__device__ __forceinline__
+uint4 SWAPDWORDS2(uint4 value)
+{
+	return make_uint4(value.y, value.x, value.w ,value.z);
 }
 
 static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
