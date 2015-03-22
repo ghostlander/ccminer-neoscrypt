@@ -1419,12 +1419,12 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_WHC:
 			rc = scanhash_whc(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			                      max_nonce, (uint32_t *)&hashes_done);
 			break;
 
 		case ALGO_WHCX:
 			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
-				max_nonce, &hashes_done);
+				max_nonce, (uint32_t*)&hashes_done);
 			break;
 
 		case ALGO_X11:
@@ -1851,29 +1851,38 @@ static void parse_arg(int key, char *arg)
 	}
 	case 'i':
 		d = atof(arg);
-		v = (uint32_t) d;
+		v = (uint32_t)d;
 		if (v < 0 || v > 31)
 			show_usage_and_exit(1);
 		{
-			int n = 0, adds = 0;
+			int n = 0;
+			uint32_t adds = 0;
 			int ngpus = cuda_num_devices();
-			char * pch = strtok(arg,",");
-			if (pch == NULL) {
-				for (n=0; n < ngpus; n++)
-					gpus_intensity[n] = (1 << v);
+			char * pch = strtok(arg, ",");
+			if (!pch || pch == arg) {
+				// single value, set intensity for all cards
+				uint32_t adds = 0;
+				if ((d - v) > 0.0) {
+					adds = (uint32_t)floor((d - v) * (1 << (v - 8))) * 256;
+				}
+				for (n = 0; n < ngpus; n++)
+					gpus_intensity[n] = (1 << v) + adds;
+				applog(LOG_INFO, "Intensity set to %.1f, %u cuda threads",
+					d, gpus_intensity[0]);
 				break;
 			}
 			while (pch != NULL) {
 				d = atof(pch);
-				v = (uint32_t) d;
+				v = (uint32_t)d;
 				if (v > 7) { /* 0 = default */
 					gpus_intensity[n] = (1 << v);
 					if ((d - v) > 0.0) {
-						adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
+						adds = (uint32_t)floor((d - v) * (1 << (v - 8))) * 256;
 						gpus_intensity[n] += adds;
 						applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
 							adds, v, gpus_intensity[n]);
-					} else {
+					}
+					else {
 						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
 							v, gpus_intensity[n]);
 					}
@@ -1882,10 +1891,7 @@ static void parse_arg(int key, char *arg)
 				pch = strtok(NULL, ",");
 			}
 		}
-		break;
-	case 'D':
-		opt_debug = true;
-		break;
+		break;	
 	case 'N':
 		v = atoi(arg);
 		if (v < 1)

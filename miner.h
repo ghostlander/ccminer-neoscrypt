@@ -357,11 +357,11 @@ extern int scanhash_s3(int thr_id, uint32_t *pdata,
 
 extern int scanhash_whc(int thr_id, uint32_t *pdata,
 	uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done);
+	uint32_t *hashes_done);
 
 extern int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done);
+	uint32_t *ptarget, uint32_t max_nonce,
+	uint32_t *hashes_done);
 
 
 extern int scanhash_x11(int thr_id, uint32_t *pdata,
