@@ -27,8 +27,6 @@
 #define UINT32_MAX UINT_MAX
 #endif
 
-typedef unsigned char BitSequence;
-
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t c_Target[8];
 
@@ -142,166 +140,167 @@ __constant__ uint32_t c_CNS[80] = {
 	0x3b6ba548,0x3f014f0c,0xedae9520,0xfc053c31};
 
 
-/***************************************************/
+
 __device__ __forceinline__
-void rnd512(hashState *state)
+void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 {
-	int i,j;
+	int i, j;
 	uint32_t t[40];
 	uint32_t chainv[8];
 	uint32_t tmp;
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		t[i]=0;
+	for (i = 0; i<8; i++)
+	{
+		t[i] = 0;
 #pragma unroll 5
-		for(j=0;j<5;j++) {
-			t[i] ^= state->chainv[i+8*j];
+		for (j = 0; j<5; j++)
+		{
+			t[i] ^= statechainv[i + 8 * j];
 		}
 	}
 
 	MULT2(t, 0);
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
+	for (j = 0; j<5; j++) {
 #pragma unroll 8
-		for(i=0;i<8;i++) {
-			state->chainv[i+8*j] ^= t[i];
+		for (i = 0; i<8; i++) {
+			statechainv[i + 8 * j] ^= t[i];
 		}
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
+	for (j = 0; j<5; j++) {
 #pragma unroll 8
-		for(i=0;i<8;i++) {
-			t[i+8*j] = state->chainv[i+8*j];
+		for (i = 0; i<8; i++) {
+			t[i + 8 * j] = statechainv[i + 8 * j];
 		}
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
-		MULT2(state->chainv, j);
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
+	for (j = 0; j<5; j++) {
 #pragma unroll 8
-		for(i=0;i<8;i++) {
-			state->chainv[8*j+i] ^= t[8*((j+1)%5)+i];
+		for (i = 0; i<8; i++) {
+			statechainv[8 * j + i] ^= t[8 * ((j + 1) % 5) + i];
 		}
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
+	for (j = 0; j<5; j++) {
 #pragma unroll 8
-		for(i=0;i<8;i++) {
-			t[i+8*j] = state->chainv[i+8*j];
+		for (i = 0; i<8; i++) {
+			t[i + 8 * j] = statechainv[i + 8 * j];
 		}
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
-		MULT2(state->chainv, j);
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
+	for (j = 0; j<5; j++) {
 #pragma unroll 8
-		for(i=0;i<8;i++) {
-			state->chainv[8*j+i] ^= t[8*((j+4)%5)+i];
+		for (i = 0; i<8; i++) {
+			statechainv[8 * j + i] ^= t[8 * ((j + 4) % 5) + i];
 		}
 	}
 
 #pragma unroll 5
-	for(j=0;j<5;j++) {
+	for (j = 0; j<5; j++) {
 #pragma unroll 8
-		for(i=0;i<8;i++) {
-			state->chainv[i+8*j] ^= state->buffer[i];
+		for (i = 0; i<8; i++) {
+			statechainv[i + 8 * j] ^= statebuffer[i];
 		}
-		MULT2(state->buffer, 0);
+		MULT2(statebuffer, 0);
 	}
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		chainv[i] = state->chainv[i];
+	for (i = 0; i<8; i++) {
+		chainv[i] = statechainv[i];
 	}
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		STEP(c_CNS[(2*i)],c_CNS[(2*i)+1]);
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i)], c_CNS[(2 * i) + 1]);
 	}
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		state->chainv[i] = chainv[i];
-		chainv[i] = state->chainv[i+8];
+	for (i = 0; i<8; i++) {
+		statechainv[i] = chainv[i];
+		chainv[i] = statechainv[i + 8];
 	}
 
-	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],1);
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		STEP(c_CNS[(2*i)+16],c_CNS[(2*i)+16+1]);
-	}
-
-#pragma unroll 8
-	for(i=0;i<8;i++) {
-		state->chainv[i+8] = chainv[i];
-		chainv[i] = state->chainv[i+16];
-	}
-
-	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],2);
-
-#pragma unroll 8
-	for(i=0;i<8;i++) {
-		STEP(c_CNS[(2*i)+32],c_CNS[(2*i)+32+1]);
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
 	}
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		state->chainv[i+16] = chainv[i];
-		chainv[i] = state->chainv[i+24];
+	for (i = 0; i<8; i++) {
+		statechainv[i + 8] = chainv[i];
+		chainv[i] = statechainv[i + 16];
 	}
 
-	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],3);
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		STEP(c_CNS[(2*i)+48],c_CNS[(2*i)+48+1]);
-	}
-
-#pragma unroll 8
-	for(i=0;i<8;i++) {
-		state->chainv[i+24] = chainv[i];
-		chainv[i] = state->chainv[i+32];
-	}
-
-	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],4);
-
-#pragma unroll 8
-	for(i=0;i<8;i++) {
-		STEP(c_CNS[(2*i)+64],c_CNS[(2*i)+64+1]);
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
 	}
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
-		state->chainv[i+32] = chainv[i];
+	for (i = 0; i<8; i++) {
+		statechainv[i + 16] = chainv[i];
+		chainv[i] = statechainv[i + 24];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 24] = chainv[i];
+		chainv[i] = statechainv[i + 32];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 32] = chainv[i];
 	}
 }
 
-
 __device__ __forceinline__
-void Update512(hashState *const __restrict__ state, const BitSequence *const __restrict__ data)
+void Update512(hashState *const __restrict__ state, const uint32_t *const __restrict__ data)
 {
 #pragma unroll 8
-	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)data)[i]);
-	rnd512(state);
+	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32((data)[i]);
+	rnd512(state->buffer, state->chainv);
 
 #pragma unroll 8
-	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)(data+32))[i]);
-	rnd512(state);
+	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((data))[i+8]);
+	rnd512(state->buffer, state->chainv);
 #pragma unroll 4
-	for(int i=0;i<4;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)(data+64))[i]);
+	for(int i=0;i<4;i++) state->buffer[i] = BYTES_SWAP32(((data))[i+16]);
 }
 
 
@@ -314,12 +313,12 @@ void finalization512(hashState *const __restrict__ state, uint32_t *const __rest
 	state->buffer[4] = 0x80000000;
 #pragma unroll 3
 	for(int i=5;i<8;i++) state->buffer[i] = 0;
-	rnd512(state);
+	rnd512(state->buffer, state->chainv);
 
 	/*---- blank round with m=0 ----*/
 #pragma unroll 8
 	for(i=0;i<8;i++) state->buffer[i] =0;
-	rnd512(state);
+	rnd512(state->buffer, state->chainv);
 
 #pragma unroll 8
 	for(i=0;i<8;i++) {
@@ -333,7 +332,7 @@ void finalization512(hashState *const __restrict__ state, uint32_t *const __rest
 
 #pragma unroll 8
 	for(i=0;i<8;i++) state->buffer[i]=0;
-	rnd512(state);
+	rnd512(state->buffer, state->chainv);
 
 #pragma unroll 8
 	for(i=0;i<8;i++) {
@@ -356,30 +355,26 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
-		union {
-		uint64_t buf64[16];
-		uint32_t buf32[32];
-		} buff;
+		uint64_t buff[16];
 
 #pragma unroll 16
-		for (int i=0; i < 16; ++i) buff.buf64[i] = c_PaddedMessage80[i];
+		for (int i=0; i < 16; ++i) buff[i] = c_PaddedMessage80[i];
 
 		// die Nounce durch die thread-spezifische ersetzen
-		buff.buf64[9] = REPLACE_HIWORD(buff.buf64[9], cuda_swab32(nounce));
-
+		buff[9] = REPLACE_HIWORD(buff[9], cuda_swab32(nounce));
 
 		hashState state;
 #pragma unroll 40
 		for(int i=0;i<40;i++) state.chainv[i] = c_IV[i];
 #pragma unroll 8
 		for(int i=0;i<8;i++) state.buffer[i] = 0;
-		Update512(&state, (BitSequence*)buff.buf32);
+		Update512(&state, (uint32_t *)buff);
 		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 		finalization512(&state, (uint32_t*)outHash);
 	}
 }
 
-__global__
+__global__  __launch_bounds__(256,4)
 void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -405,7 +400,7 @@ void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, voi
 		#pragma unroll 8
 		for(int i=0;i<8;i++) state.buffer[i] = 0;
 
-		Update512(&state, (BitSequence*)buff.buf32);
+		Update512(&state, buff.buf32);
 		finalization512(&state, Hash);
 
 		/* dont ask me why not a simple if (Hash[i] > c_Target[i]) return;
