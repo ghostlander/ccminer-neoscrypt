@@ -1419,7 +1419,7 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_WHC:
 			rc = scanhash_whc(thr_id, work.data, work.target,
-			                      max_nonce, (uint32_t *)&hashes_done);
+			                      max_nonce, &hashes_done);
 			break;
 
 		case ALGO_WHCX:
