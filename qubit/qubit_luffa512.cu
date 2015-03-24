@@ -17,8 +17,14 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <stdio.h>
+#ifdef __cplusplus
+#include <cstdint>
+#include <cstdio>
+using namespace std;
+#else
 #include <stdint.h>
+#include <stdio.h>
+#endif
 #include <memory.h>
 
 #include "cuda_helper.h"
@@ -37,11 +43,6 @@ static uint32_t *d_resNounce[MAX_GPUS];
 #if NBN > 1
 static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 #endif
-
-typedef struct {
-	uint32_t buffer[8]; /* Buffer to be hashed */
-	uint32_t chainv[40];   /* Chaining values */
-} hashState;
 
 #define BYTES_SWAP32(x) cuda_swab32(x)
 
@@ -105,17 +106,6 @@ typedef struct {
 	b0 ^= c1;
 
 /* initial values of chaining variables */
-__constant__ uint32_t c_IV[40] = {
-	0x6d251e69,0x44b051e0,0x4eaa6fb4,0xdbf78465,
-	0x6e292011,0x90152df4,0xee058139,0xdef610bb,
-	0xc3b44b95,0xd9d2f256,0x70eee9a0,0xde099fa3,
-	0x5d9b0557,0x8fc944b3,0xcf1ccf0e,0x746cd581,
-	0xf7efc89d,0x5dba5781,0x04016ce5,0xad659c05,
-	0x0306194f,0x666d1836,0x24aa230a,0x8b264ae7,
-	0x858075d5,0x36d79cce,0xe571f7d7,0x204b1f67,
-	0x35870c6a,0x57e9e923,0x14bcb808,0x7cde72ce,
-	0x6c68e9be,0x5ec41e22,0xc825b7c7,0xaffb4363,
-	0xf5df3999,0x0fc688f1,0xb07224cc,0x03e86cea};
 
 __constant__ uint32_t c_CNS[80] = {
 	0x303994a6,0xe0337818,0xc0e65299,0x441ba90d,
@@ -152,9 +142,9 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 #pragma unroll 8
 	for (i = 0; i<8; i++)
 	{
-		t[i] = 0;
-#pragma unroll 5
-		for (j = 0; j<5; j++)
+		t[i] = statechainv[i];
+#pragma unroll
+		for (j = 1; j<5; j++)
 		{
 			t[i] ^= statechainv[i + 8 * j];
 		}
@@ -290,56 +280,64 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 }
 
 __device__ __forceinline__
-void Update512(hashState *const __restrict__ state, const uint32_t *const __restrict__ data)
+void Update512(uint32_t *const __restrict__ statebuffer, uint32_t *const __restrict__ statechainv, const uint32_t *const __restrict__ data)
 {
 #pragma unroll 8
-	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32((data)[i]);
-	rnd512(state->buffer, state->chainv);
+	for (int i = 0; i<8; i++)
+		statebuffer[i] = BYTES_SWAP32((data)[i]);
+	rnd512(statebuffer, statechainv);
 
 #pragma unroll 8
-	for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((data))[i+8]);
-	rnd512(state->buffer, state->chainv);
+	for(int i=0;i<8;i++)
+		statebuffer[i] = BYTES_SWAP32(((data))[i+8]);
+	rnd512(statebuffer, statechainv);
 #pragma unroll 4
-	for(int i=0;i<4;i++) state->buffer[i] = BYTES_SWAP32(((data))[i+16]);
+	for(int i=0;i<4;i++)
+		statebuffer[i] = BYTES_SWAP32(((data))[i+16]);
 }
 
 
 /***************************************************/
 __device__ __forceinline__
-void finalization512(hashState *const __restrict__ state, uint32_t *const __restrict__ b)
+void finalization512(uint32_t *const __restrict__ statebuffer, uint32_t *const __restrict__ statechainv, uint32_t *const __restrict__ b)
 {
 	int i,j;
 
-	state->buffer[4] = 0x80000000;
+	statebuffer[4] = 0x80000000;
 #pragma unroll 3
-	for(int i=5;i<8;i++) state->buffer[i] = 0;
-	rnd512(state->buffer, state->chainv);
+	for(int i=5;i<8;i++)
+		statebuffer[i] = 0;
+	rnd512(statebuffer, statechainv);
 
 	/*---- blank round with m=0 ----*/
 #pragma unroll 8
-	for(i=0;i<8;i++) state->buffer[i] =0;
-	rnd512(state->buffer, state->chainv);
+	for(i=0;i<8;i++)
+		statebuffer[i] =0;
+	rnd512(statebuffer, statechainv);
 
 #pragma unroll 8
 	for(i=0;i<8;i++) {
 		b[i] = 0;
 #pragma unroll 5
 		for(j=0;j<5;j++) {
-			b[i] ^= state->chainv[i+8*j];
+			b[i] ^= statechainv[i+8*j];
 		}
 		b[i] = BYTES_SWAP32((b[i]));
 	}
 
 #pragma unroll 8
-	for(i=0;i<8;i++) state->buffer[i]=0;
-	rnd512(state->buffer, state->chainv);
+	for(i=0;i<8;i++)
+		statebuffer[i]=0;
+	rnd512(statebuffer, statechainv);
 
 #pragma unroll 8
-	for(i=0;i<8;i++) {
+	for(i=0;i<8;i++)
+	{
 		b[8+i] = 0;
 #pragma unroll 5
-		for(j=0;j<5;j++) {
-			b[8+i] ^= state->chainv[i+8*j];
+		for(j=0;j<5;j++)
+		{
+			b[8+i] ^= statechainv[i+8*j];
 		}
 		b[8+i] = BYTES_SWAP32((b[8+i]));
 	}
@@ -349,38 +347,51 @@ void finalization512(hashState *const __restrict__ state, uint32_t *const __rest
 /***************************************************/
 // Die Hash-Funktion
 __global__
-void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
+void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = startNounce + thread;
+		const uint32_t nounce = startNounce + thread;
 		uint64_t buff[16];
 
 #pragma unroll 16
-		for (int i=0; i < 16; ++i) buff[i] = c_PaddedMessage80[i];
+		for (int i=0; i < 16; ++i)
+			buff[i] = c_PaddedMessage80[i];
 
 		// die Nounce durch die thread-spezifische ersetzen
 		buff[9] = REPLACE_HIWORD(buff[9], cuda_swab32(nounce));
 
-		hashState state;
-#pragma unroll 40
-		for(int i=0;i<40;i++) state.chainv[i] = c_IV[i];
-#pragma unroll 8
-		for(int i=0;i<8;i++) state.buffer[i] = 0;
-		Update512(&state, (uint32_t *)buff);
-		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
-		finalization512(&state, (uint32_t*)outHash);
+		uint32_t statebuffer[8];
+		uint32_t statechainv[40] =
+		{
+			0x6d251e69, 0x44b051e0, 0x4eaa6fb4, 0xdbf78465,
+			0x6e292011, 0x90152df4, 0xee058139, 0xdef610bb,
+			0xc3b44b95, 0xd9d2f256, 0x70eee9a0, 0xde099fa3,
+			0x5d9b0557, 0x8fc944b3, 0xcf1ccf0e, 0x746cd581,
+			0xf7efc89d, 0x5dba5781, 0x04016ce5, 0xad659c05,
+			0x0306194f, 0x666d1836, 0x24aa230a, 0x8b264ae7,
+			0x858075d5, 0x36d79cce, 0xe571f7d7, 0x204b1f67,
+			0x35870c6a, 0x57e9e923, 0x14bcb808, 0x7cde72ce,
+			0x6c68e9be, 0x5ec41e22, 0xc825b7c7, 0xaffb4363,
+			0xf5df3999, 0x0fc688f1, 0xb07224cc, 0x03e86cea
+		};
+
+		Update512(statebuffer, statechainv, (uint32_t *)buff);
+		uint32_t *outHash = outputHash + 16 * thread;
+		finalization512(statebuffer, statechainv, outHash);
+
+
 	}
 }
 
 __global__  __launch_bounds__(256,4)
 void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = startNounce + thread;
+		const uint32_t nounce = startNounce + thread;
 		union {
 			uint64_t buf64[16];
 			uint32_t buf32[32];
@@ -388,20 +399,29 @@ void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, voi
 		uint32_t Hash[16];
 
 		#pragma unroll 16
-		for (int i=0; i < 16; ++i) buff.buf64[i] = c_PaddedMessage80[i];
+		for (int i=0; i < 16; ++i)
+			buff.buf64[i] = c_PaddedMessage80[i];
 
 		// Tested nonce
 		buff.buf64[9] = REPLACE_HIWORD(buff.buf64[9], cuda_swab32(nounce));
 
-		hashState state;
-		#pragma unroll 40
-		for(int i=0;i<40;i++) state.chainv[i] = c_IV[i];
+		uint32_t statebuffer[8];
+		uint32_t statechainv[40] =
+		{
+			0x6d251e69, 0x44b051e0, 0x4eaa6fb4, 0xdbf78465,
+			0x6e292011, 0x90152df4, 0xee058139, 0xdef610bb,
+			0xc3b44b95, 0xd9d2f256, 0x70eee9a0, 0xde099fa3,
+			0x5d9b0557, 0x8fc944b3, 0xcf1ccf0e, 0x746cd581,
+			0xf7efc89d, 0x5dba5781, 0x04016ce5, 0xad659c05,
+			0x0306194f, 0x666d1836, 0x24aa230a, 0x8b264ae7,
+			0x858075d5, 0x36d79cce, 0xe571f7d7, 0x204b1f67,
+			0x35870c6a, 0x57e9e923, 0x14bcb808, 0x7cde72ce,
+			0x6c68e9be, 0x5ec41e22, 0xc825b7c7, 0xaffb4363,
+			0xf5df3999, 0x0fc688f1, 0xb07224cc, 0x03e86cea
+		};
 
-		#pragma unroll 8
-		for(int i=0;i<8;i++) state.buffer[i] = 0;
-
-		Update512(&state, buff.buf32);
-		finalization512(&state, Hash);
+		Update512(statebuffer, statechainv, buff.buf32);
+		finalization512(statebuffer, statechainv, Hash);
 
 		/* dont ask me why not a simple if (Hash[i] > c_Target[i]) return;
 		 * we lose 20% in perfs without the position test */

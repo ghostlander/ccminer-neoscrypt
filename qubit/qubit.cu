@@ -19,9 +19,11 @@ static uint32_t *h_found[MAX_GPUS];
 
 extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
-extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash);
 
-extern void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+
+
+extern void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 extern void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
@@ -109,7 +111,7 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xf;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
@@ -140,7 +142,7 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 
 		// Hash with CUDA
 		qubit_luffa512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
+		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], d_hash[thr_id], ptarget[7], h_found[thr_id]);
