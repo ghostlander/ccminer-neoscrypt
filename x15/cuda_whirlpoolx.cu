@@ -6,6 +6,9 @@
 #include <memory.h>
 #include "cuda_helper.h"
 
+#define TPB 512
+#define NONCES_PER_THREAD 8
+
 __constant__  uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__  uint2 c_xtra[8];
 __constant__  uint2 c_tmp[72];
@@ -87,12 +90,6 @@ const  uint64_t hmixTob0Tox[256] = {
 /**
  * Round constants.
  */
-__constant__ uint64_t InitVector_RC[10] =
-{
-	0x4F01B887E8C62318,0x52916F79F5D2A636,0x357B0CA38E9BBC60,0x57FE4B2EC2D7E01D,0xDA4AF09FE5377715,
-	0x856BA0B10A29C958,0x67053ECBF4105DBD,0xD8957DA78B4127E4,0x9E4717DD667CEEFB,0x33835AAD07BF2DCA
-};
-
 /* ====================================================================== */
 
 __device__ __forceinline__
@@ -191,11 +188,18 @@ void precomputeX(uint32_t threads, uint2*const __restrict__ d_xtra, uint64_t*con
 {
 
 	__shared__ uint64_t sharedMemory[2048];
+	const uint64_t InitVector_RC[10] =
+	{
+		0x4F01B887E8C62318, 0x52916F79F5D2A636, 0x357B0CA38E9BBC60, 0x57FE4B2EC2D7E01D, 0xDA4AF09FE5377715,
+		0x856BA0B10A29C958, 0x67053ECBF4105DBD, 0xD8957DA78B4127E4, 0x9E4717DD667CEEFB, 0x33835AAD07BF2DCA
+	};
+
 
 	getShared(sharedMemory);
 	const int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+
 		uint64_t n[8];
 		uint64_t h[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -423,20 +427,30 @@ void precomputeX(uint32_t threads, uint2*const __restrict__ d_xtra, uint64_t*con
 		}
 	}
 }
-__global__ __launch_bounds__(1024, 2)
+__global__ __launch_bounds__(TPB, 3)
 void whirlpoolx(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 {
-	__shared__ uint64_t sharedMemory[2048];
 
-	getShared(sharedMemory);
 
-	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t threadindex = (blockDim.x * blockIdx.x + threadIdx.x);
 
-	if (thread < threads){
+
+	if (threadindex < threads)
+	{
+		__shared__ uint64_t sharedMemory[2048];
+		getShared(sharedMemory);
+
+		const uint32_t numberofthreads = blockDim.x*gridDim.x;
+		const uint32_t maxnonce = startNounce + threadindex + numberofthreads*NONCES_PER_THREAD - 1;
+		const uint32_t threadindex = blockIdx.x*blockDim.x + threadIdx.x;
+		const uint64_t backup = pTarget[0];
+		#pragma unroll 
+		for (uint32_t nounce = startNounce + threadindex; nounce <= maxnonce; nounce += numberofthreads)
+		{
 
 		uint2 n[8];
 		uint2 tmp[8];
-		const uint32_t nounce = startNounce + thread;
+		//const uint32_t nounce = startNounce + thread;
 
 		n[1].y = nounce ^ c_xtra[0].y;
 
@@ -531,13 +545,14 @@ void whirlpoolx(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 		tmp[6] = ROUND_ELT2(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ (c_tmp[6 + 64]);
 		tmp[7] = ROUND_ELT2(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ (c_tmp[7 + 64]);
 
-		if ((devectorize(c_xtra[1] ^ ROUND_ELT2(sharedMemory, tmp, 3, 2, 1, 0, 7, 6, 5, 4) ^ ROUND_ELT2(sharedMemory, tmp, 5, 4, 3, 2, 1, 0, 7, 6))) <= pTarget[0])
+		if ((devectorize(c_xtra[1] ^ ROUND_ELT2(sharedMemory, tmp, 3, 2, 1, 0, 7, 6, 5, 4) ^ ROUND_ELT2(sharedMemory, tmp, 5, 4, 3, 2, 1, 0, 7, 6))) <= backup)
 		{
 			uint32_t tmp = atomicExch(resNounce, nounce);
 			if (tmp != 0xffffffff)
 				resNounce[1] = tmp;
 		}
 	} // thread < threads
+	}
 }
 
 __host__ extern void whirlpoolx_cpu_init(int thr_id, uint32_t threads)
@@ -578,10 +593,8 @@ __host__ void whirlpoolx_precompute(int thr_id)
 
 __host__ void cpu_whirlpoolx(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *foundnonce)
 {
-	int tpb = 1024;
-
-	dim3 grid((threads + tpb - 1) / tpb);
-	dim3 block(tpb);
+	dim3 grid((threads + TPB*NONCES_PER_THREAD - 1) / TPB / NONCES_PER_THREAD);
+	dim3 block(TPB);
 
 	cudaMemset(d_WXNonce[thr_id], 0xff, 2 * sizeof(uint32_t));
 	whirlpoolx <<<grid, block >>>(threads, startNounce, d_WXNonce[thr_id]);
