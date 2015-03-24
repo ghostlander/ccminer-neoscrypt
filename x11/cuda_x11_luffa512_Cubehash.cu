@@ -300,6 +300,7 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
         statechainv[i+32] = chainv[i];
     }
 }
+
 __device__ __forceinline__
 void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 {
@@ -581,7 +582,7 @@ __device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
 	int l;
 	int m;
 
-//	#pragma unroll 
+	#pragma unroll 1
 	for (r = 0; r < CUBEHASH_ROUNDS; ++r) {
 
 		/* "add x_0jklm into x_1jklmn modulo 2^32" */
@@ -732,6 +733,11 @@ void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const uint32
 	block_tox((uint32_t*)data, x);
 	rrounds(x);
 }
+void __device__ __forceinline__ Update32_const(uint32_t x[2][2][2][2][2])
+{
+	x[0][0][0][0][0] ^= 0x80;
+	rrounds(x);
+}
 
 void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 {
@@ -797,9 +803,7 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		};
 		Update32(x, Hash);
 		Update32(x, &Hash[8]);
-		// Padding Block
-		uint32_t last[8] = { 0x80, 0, 0, 0, 0, 0, 0, 0 };
-		Update32(x, last);
+		Update32_const(x);
 		Final(x, Hash);
 	}
 }
