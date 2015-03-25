@@ -1,7 +1,7 @@
 #include "cuda_helper.h"
 #include <memory.h> // memcpy()
 
-#define TPB 256
+#define TPB 320
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
@@ -111,9 +111,9 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	rk[0] ^= rk[28];
 	rk[1] ^= rk[29];
 	rk[2] ^= rk[30];
-	rk[3] ^= rk[31];
+	rk[3] ^= ~rk[31];
 	rk[0] ^= counter;
-	rk[3] ^= 0xFFFFFFFF;
+	//rk[3] ^= 0xFFFFFFFF;
 	x0 = p0 ^ rk[0];
 	x1 = p1 ^ rk[1];
 	x2 = p2 ^ rk[2];
@@ -873,9 +873,9 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	rk[28] ^= rk[24];
 	rk[29] ^= rk[25];
 	rk[30] ^= rk[26];
-	rk[31] ^= rk[27];
+	rk[31] ^= ~rk[27];
 	rk[30] ^= counter;
-	rk[31] ^= 0xFFFFFFFF;
+	//rk[31] ^= 0xFFFFFFFF;
 	x0 ^= rk[28];
 	x1 ^= rk[29];
 	x2 ^= rk[30];
@@ -1208,7 +1208,7 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	rk[24] ^= rk[20];
 	rk[25] ^= rk[21] ^ counter;
 	rk[26] ^= rk[22];
-	rk[27] ^= rk[23] ^ 0xFFFFFFFF;
+	rk[27] ^= ~rk[23]; //^ 0xFFFFFFFF;
 	x0 ^= rk[24];
 	x1 ^= rk[25];
 	x2 ^= rk[26];
@@ -2138,9 +2138,9 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		rk[28] ^= rk[24];
 		rk[29] ^= rk[25];
 		rk[30] ^= rk[26];
-		rk[31] ^= rk[27];
+		rk[31] ^= ~rk[27];
 		rk[30] ^= 512;
-		rk[31] ^= 0xFFFFFFFF;
+//		rk[31] ^= 0xFFFFFFFF;
 		x0 ^= rk[28];
 		x1 ^= rk[29];
 		x2 ^= rk[30];
