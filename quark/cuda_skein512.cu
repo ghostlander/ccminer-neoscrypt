@@ -514,16 +514,19 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
+
+
+#if __CUDA_ARCH__ > 500
+#define TBP 448
+#else
+#define TBP 128
+#endif
+
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	int t = 128;
-	if (device_sm[device_map[thr_id]] > 500)
-	{
-		t = 448;
-	}
-	dim3 grid((threads + t - 1) / t);
-	dim3 block(t);
+	dim3 grid((threads + TBP - 1) / TBP);
+	dim3 block(TBP);
 	quark_skein512_gpu_hash_64 << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 
 }
