@@ -17,18 +17,18 @@ __constant__ uint32_t pTarget[8];
 static uint32_t *h_wnounce[MAX_GPUS];
 static uint32_t *d_WNonce[MAX_GPUS];
 
-#define USE_ALL_TABLES 0
+#define USE_ALL_TABLES 1
 
 __constant__ static uint64_t mixTob0Tox[256];
 #if USE_ALL_TABLES
 __constant__ static uint64_t mixTob1Tox[256];
-__constant__ static uint64_t mixTob2Tox[256];
-__constant__ static uint64_t mixTob3Tox[256];
-__constant__ static uint64_t mixTob4Tox[256];
-__constant__ static uint64_t mixTob5Tox[256];
-__constant__ static uint64_t mixTob6Tox[256];
-__constant__ static uint64_t mixTob7Tox[256];
 #endif
+//__constant__ static uint64_t mixTob2Tox[256];
+//__constant__ static uint64_t mixTob3Tox[256];
+//__constant__ static uint64_t mixTob4Tox[256];
+//__constant__ static uint64_t mixTob5Tox[256];
+//__constant__ static uint64_t mixTob6Tox[256];
+//__constant__ static uint64_t mixTob7Tox[256];
 
 /**
  * Whirlpool CUDA kernel implementation.
@@ -326,6 +326,7 @@ static const uint64_t old1_T1[256] = {
 	SPH_C64(0x6B933FF815F8F83F), SPH_C64(0xC244A486978686A4)
 };
 
+/*
 static const uint64_t old1_T2[256] = {
 	SPH_C64(0xC0781828181878D8), SPH_C64(0x05AF23652323AF26),
 	SPH_C64(0x7EF9C657C6C6F9B8), SPH_C64(0x136FE825E8E86FFB),
@@ -588,6 +589,7 @@ static const uint64_t old1_T3[256] = {
 	SPH_C64(0x3FF815F8F83F6B93), SPH_C64(0xA486978686A4C244)
 };
 
+/*
 static const uint64_t old1_T4[256] = {
 	SPH_C64(0x1828181878D8C078), SPH_C64(0x23652323AF2605AF),
 	SPH_C64(0xC657C6C6F9B87EF9), SPH_C64(0xE825E8E86FFB136F),
@@ -1111,8 +1113,8 @@ static const uint64_t old1_T7[256] = {
 	SPH_C64(0x2888755D88287828), SPH_C64(0x5C3186DA315CE45C),
 	SPH_C64(0xF83F6B933FF815F8), SPH_C64(0x86A4C244A4869786)
 };
+*/
 #endif
-
 
 /*
 static const uint64_t old1_RC[10] = {
@@ -1262,6 +1264,7 @@ static const uint64_t plain_T0[256] = {
 
 #if USE_ALL_TABLES
 
+
 static const uint64_t plain_T1[256] = {
 	SPH_C64(0x3078C018601818D8), SPH_C64(0x46AF05238C232326),
 	SPH_C64(0x91F97EC63FC6C6B8), SPH_C64(0xCD6F13E887E8E8FB),
@@ -1392,7 +1395,7 @@ static const uint64_t plain_T1[256] = {
 	SPH_C64(0x50885D28A0282875), SPH_C64(0xB831DA5C6D5C5C86),
 	SPH_C64(0xED3F93F8C7F8F86B), SPH_C64(0x11A44486228686C2)
 };
-
+/*
 static const uint64_t plain_T2[256] = {
 	SPH_C64(0x78C018601818D830), SPH_C64(0xAF05238C23232646),
 	SPH_C64(0xF97EC63FC6C6B891), SPH_C64(0x6F13E887E8E8FBCD),
@@ -1654,7 +1657,7 @@ static const uint64_t plain_T3[256] = {
 	SPH_C64(0x5D28A02828755088), SPH_C64(0xDA5C6D5C5C86B831),
 	SPH_C64(0x93F8C7F8F86BED3F), SPH_C64(0x4486228686C211A4)
 };
-
+/*
 static const uint64_t plain_T4[256] = {
 	SPH_C64(0x18601818D83078C0), SPH_C64(0x238C23232646AF05),
 	SPH_C64(0xC63FC6C6B891F97E), SPH_C64(0xE887E8E8FBCD6F13),
@@ -2178,6 +2181,7 @@ static const uint64_t plain_T7[256] = {
 	SPH_C64(0x287550885D28A028), SPH_C64(0x5C86B831DA5C6D5C),
 	SPH_C64(0xF86BED3F93F8C7F8), SPH_C64(0x86C211A444862286)
 };
+*/
 
 /**
  * Round constants.
@@ -2192,21 +2196,20 @@ const int i0,const int i1,const int i2,const int i3,const int i4,const int i5,co
 {
 	return(
 		sharedMemory[__byte_perm(in[(i0)].x, 0, 0x4440)] ^ ROL2(sharedMemory[__byte_perm(in[(i1)].x, 0, 0x4441)], 8) ^ ROL2(sharedMemory[__byte_perm(in[(i2)].x, 0, 0x4442)], 16) ^
-		ROL2(sharedMemory[__byte_perm(in[(i3)].x, 0, 0x4443)], 24) ^ SWAPDWORDS2(sharedMemory[__byte_perm(in[(i4)].y, 0, 0x4440)]) ^ ROL2(sharedMemory[__byte_perm(in[(i5)].y, 0, 0x4441)], 40) ^
-		ROL2(sharedMemory[__byte_perm(in[(i6)].y, 0, 0x4442)], 48) ^ ROL2(sharedMemory[__byte_perm(in[(i7)].y, 0, 0x4443)], 56));
+		ROL2(sharedMemory[__byte_perm(in[(i3)].x, 0, 0x4443)], 24) ^ sharedMemory[__byte_perm(in[(i4)].y, 0, 0x4440) + 256] ^ ROL2(sharedMemory[__byte_perm(in[(i5)].y, 0, 0x4441) + 256], 8) ^
+		ROL2(sharedMemory[__byte_perm(in[(i6)].y, 0, 0x4442) + 256], 16) ^ ROL2(sharedMemory[__byte_perm(in[(i7)].y, 0, 0x4443) + 256], 24));
 
 
 }
 #else
 __device__ __forceinline__
-static uint64_t ROUND_ELT(const uint2* sharedMemory, uint2* __restrict__ in,
+static uint2 ROUND_ELT(const uint2*const __restrict__  sharedMemory, uint2*  const __restrict__ in,
 const int i0, const int i1, const int i2, const int i3, const int i4, const int i5, const int i6, const int i7)
 {
-	uint32_t* in32 = (uint32_t*)in;
-	return (sharedMemory[__byte_perm(in32[(i0 << 1)], 0, 0x4440)] ^ sharedMemory[__byte_perm(in32[(i1 << 1)], 0, 0x4441) + 256] ^
-		sharedMemory[__byte_perm(in32[(i2 << 1)], 0, 0x4442) + 512] ^ sharedMemory[__byte_perm(in32[(i3 << 1)], 0, 0x4443) + 768] ^
-		sharedMemory[__byte_perm(in32[(i4 << 1) + 1], 0, 0x4440) + 1024] ^ sharedMemory[__byte_perm(in32[(i5 << 1) + 1], 0, 0x4441) + 1280] ^
-		sharedMemory[__byte_perm(in32[(i6 << 1) + 1], 0, 0x4442) + 1536] ^ sharedMemory[__byte_perm(in32[(i7 << 1) + 1], 0, 0x4443) + 1792]);
+	return (sharedMemory[__byte_perm(in[i0].x, 0, 0x4440)] ^ sharedMemory[__byte_perm(in[i1].x, 0, 0x4441) + 256] ^
+		sharedMemory[__byte_perm(in[i2].x, 0, 0x4442) + 512] ^ sharedMemory[__byte_perm(in[i3].x, 0, 0x4443) + 768] ^
+		SWAPDWORDS2(sharedMemory[__byte_perm(in[i4].y, 0, 0x4440)]) ^ SWAPDWORDS2(sharedMemory[__byte_perm(in[i5].y, 0, 0x4441) + 256]) ^
+		SWAPDWORDS2(sharedMemory[__byte_perm(in[i6].y, 0, 0x4442) + 512]) ^ SWAPDWORDS2(sharedMemory[__byte_perm(in[i7].y, 0, 0x4443) + 768]));
 }
 #endif /* USE_ALL_TABLES */
 
@@ -2216,21 +2219,24 @@ __global__
 void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 #if USE_ALL_TABLES
-	__shared__ uint2 sharedMemory[2048];
+	__shared__ uint2 sharedMemory[256*4];
 #else
-	__shared__ uint2 sharedMemory[256];
+	__shared__ uint2 sharedMemory[256*2];
 #endif
 
 	if (threadIdx.x < 256) {
-		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 #if USE_ALL_TABLES
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 512] = vectorize(mixTob2Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 768] = vectorize(mixTob3Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 1024] = vectorize(mixTob4Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 1280] = vectorize(mixTob5Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 1536] = vectorize(mixTob6Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 1792] = vectorize(mixTob7Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = ROL2(vectorize(mixTob0Tox[threadIdx.x]), 16);
+		sharedMemory[threadIdx.x + 768] = ROL2(vectorize(mixTob1Tox[threadIdx.x]), 16);
+//		sharedMemory[threadIdx.x + 1024] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
+//		sharedMemory[threadIdx.x + 1280] = SWAPDWORDS2(sharedMemory[threadIdx.x + 256]);
+//		sharedMemory[threadIdx.x + 1536] = SWAPDWORDS2(sharedMemory[threadIdx.x + 512]);
+//		sharedMemory[threadIdx.x + 1792] = SWAPDWORDS2(sharedMemory[threadIdx.x + 768]);
+#else
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 256] = SWAPDWORDS2(sharedMemory[threadIdx.x]); 
 #endif
 	}
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2388,25 +2394,105 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			outHash[i] = hash.h4[i];
 	} // thread < threads
 }
+
+__constant__ uint2 precalc[8 * 9] = {
+	{ 0xf889ab3b, 0x24aed1ea },
+	{ 0x66454544, 0xafcbe945 },
+	{ 0xa4a4fe70, 0x89b2a4c5 },
+	{ 0xe1a9fac5, 0xa0e1cce1 },
+	{ 0x5cc0ac48, 0xfcb8fcfc },
+	{ 0x260ef78f, 0x698f8f90 },
+	{ 0x07147996, 0x797985d7 },
+	{ 0x68f8a8f8, 0xf878c8b8 },
+	{ 0xdbbf19d3, 0x58704630 },
+	{ 0xd1235b29, 0xdb37cfaf },
+	{ 0xc28a2c01, 0x98ac958b },
+	{ 0xb19e6381, 0xa706b2c0 },
+	{ 0x7a605e44, 0xdb09b2b0 },
+	{ 0xcf2c5b73, 0x71bc8cbc },
+	{ 0x240967dc, 0xd3ddedef },
+	{ 0xf03b8d7b, 0x197d3bd7 },
+	{ 0xc1aabe38, 0x866511de },
+	{ 0xd0f37c68, 0x7f33874a },
+	{ 0xdbfa37f3, 0x57f0ad98 },
+	{ 0x5842e2c5, 0xbc8d35ee },
+	{ 0xe8f00911, 0x7e246e99 },
+	{ 0xedd6c501, 0x0134b010 },
+	{ 0xf152c9fb, 0xd3ec287b },
+	{ 0x0cdc5632, 0x4027f1c7 },
+	{ 0x20a525af, 0x14cf9b94 },
+	{ 0xa92636c1, 0x4d53c4e3 },
+	{ 0x867d0fe6, 0xe1f94077 },
+	{ 0xbbe65d91, 0x29066ae2 },
+	{ 0xcc545a96, 0x8d5efe4c },
+	{ 0xcb31e9be, 0xa63a3262 },
+	{ 0x18597bb1, 0x476a8496 },
+	{ 0x36c9f0d4, 0x31af5927 },
+	{ 0xc0b5f9e2, 0xb00b3725 },
+	{ 0xa2cb2b39, 0xa5948416 },
+	{ 0xcef88a60, 0x148c34fa },
+	{ 0x6437a57a, 0x19928c41 },
+	{ 0xa146f3b3, 0x893f83fa },
+	{ 0x483f4997, 0x7ccf0278 },
+	{ 0xbae8addc, 0x238f001e },
+	{ 0x494f7792, 0x3d32b0ed },
+	{ 0x82634175, 0x2fff4d77 },
+	{ 0xd038faff, 0x00460355 },
+	{ 0x49027dbf, 0x61f3983e },
+	{ 0xc260a8f4, 0x0bcee59a },
+	{ 0x445adfc8, 0x279d5dee },
+	{ 0x555af423, 0xa4007504 },
+	{ 0x121016b0, 0x8ce2f902 },
+	{ 0x29cd30ac, 0x1d333368 },
+	{ 0x82f16b03, 0x89ad8468 },
+	{ 0x62c64099, 0x637146d8 },
+	{ 0x173e434c, 0x10c2194b },
+	{ 0xd3cf9ce2, 0xc586ff4c },
+	{ 0xa011ff21, 0x5326df42 },
+	{ 0xcb008e1b, 0x134be46c },
+	{ 0xf73b12a6, 0xceb747a3 },
+	{ 0x0e9018d9, 0xca33283b },
+	{ 0x7a671cd0, 0xf92c9a0a },
+	{ 0x532f942a, 0xb2b6634a },
+	{ 0x46224288, 0xb4a8acfe },
+	{ 0xc75c4a47, 0x5935583d },
+	{ 0x5d92a674, 0xa16f5ca5 },
+	{ 0x8ce61777, 0x395c73c4 },
+	{ 0x0b3b2a08, 0xc61aec53 },
+	{ 0xeb58f62a, 0x62e74d81 },
+	{ 0xb6489548, 0x3abcee01 },
+	{ 0xc66b0da5, 0x818eed6b },
+	{ 0xcf3dcee0, 0x755a2688 },
+	{ 0xdb4a8cc2, 0xe99cf6c0 },
+	{ 0xd59cb754, 0x1385717f },
+	{ 0x8a4b4143, 0x7b0b7d97 },
+	{ 0xbb351963, 0x7a15f6db },
+	{ 0xf64e7a6a, 0x27820137 }
+};
+
+
 __global__ __launch_bounds__(256,2)
 void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 #if USE_ALL_TABLES
-	__shared__ uint2 sharedMemory[2048];
+	__shared__ uint2 sharedMemory[256*4];
 #else
-	__shared__ uint2 sharedMemory[256];
+	__shared__ uint2 sharedMemory[512];
 #endif
 	if (threadIdx.x < 256) 
 	{
-		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 #if USE_ALL_TABLES
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+512]  =vectorize( mixTob2Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+768]  = vectorize(mixTob3Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1024] = vectorize(mixTob4Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1280] = vectorize(mixTob5Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1536] = vectorize(mixTob6Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1792] = vectorize(mixTob7Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = ROL2(vectorize(mixTob0Tox[threadIdx.x]), 16);
+		sharedMemory[threadIdx.x + 768] = ROL2(vectorize(mixTob1Tox[threadIdx.x]), 16);
+//		sharedMemory[threadIdx.x + 1024] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
+//		sharedMemory[threadIdx.x + 1280] = SWAPDWORDS2(sharedMemory[threadIdx.x + 256]);
+//		sharedMemory[threadIdx.x + 1536] = SWAPDWORDS2(sharedMemory[threadIdx.x + 512]);
+//		sharedMemory[threadIdx.x + 1792] = SWAPDWORDS2(sharedMemory[threadIdx.x + 768]);
+#else
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 256] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
 #endif
 	}
 
@@ -2434,46 +2520,52 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		};
 
 #pragma unroll 8
-		for (i = 0; i<8; i++)
+		for (i = 0; i < 8; i++)
 			n[i] = hash[i] = vectorize(g_hash[hashPosition + i]);
 
-#pragma unroll 10
-		for (i = 0; i < 10; i++)
+		uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7,pre;
+
+		pre = vectorize((0xD83078C018601818) ^ (0x3078C018601818D8) ^ (0x78C018601818D830) ^ (0xC018601818D83078) ^ (0x18601818D83078C0) ^ (0x601818D83078C018) ^ (0x1818D83078C01860) ^ (0x18D83078C0186018));
+
+		tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1) ^ pre^ InitVector_RC[0];
+		tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ pre;
+		tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ pre;
+		tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ pre;
+		tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ pre;
+		tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ pre;
+		tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ pre;
+		tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ pre;
+
+		n[0] = tmp0;
+		n[1] = tmp1;
+		n[2] = tmp2;
+		n[3] = tmp3;
+		n[4] = tmp4;
+		n[5] = tmp5;
+		n[6] = tmp6;
+		n[7] = tmp7;
+
+//		#pragma unroll
+		for (i = 0; i < 8*9; i+=8)
 		{
-			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[i]; 
-			tmp1 = ROUND_ELT(sharedMemory, h, 1, 0, 7, 6, 5, 4, 3, 2); 
-			tmp2 = ROUND_ELT(sharedMemory, h, 2, 1, 0, 7, 6, 5, 4, 3); 
-			tmp3 = ROUND_ELT(sharedMemory, h, 3, 2, 1, 0, 7, 6, 5, 4); 
-			tmp4 = ROUND_ELT(sharedMemory, h, 4, 3, 2, 1, 0, 7, 6, 5); 
-			tmp5 = ROUND_ELT(sharedMemory, h, 5, 4, 3, 2, 1, 0, 7, 6); 
-			tmp6 = ROUND_ELT(sharedMemory, h, 6, 5, 4, 3, 2, 1, 0, 7); 
-			tmp7= ROUND_ELT(sharedMemory, h, 7, 6, 5, 4, 3, 2, 1, 0); 
-			h[0] = tmp0; 
-			h[1] = tmp1; 
-			h[2] = tmp2; 
-			h[3] = tmp3; 
-			h[4] = tmp4; 
-			h[5] = tmp5; 
-			h[6] = tmp6; 
-			h[7] = tmp7;
-			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1)^ h[0]; 
-			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ h[1];
-			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ h[2];
-			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ h[3];
-			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ h[4];
-			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ h[5];
-			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ h[6];
-			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ h[7];
-		    n[0] = tmp0; 
-			n[1] = tmp1; 
-			n[2] = tmp2; 
-			n[3] = tmp3; 
-			n[4] = tmp4; 
-			n[5] = tmp5; 
-			n[6] = tmp6; 
-			n[7] = tmp7; 
+			tmp0 = ROUND_ELT(sharedMemory, n, 0, 7, 6, 5, 4, 3, 2, 1) ^ precalc[i];
+			tmp1 = ROUND_ELT(sharedMemory, n, 1, 0, 7, 6, 5, 4, 3, 2) ^ precalc[i+1];
+			tmp2 = ROUND_ELT(sharedMemory, n, 2, 1, 0, 7, 6, 5, 4, 3) ^ precalc[i+2];
+			tmp3 = ROUND_ELT(sharedMemory, n, 3, 2, 1, 0, 7, 6, 5, 4) ^ precalc[i+3];
+			tmp4 = ROUND_ELT(sharedMemory, n, 4, 3, 2, 1, 0, 7, 6, 5) ^ precalc[i+4];
+			tmp5 = ROUND_ELT(sharedMemory, n, 5, 4, 3, 2, 1, 0, 7, 6) ^ precalc[i+5];
+			tmp6 = ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7) ^ precalc[i+6];
+			tmp7 = ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0) ^ precalc[i+7];
+			n[0] = tmp0;
+			n[1] = tmp1;
+			n[2] = tmp2;
+			n[3] = tmp3;
+			n[4] = tmp4;
+			n[5] = tmp5;
+			n[6] = tmp6;
+			n[7] = tmp7;
 		}
+
 
 #pragma unroll 8
 		for (i = 0; i<8; i++)
@@ -2552,22 +2644,25 @@ __global__
 void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resNounce)
 {
 #if USE_ALL_TABLES
-	__shared__ uint2 sharedMemory[2048];
+	__shared__ uint2 sharedMemory[256*4];
 #else
-	__shared__ uint2 sharedMemory[256];
+	__shared__ uint2 sharedMemory[256*2];
 #endif
 
 	if (threadIdx.x < 256)
 	{
-		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 #if USE_ALL_TABLES
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+512]  =vectorize( mixTob2Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+768]  = vectorize(mixTob3Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1024] = vectorize(mixTob4Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1280] = vectorize(mixTob5Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1536] = vectorize(mixTob6Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x+1792] = vectorize(mixTob7Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = ROL2(vectorize(mixTob0Tox[threadIdx.x]), 16);
+		sharedMemory[threadIdx.x + 768] = ROL2(vectorize(mixTob1Tox[threadIdx.x]), 16);
+//		sharedMemory[threadIdx.x + 1024] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
+//		sharedMemory[threadIdx.x + 1280] = SWAPDWORDS2(sharedMemory[threadIdx.x + 256]);
+//		sharedMemory[threadIdx.x + 1536] = SWAPDWORDS2(sharedMemory[threadIdx.x + 512]);
+//		sharedMemory[threadIdx.x + 1792] = SWAPDWORDS2(sharedMemory[threadIdx.x + 768]);
+#else
+		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 256] = SWAPDWORDS2(sharedMemory[threadIdx.x]); 
 #endif
 	}
 
@@ -2726,19 +2821,19 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 }
 
 __host__
-extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
+extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, const int mode)
 {
 	switch (mode) {
 	case 0: /* x15 with rotated T1-T7 (based on T0) */
 		cudaMemcpyToSymbol(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
 #if USE_ALL_TABLES
 		cudaMemcpyToSymbol(mixTob1Tox, plain_T1, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob2Tox, plain_T2, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob3Tox, plain_T3, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob4Tox, plain_T4, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob5Tox, plain_T5, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob6Tox, plain_T6, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob7Tox, plain_T7, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob2Tox, plain_T2, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob3Tox, plain_T3, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob4Tox, plain_T4, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob5Tox, plain_T5, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob6Tox, plain_T6, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob7Tox, plain_T7, (256*8), 0, cudaMemcpyHostToDevice);
 #endif
 		break;
 
@@ -2746,12 +2841,12 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		cudaMemcpyToSymbol(mixTob0Tox, old1_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
 #if USE_ALL_TABLES
 		cudaMemcpyToSymbol(mixTob1Tox, old1_T1, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob2Tox, old1_T2, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob3Tox, old1_T3, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob4Tox, old1_T4, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob5Tox, old1_T5, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob2Tox, old1_T2, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob3Tox, old1_T3, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob4Tox, old1_T4, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob5Tox, old1_T5, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
 #endif
 		cudaMalloc(&d_WNonce[thr_id], 2 * sizeof(uint32_t));
 		cudaMallocHost(&h_wnounce[thr_id], 2 * sizeof(uint32_t));
