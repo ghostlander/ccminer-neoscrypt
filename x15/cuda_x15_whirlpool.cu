@@ -19,16 +19,6 @@ static uint32_t *d_WNonce[MAX_GPUS];
 
 #define USE_ALL_TABLES 1
 
-__constant__ static uint64_t mixTob0Tox[256];
-#if USE_ALL_TABLES
-__constant__ static uint64_t mixTob1Tox[256];
-#endif
-//__constant__ static uint64_t mixTob2Tox[256];
-//__constant__ static uint64_t mixTob3Tox[256];
-//__constant__ static uint64_t mixTob4Tox[256];
-//__constant__ static uint64_t mixTob5Tox[256];
-//__constant__ static uint64_t mixTob6Tox[256];
-//__constant__ static uint64_t mixTob7Tox[256];
 
 /**
  * Whirlpool CUDA kernel implementation.
@@ -62,7 +52,7 @@ __constant__ static uint64_t mixTob1Tox[256];
  * @author SP
  */
 
-static const uint64_t plain_T0[256] = {
+__constant__  __align__(64) uint64_t mixTob0Tox[256] = {
 	SPH_C64(0xD83078C018601818), SPH_C64(0x2646AF05238C2323),
 	SPH_C64(0xB891F97EC63FC6C6), SPH_C64(0xFBCD6F13E887E8E8),
 	SPH_C64(0xCB13A14C87268787), SPH_C64(0x116D62A9B8DAB8B8),
@@ -196,7 +186,7 @@ static const uint64_t plain_T0[256] = {
 #if USE_ALL_TABLES
 
 
-static const uint64_t plain_T1[256] = {
+__constant__  __align__(64) uint64_t  mixTob1Tox[256] = {
 	SPH_C64(0x3078C018601818D8), SPH_C64(0x46AF05238C232326),
 	SPH_C64(0x91F97EC63FC6C6B8), SPH_C64(0xCD6F13E887E8E8FB),
 	SPH_C64(0x13A14C87268787CB), SPH_C64(0x6D62A9B8DAB8B811),
@@ -1133,8 +1123,7 @@ const int i0,const int i1,const int i2,const int i3,const int i4,const int i5,co
 
 }
 #else
-__device__ __forceinline__
-static uint2 ROUND_ELT(const uint2*const __restrict__  sharedMemory, uint2*  const __restrict__ in,
+__device__ uint2 ROUND_ELT(const uint2*const __restrict__  sharedMemory, uint2*  const __restrict__ in,
 const int i0, const int i1, const int i2, const int i3, const int i4, const int i5, const int i6, const int i7)
 {
 	return (sharedMemory[__byte_perm(in[i0].x, 0, 0x4440)] ^ 
@@ -1407,7 +1396,8 @@ __constant__ uint2 precalc[8 * 9] = {
 	{ 0xf64e7a6a, 0x27820137 }
 };
 
-__global__ __launch_bounds__(256,2)
+
+__global__ __launch_bounds__(threadsperblock, 2)
 void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 #if USE_ALL_TABLES
@@ -1420,8 +1410,8 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 #if USE_ALL_TABLES
 		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
 		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 512] = ROL2(vectorize(mixTob0Tox[threadIdx.x]), 16);
-		sharedMemory[threadIdx.x + 768] = ROL2(vectorize(mixTob1Tox[threadIdx.x]), 16);
+		sharedMemory[threadIdx.x + 512] = ROL2(sharedMemory[threadIdx.x], 16);
+		sharedMemory[threadIdx.x + 768] = ROL2(sharedMemory[threadIdx.x + 256], 16);
 //		sharedMemory[threadIdx.x + 1024] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
 //		sharedMemory[threadIdx.x + 1280] = SWAPDWORDS2(sharedMemory[threadIdx.x + 256]);
 //		sharedMemory[threadIdx.x + 1536] = SWAPDWORDS2(sharedMemory[threadIdx.x + 512]);
@@ -1435,6 +1425,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+
 
 
 		const uint2 InitVector_RC[10] =
@@ -1454,7 +1445,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 
 		uint32_t nounce = (startNounce + thread);
 		uint32_t hashPosition = (nounce - startNounce) << 3;
-		uint2 hash[8], state[8], n[8], h[8] = { 0 };
+		uint2 hash[8], state[8], n[8], h[8];
 		int i;
 
 
@@ -1759,16 +1750,16 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 __host__
 extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, const int mode)
 {
-		cudaMemcpyToSymbol(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
-#if USE_ALL_TABLES
-		cudaMemcpyToSymbol(mixTob1Tox, plain_T1, (256*8), 0, cudaMemcpyHostToDevice);
+//		cudaMemcpyToSymbol(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
+//#if USE_ALL_TABLES
+//		cudaMemcpyToSymbol(mixTob1Tox, plain_T1, (256*8), 0, cudaMemcpyHostToDevice);
 //		cudaMemcpyToSymbol(mixTob2Tox, plain_T2, (256*8), 0, cudaMemcpyHostToDevice);
 //		cudaMemcpyToSymbol(mixTob3Tox, plain_T3, (256*8), 0, cudaMemcpyHostToDevice);
 //		cudaMemcpyToSymbol(mixTob4Tox, plain_T4, (256*8), 0, cudaMemcpyHostToDevice);
 //		cudaMemcpyToSymbol(mixTob5Tox, plain_T5, (256*8), 0, cudaMemcpyHostToDevice);
 //		cudaMemcpyToSymbol(mixTob6Tox, plain_T6, (256*8), 0, cudaMemcpyHostToDevice);
 //		cudaMemcpyToSymbol(mixTob7Tox, plain_T7, (256*8), 0, cudaMemcpyHostToDevice);
-#endif
+//#endif
 }
 
 __host__
