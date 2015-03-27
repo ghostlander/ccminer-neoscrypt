@@ -517,7 +517,7 @@ static __constant__ uint32_t d_T512[4096/4] = {
 		c0 = (h[0x0] ^= m0); \
 	}
 
-__global__ __launch_bounds__(512,2)
+__global__ __launch_bounds__(256,4)
 void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash )
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -567,13 +567,14 @@ void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
         uint32_t h[16] = { c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF };
 		uint32_t *tp, db, dm;
 
+		#pragma unroll 1
 		for(int i = 0; i < 64; i += 8) 
 		{            
             tp = &d_T512[0];
 			m0 = 0; m1 = 0; m2 = 0; m3 = 0; m4 = 0; m5 = 0; m6 = 0; m7 = 0; 
             m8 = 0; m9 = 0; mA = 0; mB = 0; mC = 0; mD = 0; mE = 0; mF = 0;
 
-            for (int u = 0; u < 8; u ++) 
+			for (int u = 0; u < 8; u++)
 			{ 
                 db = h1[i+u]; 
 				for (int v = 0; v < 8; v++, db >>= 1, tp += 16)
@@ -590,7 +591,8 @@ void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
                 } 
             } 
 
-            for( int r = 0; r < 6; r += 2 ) {
+			for (int r = 0; r < 6; r += 2) 
+			{
                 ROUND_BIG(r, d_alpha_n); 
                 ROUND_BIG(r+1, d_alpha_n); 
             }
@@ -732,6 +734,7 @@ void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
         mC = tp[12]; mD = tp[13]; 
         mE = tp[14]; mF = tp[15]; 
 
+#pragma unroll 1
         for( int r = 0; r < 12; r += 2 ) 
 		{
 			//            ROUND_BIG(r, d_alpha_f); 
