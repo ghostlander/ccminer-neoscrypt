@@ -234,7 +234,7 @@ static __device__ __forceinline__ void RoundFunction6(uint32_t x[8][4], uint32_t
 static __device__ __forceinline__ void E8(uint32_t x[8][4])
 {
     /*perform 6 rounds*/
-//#pragma unroll 6
+#pragma unroll 1
     for (int i = 0; i < 42; i+=7)
 	{
 		RoundFunction0(x, i);

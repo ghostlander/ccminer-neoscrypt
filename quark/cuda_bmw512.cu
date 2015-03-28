@@ -113,14 +113,14 @@ __device__ void Compression512_64_first(uint2 *msg, uint2 *hash)
 		ROTL64(msg[5 + 3], 5 + 4) - ROTL64(msg[5 + 10], 5 + 11)) ^ hash[5 + 7]);
 
 
-#pragma unroll 3
+//#pragma unroll 3
 	for (int i = 6; i<9; i++) {
 		q[i + 16] = CONST_EXP2(i) +
 			((vectorize((i + 16)*(0x0555555555555555ull)) + ROTL64(msg[i], i + 1) -
 			ROTL64(msg[i - 6], (i - 6) + 1)) ^ hash[i + 7]);
 	}
 
-#pragma unroll 4
+//#pragma unroll 4
 	for (int i = 9; i<13; i++) {
 		q[i + 16] = CONST_EXP2(i) +
 			((vectorize((i + 16)*(0x0555555555555555ull)) +
