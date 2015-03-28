@@ -4,22 +4,12 @@
 
 #define TPB 160
 
-static __constant__ uint2 blake2b_IV[8] = {
-	{ 0xf3bcc908, 0x6a09e667 },
-	{ 0x84caa73b, 0xbb67ae85 },
-	{ 0xfe94f82b, 0x3c6ef372 },
-	{ 0x5f1d36f1, 0xa54ff53a },
-	{ 0xade682d1, 0x510e527f },
-	{ 0x2b3e6c1f, 0x9b05688c },
-	{ 0xfb41bd6b, 0x1f83d9ab },
-	{ 0x137e2179, 0x5be0cd19 }
-};
 
 
 static __device__ __forceinline__
 void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
 {
-	a += b; d = SWAPINT2(d ^ a);
+	a += b; d = SWAPDWORDS2(d ^ a);
 	c += d; b = ROR2(b ^ c, 24);
 	a += b; d = ROR2(d ^ a, 16);
 	c += d; b = ROR2(b ^ c, 63);
@@ -38,6 +28,7 @@ static __device__ __forceinline__ void round_lyra_v35(uint2 *s)
 
 __device__ __forceinline__ void reduceDuplexRowSetup(const int rowIn, const int rowInOut, const int rowOut, uint2 state[16], uint2 Matrix[96][8])
 { 
+
 	for (int i = 0; i < 8*12; i+=12)
 	{
 		#pragma unroll
@@ -60,6 +51,8 @@ __device__ __forceinline__ void reduceDuplexRowSetup(const int rowIn, const int 
 		Matrix[10 + i][rowInOut] ^= state[9];
 		Matrix[11 + i][rowInOut] ^= state[10];
 	}
+
+
 }
 
 
@@ -90,13 +83,26 @@ __device__ __forceinline__ void reduceDuplexRowt(const int rowIn,  const int row
 	}
 }
 
-__global__ __launch_bounds__(TPB, 1)
+__global__	__launch_bounds__(TPB, 1)
 void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint2 state[16];
+
+		const uint2 blake2b_IV[8] = {
+			{ 0xf3bcc908, 0x6a09e667 },
+			{ 0x84caa73b, 0xbb67ae85 },
+			{ 0xfe94f82b, 0x3c6ef372 },
+			{ 0x5f1d36f1, 0xa54ff53a },
+			{ 0xade682d1, 0x510e527f },
+			{ 0x2b3e6c1f, 0x9b05688c },
+			{ 0xfb41bd6b, 0x1f83d9ab },
+			{ 0x137e2179, 0x5be0cd19 }
+		};
+
+
+		register uint2 state[16];
 		#pragma unroll
 		for (int i = 0; i<4; i++) 
 		{ 
@@ -111,26 +117,26 @@ void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputH
 		//#pragma unroll 24
 		for (int i = 0; i<24; i++) { round_lyra_v35(state); } //because 12 is not enough
 
-		uint2 Matrix[96][8]; // not cool
+		uint2 __align__(16) Matrix[96][8]; // not cool
 
 		// reducedSqueezeRow0
-		#pragma unroll 8
-		for (int i = 0; i < 8; i++)
+		#pragma unroll
+		for (int i = 0; i < 8*12; i+=12)
 		{
 			#pragma unroll 12
-			for (int j = 0; j<12; j++) { Matrix[j + 84 - 12 * i][0] = state[j]; }
+			for (int j = 0; j<12; j++) { Matrix[j + 84 - i][0] = state[j]; }
 			round_lyra_v35(state);
 		}
 
 		// reducedSqueezeRow1
-//		#pragma unroll 8
-		for (int i = 0; i < 8; i++)
+//		#pragma unroll 	
+		for (int i = 0; i < 8*12; i+=12)
 		{
 			#pragma unroll 12
-			for (int j = 0; j<12; j++) { state[j] ^= Matrix[j + 12 * i][0]; }
+			for (int j = 0; j<12; j++) { state[j] ^= Matrix[j + i][0]; }
 			round_lyra_v35(state);
 			#pragma unroll 12
-			for (int j = 0; j<12; j++) { Matrix[j + 84 - 12 * i][1] = Matrix[j + 12 * i][0] ^ state[j]; }
+			for (int j = 0; j<12; j++) { Matrix[j + 84 - i][1] = Matrix[j + i][0] ^ state[j]; }
 		}
 
 		reduceDuplexRowSetup(1, 0, 2,state, Matrix);
@@ -163,6 +169,7 @@ void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputH
 		state[10] ^= Matrix[10][rowa];
 		state[11] ^= Matrix[11][rowa];
 
+		#pragma unroll
 		for (int i = 0; i < 12; i++)
 		{
 			round_lyra_v35(state);
