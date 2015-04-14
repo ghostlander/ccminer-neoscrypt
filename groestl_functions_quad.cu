@@ -286,7 +286,6 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *const r)
 {
 
-	#pragma unroll 1
 	for(int round=0;round<14;round++)
     {
         G256_AddRoundConstantP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
