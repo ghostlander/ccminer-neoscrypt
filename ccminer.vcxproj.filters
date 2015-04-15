@@ -460,9 +460,6 @@
     <CudaCompile Include="x11\cuda_x11_echo.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
-    <CudaCompile Include="x11\cuda_x11_luffa512.cu">
-      <Filter>Source Files\CUDA\x11</Filter>
-    </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_luffa512_Cubehash.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
@@ -557,6 +554,11 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="bitcoin.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\cuda_whirlpoolx.cu" />
+    <CudaCompile Include="x15\whirlpoolx.cu" />
+    <CudaCompile Include="skein.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
   </ItemGroup>

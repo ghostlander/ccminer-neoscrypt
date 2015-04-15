@@ -1689,6 +1689,9 @@ void print_hash_tests(void)
 	qubithash(&hash[0], &buf[0]);
 	printpfx("qubit", hash);
 
+	skeincoinhash(&hash[0], &buf[0]);
+	printpfx("skein", hash);
+
 	memset(hash, 0, sizeof hash);
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);

@@ -303,6 +303,12 @@ extern int scanhash_heavy(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done, uint32_t maxvote, int blocklen);
 
+extern int scanhash_skeincoin(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	uint32_t *hashes_done);
+
+
+
 extern int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -676,6 +682,7 @@ void nist5hash(void *state, const void *input);
 void pentablakehash(void *output, const void *input);
 void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
+void skeincoinhash(void *output, const void *input);
 void s3hash(void *output, const void *input);
 void wcoinhash(void *state, const void *input);
 void x11hash(void *output, const void *input);

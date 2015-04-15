@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.2-tpruvot (SP_MOD) (Jan 2015) - "Happy new Year!"
+ccMiner release 1.5.2-tpruvot (SP_MOD) (april 2015)
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -18,6 +18,10 @@ sp-hash@github:
   
 DJM34:
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
+
+KlausT @github:
+  BTC 1H2BHSyuwLP9vqt2p3bK9G3mDJsAi7qChw
+  DRK XcM9FXrvZS275pGyGmfJmS98tHPZ1rjErM
 
 cbuchner v1.2:
   LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm
