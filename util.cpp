@@ -1649,6 +1649,10 @@ void print_hash_tests(void)
 	groestlhash(&hash[0], &buf[0]);
 	printpfx("groestl", hash);
 
+	heavycoin_hash(&hash[0], &buf[0], 32);
+	printpfx("heavy", hash);
+	memset(hash, 0, sizeof hash);
+
 	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
 	printpfx("jackpot", hash);
