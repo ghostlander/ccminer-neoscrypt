@@ -183,7 +183,7 @@ static void getShared(uint64_t* sharedMemory)
 }
 
 
-__global__ __launch_bounds__(256,2)
+__global__ __forceinline__ __launch_bounds__(256,2)
 void precomputeX(uint32_t threads, uint2*const __restrict__ d_xtra, uint64_t*const __restrict__ d_tmp)
 {
 
