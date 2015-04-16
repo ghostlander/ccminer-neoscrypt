@@ -689,7 +689,6 @@ void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	qubit_cpu_precalc();
 	qubit_luffa512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 }
 
@@ -704,6 +703,7 @@ void qubit_luffa512_cpu_setBlock_80(void *pdata)
 	PaddedMessage[127] = 0x80;
 
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+	qubit_cpu_precalc();
 }
 
 __host__
