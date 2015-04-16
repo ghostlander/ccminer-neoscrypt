@@ -1793,9 +1793,9 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		Hash[2] = devectorize(hash64[2] + h2);
 		Hash[3] = devectorize(hash64[3] + h3);
 		Hash[4] = devectorize(hash64[4] + h4);
-		Hash[5] = devectorize(hash64[5] + h5 + vectorizelow(8));
-		Hash[6] = devectorize(hash64[6] + h6 + vectorize(0xff00000000000000ULL));
-		Hash[7] = devectorize(hash64[7] + h7 + vectorizelow(18));
+		Hash[5] = devectorize(hash64[5] + h5)+ 8;
+		Hash[6] = devectorize(hash64[6] + h6)+ 0xff00000000000000ULL;
+		Hash[7] = devectorize(hash64[7] + h7)+ 18;
 
 #undef h0
 #undef h1
