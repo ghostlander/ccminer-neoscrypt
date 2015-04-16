@@ -410,8 +410,7 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
 		sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 
-		//uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		uint32_t foundNonce = UINT32_MAX;
+		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhash64[8];
