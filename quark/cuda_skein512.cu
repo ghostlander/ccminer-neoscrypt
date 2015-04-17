@@ -374,7 +374,7 @@ __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(448, 2)
 #else
-__launch_bounds__(128)
+__launch_bounds__(128,10)
 #endif
 void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
@@ -1893,11 +1893,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 }
 
 __global__ 
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(TPBf, 2)
-#else
-__launch_bounds__(TPBf, 1)
-#endif
+__launch_bounds__(128, 10)
 void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce, uint32_t target)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2021,7 +2017,7 @@ __host__ void quark_skein512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-__global__ __launch_bounds__(128,6)
+__global__ __launch_bounds__(128, 10)
 void skein512_gpu_hash_close(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2075,7 +2071,7 @@ void skein512_gpu_hash_close(uint32_t threads, uint32_t startNounce, uint64_t *g
 	}
 }
 
-__global__ __launch_bounds__(128,5)
+__global__ __launch_bounds__(128, 10)
 void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output64)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2141,9 +2137,9 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 }
 
 #if __CUDA_ARCH__ > 500
-#define tp 128
-#else
 #define tp 448
+#else
+#define tp 128
 #endif
 
 __host__
@@ -2158,7 +2154,7 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 __host__
 void quark_skein512_cpu_hash_64_quark(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	int t = 64;
+	int t = 128;
 	dim3 grid((threads + t - 1) / t);
 	dim3 block(t);
 	quark_skein512_gpu_hash_64 << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
