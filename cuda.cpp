@@ -113,7 +113,7 @@ int cuda_finddevice(char *name)
 uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
 {
 	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
-	api_set_throughput(thr_id%num_cpus, throughput);
+	api_set_throughput(thr_id%active_gpus, throughput);
 	throughput /= opt_n_gputhreads;
 	return throughput;
 }

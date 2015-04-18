@@ -1149,13 +1149,16 @@ static void *miner_thread(void *userdata)
 	}
 
 	/* Cpu thread affinity */
-	if (num_cpus > 1 || opt_n_gputhreads>1) {
-		if (opt_affinity == -1 && opt_n_threads > 1) {
+	if (num_cpus > 1) 
+	{
+		if (opt_affinity == -1) 
+		{
 			if (!opt_quiet)
 				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
-						thr_id, (1 << (thr_id % num_cpus)));
-			affine_to_cpu_mask(thr_id, 1 << (thr_id % num_cpus));
-		} else if (opt_affinity != -1) {
+						thr_id, (1 << (thr_id)));
+			affine_to_cpu_mask(thr_id, 1 << (thr_id));
+		} else if (opt_affinity != -1) 
+		{
 			if (!opt_quiet)
 				applog(LOG_DEBUG, "Binding thread %d to cpu mask %x", thr_id,
 						opt_affinity);
@@ -1955,7 +1958,7 @@ static void parse_arg(int key, char *arg)
 		if (v < 1 || v > 9999)	/* sanity check */
 			show_usage_and_exit(1);
 		opt_n_gputhreads = v;
-		opt_n_threads = opt_n_gputhreads*num_cpus;
+		opt_n_threads = opt_n_gputhreads*active_gpus;
 		break;
 	case 'v':
 		v = atoi(arg);
@@ -2281,21 +2284,22 @@ int main(int argc, char *argv[])
 #elif defined(CTL_HW) && defined(HW_NCPU)
 	int req[] = { CTL_HW, HW_NCPU };
 	size_t len = sizeof(num_cpus);
-	sysctl(req, 2, &num_cpus, &len, NULL, 0);
+	sysc tl(req, 2, &num_cpus, &len, NULL, 0);
 #else
 	num_cpus = 1;
 #endif
-	if (num_cpus < 1)
-		num_cpus = 1;
-
-	// default thread to device map
-	for (i = 0; i < MAX_GPUS; i++)
-	{
-		device_map[i] = i % (num_cpus-1);
-	}
-
 	// number of gpus
 	active_gpus = cuda_num_devices();
+
+	if (active_gpus > 1)
+	{
+		// default thread to device map
+		for (i = 0; i < MAX_GPUS; i++)
+		{
+			device_map[i] = i % (active_gpus);
+		}
+	}
+
 	cuda_devicenames();
 
 	/* parse command line */
