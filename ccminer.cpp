@@ -1153,7 +1153,7 @@ static void *miner_thread(void *userdata)
 		if (opt_affinity == -1 && opt_n_threads > 1) {
 			if (!opt_quiet)
 				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
-						thr_id % num_cpus, (1 << (thr_id % num_cpus)));
+						thr_id, (1 << (thr_id % num_cpus)));
 			affine_to_cpu_mask(thr_id, 1 << (thr_id % num_cpus));
 		} else if (opt_affinity != -1) {
 			if (!opt_quiet)
