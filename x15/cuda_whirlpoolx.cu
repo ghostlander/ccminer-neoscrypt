@@ -6,8 +6,15 @@
 #include <memory.h>
 #include "cuda_helper.h"
 
-#define TPB 512
-#define NONCES_PER_THREAD 8
+
+#if __CUDA_ARCH__ > 500
+#define TPB 1024
+#else
+#define TPB 640
+#endif
+
+
+#define NONCES_PER_THREAD 16
 
 __constant__  uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__  uint2 c_xtra[8];
@@ -183,7 +190,7 @@ static void getShared(uint64_t* sharedMemory)
 }
 
 
-__global__ __forceinline__ __launch_bounds__(256,2)
+__global__ __launch_bounds__(256)
 void precomputeX(uint32_t threads, uint2*const __restrict__ d_xtra, uint64_t*const __restrict__ d_tmp)
 {
 
@@ -427,7 +434,7 @@ void precomputeX(uint32_t threads, uint2*const __restrict__ d_xtra, uint64_t*con
 		}
 	}
 }
-__global__ __launch_bounds__(TPB, 3)
+__global__ __launch_bounds__(TPB)
 void whirlpoolx(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 {
 
@@ -444,7 +451,7 @@ void whirlpoolx(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 		const uint32_t maxnonce = startNounce + threadindex + numberofthreads*NONCES_PER_THREAD - 1;
 		const uint32_t threadindex = blockIdx.x*blockDim.x + threadIdx.x;
 		const uint64_t backup = pTarget[0];
-		#pragma unroll 
+//		#pragma unroll 
 		for (uint32_t nounce = startNounce + threadindex; nounce <= maxnonce; nounce += numberofthreads)
 		{
 
