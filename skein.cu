@@ -303,7 +303,7 @@ void skeincoin_gpu_sha256(uint32_t *message)
 }
 #endif
 
-__global__ __launch_bounds__(512,2)
+__global__ __launch_bounds__(256,4)
 void sha2_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *hashBuffer)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -380,7 +380,7 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x03F;
+		((uint32_t*)ptarget)[7] = 0x03;
 
 	if (!init[thr_id])
 	{
