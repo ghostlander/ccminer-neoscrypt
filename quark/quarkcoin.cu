@@ -147,7 +147,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
@@ -223,7 +222,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// das ist der bedingte Branch für Keccak512
 		quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id]);
 		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id]);
-
+		
+		cudaDeviceSynchronize();
 		uint32_t foundnonces[2];
 		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], foundnonces);
 		if (foundnonces[0] != 0xffffffff)

@@ -52,7 +52,8 @@ int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, uint32_t *ptarget, uint32_t
 	if (!init[thr_id])
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+	//	cudaDeviceReset();
+//		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 		whirlpoolx_cpu_init(thr_id, throughput);
@@ -77,7 +78,7 @@ int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, uint32_t *ptarget, uint32_t
 			/* check now with the CPU to confirm */
 			be32enc(&endiandata[19], foundNonce[0]);
 			whirlxHash(vhash64, endiandata);
-
+			cudaDeviceSynchronize();
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;

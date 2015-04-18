@@ -141,19 +141,16 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	int intensity = 256 * 256 * 10;
-	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 21*(1);
-	uint32_t throughput = device_intensity(thr_id, __func__, intensity); // 19=256*256*8;
-	throughput = min(throughput, (max_nonce - first_nonce));
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 21 : 256 * 256 * 10;
+	uint32_t throughput = device_intensity(thr_id, __func__, intensity);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
-		cudaDeviceReset();
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		cudaSetDeviceFlags(cudaDeviceBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);

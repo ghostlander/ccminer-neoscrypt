@@ -481,6 +481,8 @@ extern bool opt_quiet;
 extern bool opt_protocol;
 extern bool opt_tracegpu;
 extern int opt_n_threads;
+extern int opt_n_gputhreads;
+extern int num_cpus;
 extern int active_gpus;
 extern int opt_timeout;
 extern bool want_longpoll;
@@ -504,7 +506,7 @@ extern uint16_t opt_vote;
 extern uint64_t global_hashrate;
 extern double   global_diff;
 
-#define MAX_GPUS 16
+#define MAX_GPUS 32
 extern char* device_name[MAX_GPUS];
 extern int device_map[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
