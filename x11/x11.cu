@@ -145,11 +145,12 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	uint32_t throughput = device_intensity(thr_id, __func__, intensity);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xf;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		quark_groestl512_cpu_init(thr_id, throughput);
@@ -207,6 +208,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				if (vhash64[7] != Htarg)
 					{
 						applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
+						pdata[19] -= throughput;
 					}
 			}
 		}
