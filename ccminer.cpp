@@ -1519,10 +1519,32 @@ static void *miner_thread(void *userdata)
 		/* output */
 		if (!opt_quiet && (loopcnt > 0)  ) 
 		{
-				sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
-					1e-3 * thr_hashrates[thr_id]);
+			double hashrate = 0;
+		
+			if (opt_n_gputhreads != 1)
+			{
+				if (thr_id<active_gpus)
+				{
+
+					for (int i = 0; i < opt_n_gputhreads; i++)
+					{
+						hashrate += thr_hashrates[(thr_id%active_gpus) + active_gpus*i];
+					}
+					sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
+						1e-3 * hashrate);
+					applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
+						device_map[thr_id], device_name[device_map[thr_id]], s);
+				}
+			}
+			else
+			{
+				hashrate = thr_hashrates[thr_id];
+				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
+					1e-3 * hashrate);
 				applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
 					device_map[thr_id], device_name[device_map[thr_id]], s);
+			}
+
 		}
 
 		/* loopcnt: ignore first loop hashrate */
