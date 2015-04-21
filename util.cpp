@@ -1691,6 +1691,9 @@ void print_hash_tests(void)
 
 	skeincoinhash(&hash[0], &buf[0]);
 	printpfx("skein", hash);
+	
+	scrypthash(&hash[0], &buf[0]);
+	printpfx("scrypt", hash);
 
 	memset(hash, 0, sizeof hash);
 	s3hash(&hash[0], &buf[0]);

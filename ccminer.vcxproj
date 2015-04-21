@@ -173,7 +173,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
@@ -248,6 +248,8 @@
     <CudaCompile Include="cuda_bitcoin.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+	<ClCompile Include="scrypt-jane.cpp" />
+    <ClCompile Include="scrypt.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="fuguecoin.cpp" />
     <ClCompile Include="groestlcoin.cpp" />
@@ -259,10 +261,6 @@
     <ClCompile Include="crc32.c" />
     <ClCompile Include="hefty1.c" />
     <ClCompile Include="myriadgroestl.cpp" />
-    <ClCompile Include="scrypt.c">
-      <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
-      <AdditionalOptions>/Tp %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
     <ClCompile Include="sph\aes_helper.c" />
@@ -318,6 +316,7 @@
     <ClInclude Include="hefty1.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="nvml.h" />
+	<ClInclude Include="scrypt\salsa_kernel.h" />
     <ClInclude Include="sph\sph_blake.h" />
     <ClInclude Include="sph\sph_bmw.h" />
     <ClInclude Include="sph\sph_cubehash.h" />
@@ -353,6 +352,22 @@
     </CudaCompile>
     <CudaCompile Include="cuda_nist5.cu">
     </CudaCompile>
+    <CudaCompile Include="scrypt\blake.cu" /> 
+    <CudaCompile Include="scrypt\fermi_kernel.cu">
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">compute_20,sm_21;compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52</CodeGeneration>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\keccak.cu" />
+    <CudaCompile Include="scrypt\kepler_kernel.cu" />
+    <CudaCompile Include="scrypt\nv_kernel.cu" />
+    <CudaCompile Include="scrypt\nv_kernel2.cu">
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">compute_35,sm_35;compute_50,sm_50;compute_52,sm_52</CodeGeneration>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\salsa_kernel.cu">
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">compute_20,sm_21</CodeGeneration>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\sha256.cu" />
+    <CudaCompile Include="scrypt\test_kernel.cu" />
+    <CudaCompile Include="scrypt\titan_kernel.cu" />
     <CudaCompile Include="groestl_functions_quad.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>
