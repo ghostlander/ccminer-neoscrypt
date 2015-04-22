@@ -57,6 +57,10 @@ int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, uint32_t *ptarget, uint32_t
 			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
+		else
+		{
+			MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+		}
 		whirlpoolx_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
@@ -103,6 +107,7 @@ int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, uint32_t *ptarget, uint32_t
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d: found nonce %08x", thr_id, foundNonce[0], vhash64[7]);
 				pdata[19] = foundNonce[0];
+				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 				return res;
 			}
 			else
@@ -114,5 +119,6 @@ int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, uint32_t *ptarget, uint32_t
 		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 	*hashes_done = pdata[19] - first_nonce + 1;
+	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }

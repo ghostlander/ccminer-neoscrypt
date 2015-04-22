@@ -152,6 +152,10 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
+		else
+		{
+			MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+		}
 
 		// Konstanten kopieren, Speicher belegen
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
@@ -247,7 +251,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[1]);
 				}
 				pdata[19] = foundnonces[0];
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nonce $%08X", thr_id, foundnonces[0]);
+				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 				return res;
 			}
 			else
@@ -260,5 +264,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
+	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }
