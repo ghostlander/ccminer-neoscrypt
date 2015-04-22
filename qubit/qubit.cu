@@ -116,8 +116,11 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaSetDeviceFlags(cudaDeviceBlockingSync);
-		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		if (opt_n_gputhreads == 1)
+		{
+			cudaSetDeviceFlags(cudaDeviceBlockingSync);
+			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		}
 
 		qubit_luffa512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);

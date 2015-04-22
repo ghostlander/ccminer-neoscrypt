@@ -312,18 +312,11 @@ Options:\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n\
       --cpu-affinity    set process affinity to cpu core(s), mask 0x3 for cores 0 and 1\n\
       --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)\n\
-  -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n"
-
-#ifdef HAVE_SYSLOG_H
-"\
+  -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n\
   -S, --syslog          use system log for output messages\n\
-      --syslog-prefix=... allow to change syslog tool name\n"
-#endif
-#ifndef WIN32
-"\
-  -B, --background      run the miner in the background\n"
-#endif
-"\	  --benchmark       run in offline benchmark mode\n\
+  --syslog - prefix = ... allow to change syslog tool name\n\
+   -B, --background      run the miner in the background\n\
+		--benchmark       run in offline benchmark mode\n\
       --cputest         debug hashes from cpu algorithms\n\
   -c, --config=FILE     load a JSON-format configuration file\n\
   -V, --version         display version information and exit\n\
@@ -1323,15 +1316,23 @@ static void *miner_thread(void *userdata)
 			case ALGO_LUFFA_DOOM:
 				minmax = 0x2000000;
 				break;
+			case ALGO_QUARK:
+				minmax = 0xe00000;
+				break;
 			case ALGO_S3:
 			case ALGO_X11:
 			case ALGO_X13:
 				minmax = 0x400000;
 				break;
+			case ALGO_X15:
+				minmax = 0x300000;
+				break;
 			case ALGO_LYRA2:
 			case ALGO_SCRYPT:
-			case ALGO_SCRYPT_JANE:
 				minmax = 0x100000;
+				break;
+			case ALGO_SCRYPT_JANE:
+				minmax = 0x80000;
 				break;
 			}
 			max64 = max(minmax-1, max64);

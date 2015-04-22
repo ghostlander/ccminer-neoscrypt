@@ -167,8 +167,11 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaSetDeviceFlags(cudaDeviceBlockingSync);
-		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		if (opt_n_gputhreads==1)
+		{
+			cudaSetDeviceFlags(cudaDeviceBlockingSync);
+			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		}
 
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id);
