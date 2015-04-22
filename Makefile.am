@@ -57,6 +57,14 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  bitcoin.cu cuda_bitcoin.cu\
 			  x15/cuda_whirlpoolx.cu x15/whirlpoolx.cu
 
+# scrypt
+ccminer_SOURCES += scrypt.cpp scrypt-jane.cpp \
+    scrypt/blake.cu scrypt/keccak.cu scrypt/sha256.cu \
+    scrypt/salsa_kernel.cu scrypt/test_kernel.cu \
+    scrypt/fermi_kernel.cu scrypt/kepler_kernel.cu \
+    scrypt/nv_kernel.cu scrypt/nv_kernel2.cu scrypt/titan_kernel.cu
+
+			  
 if HAVE_NVML
 nvml_defs = -DUSE_WRAPNVML
 nvml_libs = -ldl
@@ -114,6 +122,10 @@ quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
+
+# This kernel need also an older SM to be able to autotune kernels
+scrypt/salsa_kernel.o: scrypt/salsa_kernel.cu
+	$(NVCC) $(nvcc_FLAGS) -gencode=arch=compute_20,code=\"sm_21,compute_20\" --maxrregcount=80 -o $@ -c $<
 	
 skein.o: skein.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<

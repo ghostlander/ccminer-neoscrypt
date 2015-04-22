@@ -267,7 +267,7 @@ Options:\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			quark       Quark\n\
-			qubit       Skein SHA2 (Skeincoin)\n\
+			qubit       qubit\n\
 			scrypt      Scrypt\n\
 			scrypt-jane Scrypt-jane Chacha\n\
 			skein       Skein\n\
@@ -1309,13 +1309,13 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_BITCOIN:
 			case ALGO_KECCAK:
-			case ALGO_SKEIN:
 			case ALGO_WHCX:
 				minmax = 0x40000000U;
 				break;
 			case ALGO_DOOM:
 			case ALGO_JACKPOT:
 			case ALGO_LUFFA_DOOM:
+			case ALGO_SKEIN:
 				minmax = 0x2000000;
 				break;
 			case ALGO_QUARK:
