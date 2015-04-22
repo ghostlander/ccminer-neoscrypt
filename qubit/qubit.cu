@@ -104,7 +104,7 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	{
 		intensity = 256 * 256 * 14;
 	}
-	uint32_t throughput = device_intensity(thr_id, __func__, intensity);
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 
 

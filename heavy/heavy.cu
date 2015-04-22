@@ -136,7 +136,7 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
 {
     const uint32_t first_nonce = pdata[19];
     // CUDA will process thousands of threads.
-    uint32_t throughput = device_intensity(thr_id, __func__, (1U << 19) - 256);
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, (1U << 19) - 256);
     throughput = min(throughput, (max_nonce - first_nonce));
 
     int rc = 0;

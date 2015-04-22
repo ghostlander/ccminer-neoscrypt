@@ -157,7 +157,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	static bool init[MAX_GPUS] = { 0 };
 	uint32_t endiandata[20];
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
-	uint32_t throughput = device_intensity(thr_id, __func__, intensity);
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 	throughput = min(throughput, (max_nonce - first_nonce));
 

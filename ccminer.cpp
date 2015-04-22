@@ -9,6 +9,7 @@
  */
 
 #include "cpuminer-config.h"
+#include "cuda_runtime_api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -464,6 +465,7 @@ void proper_exit(int reason)
 	if (hnvml)
 		nvml_destroy(hnvml);
 #endif
+
 
 	pthread_mutex_lock(&g_work_lock);	//freeze stratum
 	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
@@ -1184,8 +1186,8 @@ static void *miner_thread(void *userdata)
 		if (opt_affinity == -1) 
 		{
 			if (!opt_quiet)
-				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id%num_cpus,
-						thr_id, (1 << (thr_id)));
+				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
+				thr_id%num_cpus, (1 << (thr_id)));
 			affine_to_cpu_mask(thr_id, 1 << (thr_id));
 		} else if (opt_affinity != -1) 
 		{
@@ -2433,6 +2435,12 @@ int main(int argc, char *argv[])
 	// number of gpus
 	active_gpus = cuda_num_devices();
 
+	for (int i = 0; i < active_gpus;i++)
+	{
+		cudaSetDevice(i);
+		cuda_devicereset();
+	}
+
 	if (active_gpus > 1)
 	{
 		// default thread to device map
@@ -2505,7 +2513,7 @@ int main(int argc, char *argv[])
 	if (opt_priority > 0)
 	{
 		DWORD prio = NORMAL_PRIORITY_CLASS;
-	//	prio = REALTIME_PRIORITY_CLASS;//default realtime
+		prio = REALTIME_PRIORITY_CLASS;//default realtime
 
 		switch (opt_priority) {
 		case 1:

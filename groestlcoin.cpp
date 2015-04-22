@@ -37,7 +37,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
     uint32_t max_nonce, unsigned long *hashes_done)
 {
     uint32_t start_nonce = pdata[19]++;
-    uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1 << 19); // 256*256*8
     throughput = min(throughput, max_nonce - start_nonce);
 
     uint32_t *outputHash = (uint32_t*)malloc(throughput * 16 * sizeof(uint32_t));

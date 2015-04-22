@@ -158,7 +158,7 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
 
-	uint32_t throughput = device_intensity(thr_id, __func__, intensity); // 19=256*256*8;
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 19=256*256*8;
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)

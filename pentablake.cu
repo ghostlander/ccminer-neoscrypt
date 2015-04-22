@@ -461,7 +461,7 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 	int rc = 0;
-	uint32_t throughput = device_intensity(thr_id, __func__, 128U * 2560); // 18.5
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 128U * 2560); // 18.5
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)

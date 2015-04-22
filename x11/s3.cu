@@ -63,7 +63,7 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 	// reduce by one the intensity on windows
 	intensity--;
 #endif
-	uint32_t throughput = device_intensity(thr_id, __func__, 1 << intensity);
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1 << intensity);
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
