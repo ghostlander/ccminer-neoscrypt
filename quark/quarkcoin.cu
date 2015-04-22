@@ -147,7 +147,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 

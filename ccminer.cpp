@@ -466,11 +466,11 @@ void proper_exit(int reason)
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
 #endif
+
 #ifdef USE_WRAPNVML
 	if (hnvml)
 		nvml_destroy(hnvml);
 #endif
-	
 
 	pthread_mutex_lock(&g_work_lock);	//freeze stratum
 	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
@@ -480,7 +480,6 @@ void proper_exit(int reason)
 	hashlog_purge_all();
 	stats_purge_all();
 	cuda_devicereset();
-	
 
 	try
 	{
@@ -1192,15 +1191,15 @@ static void *miner_thread(void *userdata)
 		if (opt_affinity == -1) 
 		{
 			if (!opt_quiet)
-				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
+				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id%num_cpus,
 						thr_id, (1 << (thr_id)));
-			affine_to_cpu_mask(thr_id%num_cpus, 1 << (thr_id));
+			affine_to_cpu_mask(thr_id, 1 << (thr_id));
 		} else if (opt_affinity != -1) 
 		{
 			if (!opt_quiet)
-				applog(LOG_DEBUG, "Binding thread %d to cpu mask %x", thr_id,
+				applog(LOG_DEBUG, "Binding thread %d to gpu mask %x", thr_id,
 						opt_affinity);
-			affine_to_cpu_mask(thr_id%num_cpus, opt_affinity);
+			affine_to_cpu_mask(thr_id, opt_affinity);
 		}
 	}
 
@@ -1571,20 +1570,22 @@ static void *miner_thread(void *userdata)
 		if (!opt_quiet && (loopcnt > 0)  ) 
 		{
 			double hashrate = 0;
-		
 			if (opt_n_gputhreads != 1)
-			{
-				if (thr_id<active_gpus)
+			{			
+				int index = (thr_id)/opt_n_gputhreads;
+
+				if (index*opt_n_gputhreads == thr_id)
 				{
 
-					for (int i = 0; i < opt_n_gputhreads; i++)
+					for (int i = 0; i < opt_n_gputhreads;i++)
 					{
-						hashrate += thr_hashrates[(thr_id%active_gpus) + active_gpus*i];
-					}
+						hashrate += thr_hashrates[(index*opt_n_gputhreads) + i];
+					}		
+
 					sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
-						1e-3 * hashrate);
+					1e-3 * hashrate);
 					applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
-						device_map[thr_id], device_name[device_map[thr_id]], s);
+					device_map[thr_id], device_name[device_map[thr_id]], s);
 				}
 			}
 			else
@@ -2049,13 +2050,6 @@ static void parse_arg(int key, char *arg)
 			show_usage_and_exit(1);
 		opt_n_threads = v;
 		break;
-	case 'g':
-		v = atoi(arg);
-		if (v < 1 || v > 9999)	/* sanity check */
-			show_usage_and_exit(1);
-		opt_n_gputhreads = v;
-		opt_n_threads = opt_n_gputhreads*active_gpus;
-		break;
 	case 'v':
 		v = atoi(arg);
 		if (v < 0 || v > 8192)	/* sanity check */
@@ -2250,6 +2244,27 @@ static void parse_arg(int key, char *arg)
 			show_usage_and_exit(1);
 		opt_difficulty = d;
 		break;
+	case 'g':
+		v = atoi(arg);
+		if (v < 1 || v > 9999)	/* sanity check */
+			show_usage_and_exit(1);
+		opt_n_gputhreads = v;
+
+		int buf[MAX_GPUS];
+		for (int i = 0; i < active_gpus; i++)
+		{
+			buf[i] = device_map[i];
+		}
+		for (int i = 0; i < active_gpus; i++)
+		{
+			for (int j = 0; j<opt_n_gputhreads; j++)
+			{
+				device_map[(i * opt_n_gputhreads) + j] = buf[i];
+			}
+		}
+		opt_n_threads = active_gpus*opt_n_gputhreads;
+		active_gpus= opt_n_threads;
+		break;
 	case 'V':
 		show_version_and_exit();
 	case 'h':
@@ -2422,7 +2437,7 @@ int main(int argc, char *argv[])
 		// default thread to device map
 		for (i = 0; i < MAX_GPUS; i++)
 		{
-			device_map[i] = i % (active_gpus);
+			device_map[i] = i;
 			device_name[i] = NULL;
 					// for future use, maybe
 			device_interactive[i] = -1;
@@ -2549,7 +2564,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	if (!opt_n_threads)
-		opt_n_threads = active_gpus*opt_n_gputhreads;
+		opt_n_threads = active_gpus;
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)

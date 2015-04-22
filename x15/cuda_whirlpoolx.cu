@@ -10,7 +10,7 @@
 #if __CUDA_ARCH__ > 500
 #define TPB 1024
 #else
-#define TPB 640
+#define TPB 256
 #endif
 
 

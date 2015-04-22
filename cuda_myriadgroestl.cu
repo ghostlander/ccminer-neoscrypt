@@ -270,7 +270,6 @@ __global__ void __launch_bounds__(256, 3)
 __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaSetDevice(device_map[thr_id]);
-	cudaDeviceReset();
 	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 

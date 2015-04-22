@@ -26,7 +26,6 @@
  * This file was originally written by Colin Percival as part of the Tarsnap
  * online backup system.
  */
-
 #ifdef WIN32
 #include <ppl.h>
 using namespace Concurrency;
@@ -697,12 +696,17 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 	if(throughput == 0)
 		return -1;
 
+	cudaSetDevice(device_map[thr_id]);
+	cudaSetDeviceFlags(cudaDeviceBlockingSync);
+	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+
+
 	gettimeofday(tv_start, NULL);
 
 	uint32_t n = pdata[19];
 	const uint32_t Htarg = ptarget[7];
 
-	// no default set with --cputest
+	// no default set with --cputest10
 	if (opt_nfactor == 0) opt_nfactor = 9;
 	uint32_t N = (1UL<<(opt_nfactor+1));
 	uint32_t *scratch = new uint32_t[N*32]; // scratchbuffer for CPU based validation

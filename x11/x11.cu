@@ -149,10 +149,11 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
+
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		cudaDeviceReset();
-		cudaSetDeviceFlags(cudaDeviceBlockingSync);
-		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+
+//		cudaSetDeviceFlags(cudaDeviceBlockingSync);
+//		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
@@ -201,6 +202,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				pdata[19] = h_found[thr_id][0];
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0], vhash64[7], Htarg);
+
 				return res;
 			}
 			else
@@ -208,7 +210,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				if (vhash64[7] != Htarg)
 					{
 						applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
-						pdata[19] -= throughput;
 					}
 			}
 		}
