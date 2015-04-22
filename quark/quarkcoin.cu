@@ -232,6 +232,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		
 		uint32_t foundnonces[2];
 		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], foundnonces);
+		if (opt_n_gputhreads == 1) MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+
 		if (foundnonces[0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
