@@ -26,11 +26,7 @@ extern int opt_statsavg;
 void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found, uint32_t height)
 {
 	uint8_t  gpu = (uint8_t) device_map[thr_id];
-	if( opt_n_gputhreads>1)
-	{
-		int index = thr_id / opt_n_gputhreads;
-		gpu = index*opt_n_gputhreads + gpu;
-	}
+
 	const uint64_t key = ((uid++ % UINT32_MAX) << 32) + gpu;
 	stats_data data;
 	// to enough hashes to give right stats
@@ -67,11 +63,6 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 double stats_get_speed(int thr_id, double def_speed)
 {
 	uint64_t gpu = device_map[thr_id];
-	if (opt_n_gputhreads>1)
-	{
-		int index = thr_id / opt_n_gputhreads;
-		gpu = index*opt_n_gputhreads + gpu;
-	}
 
 	const uint64_t keymsk = 0xffULL; // last u8 is the gpu
 	double speed = 0.0;

@@ -131,10 +131,11 @@ extern "C" void quarkhash(void *state, const void *input)
 static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
+    uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
+	uint32_t *endiandata = (uint32_t *)malloc(sizeof(uint32_t) * 20);
 
 	int intensity = 128 * 256 * 30;
 	if (device_sm[device_map[thr_id]] == 520)  intensity = 128 * 256 * 32;
@@ -142,7 +143,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xf;
+		((uint32_t*)ptarget)[7] =thr_id*15;
 
 	if (!init[thr_id])
 	{
@@ -176,7 +177,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 	cuda_check_cpu_setTarget(ptarget);
@@ -252,6 +252,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[1]);
 				}
 				pdata[19] = foundnonces[0];
+				free(endiandata);
 				return res;
 			}
 			else
@@ -264,5 +265,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
+	free(endiandata);
 	return 0;
 }
