@@ -30,6 +30,7 @@ extern "C" {
 // Memory for the hash functions
 static uint32_t *d_hash[MAX_GPUS];
 
+extern void quark_blake512_cpu_init(int thr_id);
 extern void quark_blake512_cpu_setBlock_80(int threads, uint64_t *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
@@ -202,6 +203,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		x15_whirlpool_cpu_init(thr_id, throughput, 0);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
+		quark_blake512_cpu_init(thr_id);
 
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;

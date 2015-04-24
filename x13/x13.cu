@@ -27,6 +27,7 @@ static uint32_t *d_hash[MAX_GPUS];
 static uint32_t *h_found[MAX_GPUS];
 static uint32_t endiandata[MAX_GPUS][20];
 
+extern void quark_blake512_cpu_init(int thr_id);
 extern void quark_blake512_cpu_setBlock_80(int threads, uint64_t *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
@@ -186,6 +187,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&(h_found[thr_id]), 2 * sizeof(uint32_t)), 0);
+		quark_blake512_cpu_init(thr_id);
 
 //		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;

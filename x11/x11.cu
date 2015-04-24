@@ -165,7 +165,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			return 0;
 		}
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 64 * throughput), 0); // why 64 ?
-		cuda_check_cpu_init(thr_id, throughput);
+		quark_blake512_cpu_init(thr_id);
 		init[thr_id] = true;
 	}
 	for (int k=0; k < 20; k++)
