@@ -267,7 +267,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 					res++;
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[thr_id][1]);
 				}
-				applog(LOG_INFO, "GPU #%d: Found nonce $%08X", thr_id, foundnonces[thr_id][0]);
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nonce $%08X", thr_id, foundnonces[thr_id][0]);
 				pdata[19] = foundnonces[thr_id][0];
 				return res;
 			}
