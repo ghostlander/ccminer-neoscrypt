@@ -28,8 +28,10 @@ static uint32_t *h_found[MAX_GPUS];
 static uint32_t endiandata[MAX_GPUS][20];
 
 extern void quark_blake512_cpu_init(int thr_id);
-extern void quark_blake512_cpu_setBlock_80(int threads, uint64_t *pdata);
+extern void quark_blake512_cpu_setBlock_80(uint64_t *pdata);
+extern void quark_blake512_cpu_setBlock_80_multi(uint32_t thr_id, uint64_t *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void quark_blake512_cpu_hash_80_multi(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 extern void quark_bmw512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
@@ -163,7 +165,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xf;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
@@ -196,12 +198,26 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	for (int k = 0; k < 20; k++)
 		be32enc(&endiandata[thr_id][k], ((uint32_t*)pdata)[k]);
 
-	quark_blake512_cpu_setBlock_80(thr_id, (uint64_t *)endiandata[thr_id]);
-//	cuda_check_cpu_setTarget(ptarget);
+	if (opt_n_gputhreads > 1)
+	{
+		quark_blake512_cpu_setBlock_80_multi(thr_id, (uint64_t *)endiandata[thr_id]);
+	}
+	else
+	{
+		quark_blake512_cpu_setBlock_80( (uint64_t *)endiandata[thr_id]);
+	}
+	//	cuda_check_cpu_setTarget(ptarget);
 	x13_fugue512_cpu_setTarget(ptarget);
 
 	do {
-		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (opt_n_gputhreads > 1)
+		{
+			quark_blake512_cpu_hash_80_multi(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		}
+		else
+		{
+			quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		}
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id]);
