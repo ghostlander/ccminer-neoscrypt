@@ -20,7 +20,10 @@ static uint32_t *d_branch1Nonces[MAX_GPUS];
 static uint32_t *d_branch2Nonces[MAX_GPUS];
 static uint32_t *d_branch3Nonces[MAX_GPUS];
 
-extern void quark_blake512_cpu_setBlock_80(void *pdata);
+
+extern void quark_blake512_cpu_init(int thr_id);
+extern void quark_blake512_cpu_setBlock_80(int threads,void *pdata);
+
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 extern void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 
@@ -129,8 +132,8 @@ extern "C" void quarkhash(void *state, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
-uint32_t endiandata[MAX_GPUS][20];
-uint32_t foundnonces[MAX_GPUS][2];
+static uint32_t endiandata[MAX_GPUS][20];
+static uint32_t foundnonces[MAX_GPUS][2];
 
 extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
     uint32_t *ptarget, uint32_t max_nonce,
@@ -173,6 +176,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput);
 
 		quark_jh512_cpu_init(thr_id, throughput);
+		quark_blake512_cpu_init(thr_id);
 
 		init[thr_id] = true;
 	}
@@ -180,7 +184,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[thr_id][k], ((uint32_t*)pdata)[k]);
 	cuda_check_cpu_setTarget(ptarget);
-	quark_blake512_cpu_setBlock_80((void*)endiandata[thr_id]);
+	quark_blake512_cpu_setBlock_80(thr_id,(void*)endiandata[thr_id]);
 
 	do {
 

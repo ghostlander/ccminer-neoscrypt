@@ -8,7 +8,7 @@
 #define USE_SHUFFLE 0
 
 // die Message it Padding zur Berechnung auf der GPU
-__constant__ uint2 c_PaddedMessage80[16]; // padded message (80 bytes + padding)
+static uint2* c_PaddedMessage80[MAX_GPUS]; // padded message (80 bytes + padding)
 
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
 
@@ -245,11 +245,11 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 __global__ 
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 4)
+__launch_bounds__(256, 2)
 #else
-__launch_bounds__(32, 32)
+__launch_bounds__(32, 16)
 #endif
-void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
+void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash, uint2* c_PaddedMessage)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -258,10 +258,10 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 
 		uint2 block[16] =
 		{
-			c_PaddedMessage80[0], c_PaddedMessage80[1], c_PaddedMessage80[2], c_PaddedMessage80[3],
-			c_PaddedMessage80[4], c_PaddedMessage80[5], c_PaddedMessage80[6], c_PaddedMessage80[7],
-			c_PaddedMessage80[8], c_PaddedMessage80[9], c_PaddedMessage80[10], c_PaddedMessage80[11],
-			c_PaddedMessage80[12], c_PaddedMessage80[13], c_PaddedMessage80[14], c_PaddedMessage80[15]
+			c_PaddedMessage[0], c_PaddedMessage[1], c_PaddedMessage[2], c_PaddedMessage[3],
+			c_PaddedMessage[4], c_PaddedMessage[5], c_PaddedMessage[6], c_PaddedMessage[7],
+			c_PaddedMessage[8], c_PaddedMessage[9], c_PaddedMessage[10], c_PaddedMessage[11],
+			c_PaddedMessage[12], c_PaddedMessage[13], c_PaddedMessage[14], c_PaddedMessage[15]
 		};
 		block[9].x = nounce;
 
@@ -453,9 +453,12 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 
 // ---------------------------- END CUDA quark_blake512 functions ------------------------------------
 
-
+__host__ void quark_blake512_cpu_init(int thr_id)
+{
+	CUDA_SAFE_CALL(cudaMalloc(&c_PaddedMessage80[thr_id], 16 * sizeof(uint2)));
+}
 // Blake512 für 80 Byte grosse Eingangsdaten
-__host__ void quark_blake512_cpu_setBlock_80(void *pdata)
+__host__ void quark_blake512_cpu_setBlock_80(int thr_id, void *pdata)
 {
 	// Message mit Padding bereitstellen
 	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
@@ -468,9 +471,7 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 	PaddedMessage[127] = 0x80;
 	for (int i = 0; i < 16; i++)
 		((uint64_t*)PaddedMessage)[i] = cuda_swab64(((uint64_t*)PaddedMessage)[i]);
-	CUDA_SAFE_CALL(
-		cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice)
-	);
+	CUDA_SAFE_CALL(cudaMemcpy(c_PaddedMessage80[thr_id], PaddedMessage, 16*sizeof(uint64_t), cudaMemcpyHostToDevice));
 }
 
 
@@ -491,6 +492,6 @@ __host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	quark_blake512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
+	quark_blake512_gpu_hash_80 << <grid, block >> >(threads, startNounce, d_outputHash, c_PaddedMessage80[thr_id]);
 //	MyStreamSynchronize(NULL, order, thr_id);
 }
