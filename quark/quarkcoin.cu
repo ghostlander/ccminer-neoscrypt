@@ -129,16 +129,16 @@ extern "C" void quarkhash(void *state, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
+uint32_t endiandata[MAX_GPUS][20];
+uint32_t foundnonces[MAX_GPUS][2];
 
 extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
     uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	uint32_t *endiandata = (uint32_t *)malloc(sizeof(uint32_t) * 20);
 
-	int intensity = 128 * 256 * 30;
-	if (device_sm[device_map[thr_id]] == 520)  intensity = 128 * 256 * 32;
+	uint32_t intensity = 1<<22;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 256*4096
 	throughput = min(throughput, max_nonce - first_nonce);
 
@@ -178,9 +178,9 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	}
 
 	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[thr_id][k], ((uint32_t*)pdata)[k]);
 	cuda_check_cpu_setTarget(ptarget);
-	quark_blake512_cpu_setBlock_80((void*)endiandata);
+	quark_blake512_cpu_setBlock_80((void*)endiandata[thr_id]);
 
 	do {
 
@@ -230,41 +230,38 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id]);
 		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id]);
 		
-		uint32_t foundnonces[2];
-		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], foundnonces);
+		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], foundnonces[thr_id]);
 
-		if (foundnonces[0] != 0xffffffff)
+		if (foundnonces[thr_id][0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundnonces[0]);
-			quarkhash(vhash64, endiandata);
+			be32enc(&endiandata[thr_id][19], foundnonces[thr_id][0]);
+			quarkhash(vhash64, endiandata[thr_id]);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				// check if there was some other ones...
-				if (foundnonces[1] != 0xffffffff)
+				if (foundnonces[thr_id][1] != 0xffffffff)
 				{
-					pdata[21] = foundnonces[1];
+					pdata[21] = foundnonces[thr_id][1];
 					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[1]);
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[thr_id][1]);
 				}
-				pdata[19] = foundnonces[0];
-				free(endiandata);
+				pdata[19] = foundnonces[thr_id][0];
 				return res;
 			}
 			else
 			{
 				if (vhash64[7] != Htarg) // don't show message if it is equal but fails fulltest
-					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[0]);
+					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][0]);
 			}
 		}
 		pdata[19] += throughput;
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	free(endiandata);
 	return 0;
 }

@@ -32,7 +32,7 @@ __global__
 #endif
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint64_t *const __restrict__ g_hash)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 #if USE_SHUFFLE
 	const int warpID = threadIdx.x & 0x0F; // 16 warps
@@ -46,9 +46,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 	if (thread < threads)
 #endif
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
+		const int hashPosition = nounce - startNounce;
 
 		uint64_t *inpHash = &g_hash[hashPosition*8];
 		uint2 block[16] =
@@ -251,10 +251,10 @@ __launch_bounds__(32, 32)
 #endif
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = startNounce + thread;
+		const uint32_t nounce = startNounce + thread;
 
 		uint2 block[16] =
 		{
