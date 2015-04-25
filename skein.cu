@@ -12,7 +12,6 @@ extern "C" {
 #define ROTR32(x, i) ROTL32(x, 32-i)
 #include <openssl/sha.h>
 
-static uint32_t *d_found[MAX_GPUS];
 static uint32_t foundnonces[MAX_GPUS][2];
 
 extern void skein512_cpu_setBlock_80(uint32_t thr_id,void *pdata);
@@ -50,8 +49,9 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	const int swap = 1;
 
-	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1 << 27);
-	throughput = min(throughput, (max_nonce - first_nonce));
+	uint32_t intensity = (device_sm[device_map[thr_id]] > 500) ? 1 << 28 : 1 << 27;;
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 256*4096
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x05;
