@@ -374,8 +374,6 @@ static uint32_t *d_nonce[MAX_GPUS];
 __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(448, 2)
-#else
-__launch_bounds__(128,10)
 #endif
 void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
@@ -1892,12 +1890,13 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 #undef h7
 	}
 }
+//#else
+//__launch_bounds__(128, 10)
+//#endif
 
 __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(448, 2)
-#else
-__launch_bounds__(128, 10)
 #endif
 void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce, uint32_t target)
 {
@@ -2050,7 +2049,7 @@ __launch_bounds__(tp, 7)
 __launch_bounds__(tp, 15)
 #endif
 */
-#define tp 256
+#define tp80 256
 __global__ 
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(256, 4)
@@ -2328,7 +2327,7 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *cons
 		}
 	}
 }
-
+#define tp 128
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
@@ -2426,8 +2425,8 @@ void skein512_cpu_setBlock_80(uint32_t thr_id, void *pdata)
 __host__
 void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, int swapu,int32_t target, uint32_t *h_found)
 {
-	dim3 grid((threads + tp - 1) / tp);
-	dim3 block(tp);
+	dim3 grid((threads + tp80 - 1) / tp80);
+	dim3 block(tp80);
 	cudaMemset(d_found[thr_id], 0xffffffff, 2 * sizeof(uint32_t));
 	skein512_gpu_hash_80 << < grid, block >> > (threads, startNounce, d_found[thr_id], target);
 //	sha2_gpu_hash_64 << < grid, block >> >(threads, startNounce, d_hash, );
