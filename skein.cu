@@ -13,6 +13,8 @@ extern "C" {
 #include <openssl/sha.h>
 
 static uint32_t *d_hash[MAX_GPUS];
+static uint32_t *d_found[MAX_GPUS];
+static uint32_t foundnonces[MAX_GPUS][2];
 
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
@@ -116,7 +118,7 @@ void sha256_transform_gpu(uint32_t *state, uint32_t *message)
 
 
 __device__ __forceinline__
-void skeincoin_gpu_sha256(uint32_t *message)
+void skeincoin_gpu_sha256(uint32_t nounce, uint32_t *message, uint32_t target, uint32_t *const __restrict__ d_found)
 {
 
 	const uint32_t sha256_endingTable[] = {
@@ -264,7 +266,6 @@ void skeincoin_gpu_sha256(uint32_t *message)
 	for (int k = 0; k<8; k++)
 		hash[k] += regs[k];
 
-#if 1
 	/////
 	///// Second Pass (ending)
 	/////
@@ -290,28 +291,26 @@ void skeincoin_gpu_sha256(uint32_t *message)
 	for (int k = 0; k<8; k++)
 		hash[k] += regs[k];
 
-	// Final Hash
-#pragma unroll 8
-	for (int k = 0; k<8; k++)
-		message[k] = SWAB32(hash[k]);
-#else
-	// sha256_transform only, require an additional sha256_transform_gpu() call
-#pragma unroll 8
-	for (int k = 0; k<8; k++)
-		message[k] = hash[k];
-#endif
+	if (SWAB32(hash[7]) <= target)
+	{
+		uint32_t tmp = atomicExch(&(d_found[0]), nounce);
+		if (tmp != 0xffffffff)
+			d_found[1] = tmp;
+	}
 }
 #endif
 
-__global__ __launch_bounds__(256,4)
-void sha2_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *hashBuffer)
+__global__ __launch_bounds__(256, 4)
+void sha2_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *hashBuffer, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		uint32_t nounce = (startNounce + thread);
 		uint32_t *hash = &hashBuffer[thread << 4];
 #ifdef ADVANCED_SHA2
-		skeincoin_gpu_sha256(hash);
+		skeincoin_gpu_sha256(nounce, hash, target, d_found);
+
 #else
 		uint32_t state[16];
 		uint32_t msg[16];
@@ -334,14 +333,17 @@ void sha2_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *hashBuff
 }
 
 __host__
-void sha2_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHashes)
+void sha2_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHashes, uint32_t target, uint32_t *h_found)
 {
 	uint32_t threadsperblock = 64;
 	dim3 block(threadsperblock);
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
-	//cudaMemset(d_outputHashes, 0, 64 * threads);
-	sha2_gpu_hash_64 << < grid, block >> >(threads, startNounce, d_outputHashes);
-	MyStreamSynchronize(NULL, 0, thr_id);
+
+
+	cudaMemset(d_found[thr_id], 0xffffffff, 4 * sizeof(uint32_t));
+	sha2_gpu_hash_64 << < grid, block >> >(threads, startNounce, d_outputHashes, d_found[thr_id], target );
+	cudaMemcpy(h_found, d_found[thr_id], 4 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
 }
 
 extern "C" void skeincoinhash(void *output, const void *input)
@@ -380,7 +382,7 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x03;
+		((uint32_t*)ptarget)[7] = 0x05;
 
 	if (!init[thr_id])
 	{
@@ -392,11 +394,10 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 		}
 		else
 		{
-			MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 		}
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
-
+		CUDA_SAFE_CALL(cudaMalloc(&(d_found[thr_id]), 4 * sizeof(uint32_t)));
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
@@ -406,62 +407,56 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], pdata[k]);
 
 	skein512_cpu_setBlock_80((void*)endiandata);
-	cuda_check_cpu_setTarget(ptarget);
-
 	do
 	{
 		*hashes_done = pdata[19] - first_nonce + throughput;
-
 		// Hash with CUDA
 		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
-		sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], ptarget[7], foundnonces[thr_id]);
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
+//		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (foundnonces[thr_id][0] != 0xffffffff)
 		{
 			uint32_t vhash64[8];
 
-			endiandata[19] = swab32_if(foundNonce, swap);
+			endiandata[19] = swab32_if(foundnonces[thr_id][0], swap);
 			skeincoinhash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
 				if (opt_debug || opt_benchmark)
-					applog(LOG_INFO, "GPU #%d: found nonce $%08X", thr_id, foundNonce);
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
-				if(secNonce != 0)
+					applog(LOG_INFO, "GPU #%d: found nonce $%08X", thr_id, foundnonces[thr_id][0]);
+				if (foundnonces[thr_id][1] != 0xffffffff)
 				{
-					endiandata[19] = swab32_if(secNonce, swap);
+					endiandata[19] = swab32_if(foundnonces[thr_id][1], swap);
 					skeincoinhash(vhash64, endiandata);
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))
 					{
 						if (opt_debug || opt_benchmark)
-							applog(LOG_INFO, "GPU #%d: found nonce $%08X", thr_id, secNonce);
-						pdata[19 + res] = swab32_if(secNonce, !swap);
+							applog(LOG_INFO, "GPU #%d: found nonce $%08X", thr_id, foundnonces[thr_id][1]);
+						pdata[19 + res] = swab32_if(foundnonces[thr_id][1], !swap);
 						res++;
 					}
 					else
 					{
-						applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, secNonce);
+						if (vhash64[7] != ptarget[7]) applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][1]);
 					}
 				}
-				pdata[19] = swab32_if(foundNonce, !swap);
-				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+				pdata[19] = swab32_if(foundnonces[thr_id][0], !swap);
 				return res;
 			}
-			else
+			else 
 			{
-				applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
-				pdata[19]++;
+				if (vhash64[7] != ptarget[7]) 
+					applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][0]);
 			}
 		}
-		else
-			pdata[19] += throughput;
+
+		pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }
