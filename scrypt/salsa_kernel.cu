@@ -79,20 +79,12 @@ KernelInterface *Best_Kernel_Heuristics(cudaDeviceProp *props)
 		// high register count kernels (scrypt, low N-factor scrypt-jane)
 		if (props->major > 3 || (props->major == 3 && props->minor >= 5))
 			kernel = new NV2Kernel(); // we don't want this for Keccak though
-		else if (props->major == 3 && props->minor == 0)
-			kernel = new NVKernel();
-		else if (props->major == 2 || props->major == 1)
-			kernel = new FermiKernel();
 	}
 	else
 	{
 	   // low register count kernels (high N-factor scrypt-jane)
 	   if (props->major > 3 || (props->major == 3 && props->minor >= 5))
 			kernel = new TitanKernel();
-		else if (props->major == 3 && props->minor == 0)
-			kernel = new KeplerKernel();
-		else if (props->major == 2 || props->major == 1)
-			kernel = new TestKernel();
 	}
 	return kernel;
 }
@@ -121,12 +113,8 @@ bool validate_config(char *config, int &b, int &w, KernelInterface **kernel = NU
 			{
 				case 'T': case 'Z': *kernel = new NV2Kernel(); break;
 				case 't':           *kernel = new TitanKernel(); break;
-				case 'K': case 'Y': *kernel = new NVKernel(); break;
-				case 'k':           *kernel = new KeplerKernel(); break;
-				case 'F': case 'L': *kernel = new FermiKernel(); break;
-				case 'f': case 'X': *kernel = new TestKernel(); break;
 				case ' ': // choose based on device architecture
-					*kernel = Best_Kernel_Heuristics(props);
+					*kernel = new NV2Kernel();
 				break;
 			}
 		}
@@ -327,21 +315,12 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 	// figure out which kernel implementation to use
 	if (!validate_config(device_config[thr_id], optimal_blocks, WARPS_PER_BLOCK, &kernel, &props)) {
 		kernel = NULL;
-		if (device_config[thr_id] != NULL) {
-				 if (device_config[thr_id][0] == 'T' || device_config[thr_id][0] == 'Z')
+		if (device_config[thr_id] != NULL) 
+		{
+			 if (device_config[thr_id][0] == 'T' || device_config[thr_id][0] == 'Z')
 				kernel = new NV2Kernel();
-			else if (device_config[thr_id][0] == 't')
-				kernel = new TitanKernel();
-			else if (device_config[thr_id][0] == 'K' || device_config[thr_id][0] == 'Y')
-				kernel = new NVKernel();
-			else if (device_config[thr_id][0] == 'k')
-				kernel = new KeplerKernel();
-			else if (device_config[thr_id][0] == 'F' || device_config[thr_id][0] == 'L')
-				kernel = new FermiKernel();
-			else if (device_config[thr_id][0] == 'f' || device_config[thr_id][0] == 'X')
-				kernel = new TestKernel();
 		}
-		if (kernel == NULL) kernel = Best_Kernel_Heuristics(&props);
+		if (kernel == NULL) kernel = new NV2Kernel();
 	}
 
 	if (kernel->get_major_version() > props.major || kernel->get_major_version() == props.major && kernel->get_minor_version() > props.minor)

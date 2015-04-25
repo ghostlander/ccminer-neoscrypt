@@ -562,14 +562,10 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="scrypt\blake.cu" />
-    <CudaCompile Include="scrypt\fermi_kernel.cu" />
     <CudaCompile Include="scrypt\keccak.cu" />
-    <CudaCompile Include="scrypt\kepler_kernel.cu" />
-    <CudaCompile Include="scrypt\nv_kernel.cu" />
     <CudaCompile Include="scrypt\nv_kernel2.cu" />
     <CudaCompile Include="scrypt\salsa_kernel.cu" />
     <CudaCompile Include="scrypt\sha256.cu" />
-    <CudaCompile Include="scrypt\test_kernel.cu" />
     <CudaCompile Include="scrypt\titan_kernel.cu" />
   </ItemGroup>
 </Project>
