@@ -32,7 +32,7 @@ static uint32_t foundnonces[MAX_GPUS][2];
 
 
 extern void quark_blake512_cpu_init(int thr_id);
-extern void quark_blake512_cpu_setBlock_80(int threads, void *pdata);
+extern void quark_blake512_cpu_setBlock_80(int threads, uint64_t *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 extern void quark_bmw512_cpu_init(int thr_id, uint32_t threads);
@@ -173,7 +173,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 
 
-	quark_blake512_cpu_setBlock_80(thr_id, (void*)endiandata[thr_id]);
+	quark_blake512_cpu_setBlock_80(thr_id, (uint64_t *)endiandata[thr_id]);
 
 	do {
 

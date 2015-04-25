@@ -29,7 +29,7 @@ extern "C" {
 // Memory for the hash functions
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void quark_blake512_cpu_setBlock_80(int threads, void *pdata);
+extern void quark_blake512_cpu_setBlock_80(int threads, uint64_t *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 extern void quark_bmw512_cpu_init(int thr_id, uint32_t threads);
@@ -194,7 +194,7 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 	for (int k = 0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
-	quark_blake512_cpu_setBlock_80(thr_id, (void*)endiandata);
+	quark_blake512_cpu_setBlock_80(thr_id, (uint64_t *)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
