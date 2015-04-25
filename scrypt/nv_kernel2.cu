@@ -125,7 +125,7 @@ __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[
 {
 	unsigned int laneId = __laneId();
 
-	unsigned int lane8 = laneId%8;
+	unsigned int lane8 = laneId&7;
 	unsigned int tile  = laneId/8;
 
 	uint4 T1[8], T2[8];
@@ -167,11 +167,11 @@ __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[
 	// rotate columns up using a barrel shifter simulation
 	// column X is rotated up by (X+1) items
 #pragma unroll 8
-	for(int n = 0; n < 8; n++) T2[n] = ((lane8+1) & 1) ? T1[(n+1) % 8] : T1[n];
+	for (int n = 0; n < 8; n++) T2[n] = ((lane8 + 1) & 1) ? T1[(n + 1) &7] : T1[n];
 #pragma unroll 8
-	for(int n = 0; n < 8; n++) T1[n] = ((lane8+1) & 2) ? T2[(n+2) % 8] : T2[n];
+	for (int n = 0; n < 8; n++) T1[n] = ((lane8 + 1) & 2) ? T2[(n + 2) &7] : T2[n];
 #pragma unroll 8
-	for(int n = 0; n < 8; n++) T2[n] = ((lane8+1) & 4) ? T1[(n+4) % 8] : T1[n];
+	for (int n = 0; n < 8; n++) T2[n] = ((lane8 + 1) & 4) ? T1[(n + 4) & 7] : T1[n];
 
 	/* Matrix after column rotates:
 
@@ -187,20 +187,20 @@ __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[
 
 	// rotate rows again using address math and write to D, in reverse row order
 	D[spacing*2*(32*tile   )+ lane8     ] = T2[7];
-	D[spacing*2*(32*tile+4 )+(lane8+7)%8] = T2[6];
-	D[spacing*2*(32*tile+8 )+(lane8+6)%8] = T2[5];
-	D[spacing*2*(32*tile+12)+(lane8+5)%8] = T2[4];
-	D[spacing*2*(32*tile+16)+(lane8+4)%8] = T2[3];
-	D[spacing*2*(32*tile+20)+(lane8+3)%8] = T2[2];
-	D[spacing*2*(32*tile+24)+(lane8+2)%8] = T2[1];
-	D[spacing*2*(32*tile+28)+(lane8+1)%8] = T2[0];
+	D[spacing * 2 * (32 * tile + 4) + (lane8 + 7) & 7] = T2[6];
+	D[spacing * 2 * (32 * tile + 8) + (lane8 + 6) & 7] = T2[5];
+	D[spacing * 2 * (32 * tile + 12) + (lane8 + 5) & 7] = T2[4];
+	D[spacing * 2 * (32 * tile + 16) + (lane8 + 4) & 7] = T2[3];
+	D[spacing * 2 * (32 * tile + 20) + (lane8 + 3) & 7] = T2[2];
+	D[spacing * 2 * (32 * tile + 24) + (lane8 + 2) & 7] = T2[1];
+	D[spacing * 2 * (32 * tile + 28) + (lane8 + 1) & 7] = T2[0];
 }
 
 __device__ __forceinline__ void __transposed_read_BC(const uint4 *S, uint4 (&B)[4], uint4 (&C)[4], int spacing, int row)
 {
 	unsigned int laneId = __laneId();
 
-	unsigned int lane8 = laneId%8;
+	unsigned int lane8 = laneId & 7;
 	unsigned int tile  = laneId/8;
 
 	// Perform the same transposition as in __transposed_write_BC, but in reverse order.
@@ -209,22 +209,22 @@ __device__ __forceinline__ void __transposed_read_BC(const uint4 *S, uint4 (&B)[
 	// read and rotate rows, in reverse row order
 	uint4 T1[8], T2[8];
 	T1[7] = __ldg(&S[(spacing*2*(32*tile   ) +  lane8      + 8*__shfl(row, 0, 8))]);
-	T1[6] = __ldg(&S[(spacing*2*(32*tile+4 ) + (lane8+7)%8 + 8*__shfl(row, 1, 8))]);
-	T1[5] = __ldg(&S[(spacing*2*(32*tile+8 ) + (lane8+6)%8 + 8*__shfl(row, 2, 8))]);
-	T1[4] = __ldg(&S[(spacing*2*(32*tile+12) + (lane8+5)%8 + 8*__shfl(row, 3, 8))]);
-	T1[3] = __ldg(&S[(spacing*2*(32*tile+16) + (lane8+4)%8 + 8*__shfl(row, 4, 8))]);
-	T1[2] = __ldg(&S[(spacing*2*(32*tile+20) + (lane8+3)%8 + 8*__shfl(row, 5, 8))]);
-	T1[1] = __ldg(&S[(spacing*2*(32*tile+24) + (lane8+2)%8 + 8*__shfl(row, 6, 8))]);
-	T1[0] = __ldg(&S[(spacing*2*(32*tile+28) + (lane8+1)%8 + 8*__shfl(row, 7, 8))]);
+	T1[6] = __ldg(&S[(spacing * 2 * (32 * tile + 4) + (lane8 + 7) & 7 + 8 * __shfl(row, 1, 8))]);
+	T1[5] = __ldg(&S[(spacing * 2 * (32 * tile + 8) + (lane8 + 6) & 7 + 8 * __shfl(row, 2, 8))]);
+	T1[4] = __ldg(&S[(spacing * 2 * (32 * tile + 12) + (lane8 + 5) & 7 + 8 * __shfl(row, 3, 8))]);
+	T1[3] = __ldg(&S[(spacing * 2 * (32 * tile + 16) + (lane8 + 4) & 7 + 8 * __shfl(row, 4, 8))]);
+	T1[2] = __ldg(&S[(spacing * 2 * (32 * tile + 20) + (lane8 + 3) & 7 + 8 * __shfl(row, 5, 8))]);
+	T1[1] = __ldg(&S[(spacing * 2 * (32 * tile + 24) + (lane8 + 2) & 7 + 8 * __shfl(row, 6, 8))]);
+	T1[0] = __ldg(&S[(spacing * 2 * (32 * tile + 28) + (lane8 + 1) & 7 + 8 * __shfl(row, 7, 8))]);
 
 	// rotate columns down using a barrel shifter simulation
 	// column X is rotated down by (X+1) items, or up by (8-(X+1)) = (7-X) items
 #pragma unroll 8
-	for(int n = 0; n < 8; n++) T2[n] = ((7-lane8) & 1) ? T1[(n+1) % 8] : T1[n];
+	for (int n = 0; n < 8; n++) T2[n] = ((7 - lane8) & 1) ? T1[(n + 1) & 7] : T1[n];
 #pragma unroll 8
-	for(int n = 0; n < 8; n++) T1[n] = ((7-lane8) & 2) ? T2[(n+2) % 8] : T2[n];
+	for (int n = 0; n < 8; n++) T1[n] = ((7 - lane8) & 2) ? T2[(n + 2) &7] : T2[n];
 #pragma unroll 8
-	for(int n = 0; n < 8; n++) T2[n] = ((7-lane8) & 4) ? T1[(n+4) % 8] : T1[n];
+	for (int n = 0; n < 8; n++) T2[n] = ((7 - lane8) & 4) ? T1[(n + 4) & 7] : T1[n];
 
 	// rotate rows
 	B[0] = T2[0];
@@ -620,7 +620,8 @@ template <int ALGO> __global__ void nv2_scrypt_core_kernelB_LG(uint32_t *g_odata
 		__transposed_read_BC((uint4*)g_odata, B, C, 1, 0);
 	}
 
-	for (int i = begin; i < end; i++)  {
+	for (int i = begin; i < end; i++)  
+	{
 		int slot = C[0].x & c_N_1;
 		int pos = slot/LOOKUP_GAP, loop = slot-pos*LOOKUP_GAP;
 		uint4 b[4], c[4]; __transposed_read_BC((uint4*)(V), b, c, c_spacing, pos);
@@ -702,7 +703,7 @@ static uint64_t host_KeccakF_RoundConstants[24] =
 
 __constant__ uint64_t pdata64[10];
 
-static __device__ uint32_t cuda_swab32(uint32_t x)
+static __device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
 {
 	return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
 		  | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
@@ -711,7 +712,8 @@ static __device__ uint32_t cuda_swab32(uint32_t x)
 // in this implementation the first and last iteration of the for() loop were explicitly
 // unrolled and redundant operations were removed (e.g. operations on zero inputs, and
 // computation of unnecessary outputs)
-__global__ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validate )
+__global__ __launch_bounds__(256, 2)
+void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validate )
 {
 	uint2 Aba, Abe, Abi, Abo, Abu;
 	uint2 Aga, Age, Agi, Ago, Agu;
@@ -919,7 +921,7 @@ __global__ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_
 	Aso =   BCo ^((~BCu)&  BCa );
 	Asu =   BCu ^((~BCa)&  BCe );
 
-//#pragma unroll 10
+	#pragma unroll 1
 	for( int laneCount = 2; laneCount < 22; laneCount += 2 )
 	{
 		//    prepareTheta
@@ -1324,7 +1326,7 @@ __constant__ uint32_t pdata[20];
 #pragma warning (disable: 4146)
 #endif
 
-static __device__ sph_u32 cuda_sph_bswap32(sph_u32 x)
+static __device__ __forceinline__ sph_u32 cuda_sph_bswap32(sph_u32 x)
 {
 	return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
 		  | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
@@ -1336,7 +1338,7 @@ static __device__ sph_u32 cuda_sph_bswap32(sph_u32 x)
  * @param dst   the destination buffer
  * @param val   the 32-bit value to encode
  */
-static __device__ void
+static __device__ __forceinline__ void
 cuda_sph_enc32be(void *dst, sph_u32 val)
 {
 	*(sph_u32 *)dst = cuda_sph_bswap32(val);
@@ -1615,7 +1617,7 @@ cuda_sph_enc32be(void *dst, sph_u32 val)
 	} while (0)
 
 
-__global__ void titan_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validate )
+__global__ void titan_blake256_hash(uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validate)
 {
 	uint32_t input[16];
 	uint64_t output[4];
