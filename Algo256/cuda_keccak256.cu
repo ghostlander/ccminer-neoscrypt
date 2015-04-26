@@ -289,8 +289,8 @@ static void keccak_blockv30_32(uint64_t *s, const uint64_t *keccak_round_constan
 
 #define bitselect(a, b, c) ((a) ^ ((c) & ((b) ^ (a))))
 
-__global__ __launch_bounds__(128,5)
-void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *const __restrict__ outputHash, uint32_t *const __restrict__ resNounce)
+__global__	__launch_bounds__(512)
+void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce,  uint32_t *const __restrict__ resNounce)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -423,17 +423,16 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *const _
 }
 
 __host__
-void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, uint32_t *h_nounce)
+void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *h_nounce)
 {
-	cudaMemset(d_KNonce[thr_id], 0xff, 4*sizeof(uint32_t));
-	const uint32_t threadsperblock = 64;
+	cudaMemset(d_KNonce[thr_id], 0xffffffff, 2*sizeof(uint32_t));
+	const uint32_t threadsperblock = 512;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-
-	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash, d_KNonce[thr_id]);
+	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_KNonce[thr_id]);
 	//MyStreamSynchronize(NULL, order, thr_id);
-	CUDA_SAFE_CALL(cudaMemcpy(h_nounce, d_KNonce[thr_id], 4 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
+	CUDA_SAFE_CALL(cudaMemcpy(h_nounce, d_KNonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
 }
 
 __global__ __launch_bounds__(256,3)
@@ -499,5 +498,5 @@ void keccak256_setBlock_80(void *pdata,const void *pTargetIn)
 __host__
 void keccak256_cpu_init(int thr_id, uint32_t threads)
 {
-	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], 4*sizeof(uint32_t)));
+	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], 2*sizeof(uint32_t)));
 }
