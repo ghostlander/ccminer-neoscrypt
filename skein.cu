@@ -16,8 +16,8 @@ extern "C" {
 static uint32_t foundnonces[MAX_GPUS][2];
 
 extern void skein512_cpu_setBlock_80(uint32_t thr_id,void *pdata);
-extern void skein512_cpu_hash_80_50(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, int32_t target, uint32_t *h_found);
-extern void skein512_cpu_hash_80_52(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, int32_t target, uint32_t *h_found);
+extern void skein512_cpu_hash_80_50(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, uint64_t target, uint32_t *h_found);
+extern void skein512_cpu_hash_80_52(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, uint64_t target, uint32_t *h_found);
 
 extern "C" void skeincoinhash(void *output, const void *input)
 {
@@ -56,8 +56,10 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xff;
-
+	{
+		((uint64_t*)ptarget)[3] = 0xf00000000;
+	}
+	uint64_t target = ((uint64_t*)ptarget)[3];
 	if (!init[thr_id])
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
@@ -81,10 +83,11 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	do
 	{
 		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		if (device_sm[device_map[thr_id]] > 500)
-			skein512_cpu_hash_80_52(thr_id, throughput, pdata[19], swap, ptarget[7], foundnonces[thr_id]);
+			skein512_cpu_hash_80_52(thr_id, throughput, pdata[19], swap, target, foundnonces[thr_id]);
 		else
-			skein512_cpu_hash_80_50(thr_id, throughput, pdata[19], swap, ptarget[7], foundnonces[thr_id]);
+			skein512_cpu_hash_80_50(thr_id, throughput, pdata[19], swap, target, foundnonces[thr_id]);
 
 		if (foundnonces[thr_id][0] != 0xffffffff)
 		{
@@ -94,7 +97,8 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 			
 			skeincoinhash(vhash64, endiandata);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))
+			uint64_t test = ((uint64_t*)vhash64)[3];
+			if (test <= target && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
 				if (opt_debug || opt_benchmark)
@@ -120,8 +124,11 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 			}
 			else 
 			{
-				if (vhash64[7] != ptarget[7]) 
+				if (test != target)
 					applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][0]);
+				else
+					applog(LOG_WARNING, "Lost work: #%d", test);
+
 			}
 		}
 
