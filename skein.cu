@@ -1,6 +1,7 @@
 /**
 * SKEIN512 80 + SHA256 64
 * by tpruvot@github - 2015
+* Optimized by sp-hash@github - 2015
 */
 
 extern "C" {
@@ -15,7 +16,8 @@ extern "C" {
 static uint32_t foundnonces[MAX_GPUS][2];
 
 extern void skein512_cpu_setBlock_80(uint32_t thr_id,void *pdata);
-extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, int32_t target, uint32_t *h_found);
+extern void skein512_cpu_hash_80_50(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, int32_t target, uint32_t *h_found);
+extern void skein512_cpu_hash_80_52(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, int32_t target, uint32_t *h_found);
 
 extern "C" void skeincoinhash(void *output, const void *input)
 {
@@ -54,7 +56,7 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x05;
+		((uint32_t*)ptarget)[7] = 0xff;
 
 	if (!init[thr_id])
 	{
@@ -67,7 +69,6 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 		else
 		{
 		}
-//		CUDA_SAFE_CALL(cudaMalloc(&(d_found[thr_id]), 4 * sizeof(uint32_t)));
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
@@ -76,16 +77,21 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	for (int k = 0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	skein512_cpu_setBlock_80(thr_id,(void*)endiandata);
+	skein512_cpu_setBlock_80(thr_id, (void*)endiandata);
 	do
 	{
 		*hashes_done = pdata[19] - first_nonce + throughput;
-		skein512_cpu_hash_80(thr_id, throughput, pdata[19], swap, ptarget[7], foundnonces[thr_id]);
+		if (device_sm[device_map[thr_id]] > 500)
+			skein512_cpu_hash_80_52(thr_id, throughput, pdata[19], swap, ptarget[7], foundnonces[thr_id]);
+		else
+			skein512_cpu_hash_80_50(thr_id, throughput, pdata[19], swap, ptarget[7], foundnonces[thr_id]);
+
 		if (foundnonces[thr_id][0] != 0xffffffff)
 		{
 			uint32_t vhash64[8];
 
 			endiandata[19] = swab32_if(foundnonces[thr_id][0], swap);
+			
 			skeincoinhash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))

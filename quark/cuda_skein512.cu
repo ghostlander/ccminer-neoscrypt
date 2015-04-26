@@ -2039,22 +2039,31 @@ static __device__ __constant__ uint32_t sha256_hashTable[] = {
 #define s0(x)         (ROTR32(x, 7) ^ ROTR32(x, 18) ^ R(x, 3))
 #define s1(x)         (ROTR32(x, 17) ^ ROTR32(x, 19) ^ R(x, 10))
 
+__constant__ uint32_t sha256_endingTable[] = {
+	0x80000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000200,
+	0x80000000, 0x01400000, 0x00205000, 0x00005088, 0x22000800, 0x22550014, 0x05089742, 0xa0000020,
+	0x5a880000, 0x005c9400, 0x0016d49d, 0xfa801f00, 0xd33225d0, 0x11675959, 0xf6e6bfda, 0xb30c1549,
+	0x08b2b050, 0x9d7c4c27, 0x0ce2a393, 0x88e6e1ea, 0xa52b4335, 0x67a16f49, 0xd732016f, 0x4eeb2e91,
+	0x5dbf55e5, 0x8eee2335, 0xe2bc5ec2, 0xa83f4394, 0x45ad78f7, 0x36f3d0cd, 0xd99c05e8, 0xb0511dc7,
+	0x69bc7ac4, 0xbd11375b, 0xe3ba71e5, 0x3b209ff2, 0x18feee17, 0xe25ad9e7, 0x13375046, 0x0515089d,
+	0x4f0d0f04, 0x2627484e, 0x310128d2, 0xc668b434, 0x420841cc, 0x62d311b8, 0xe59ba771, 0x85a7a484
+		};
 
+__constant__ uint32_t sha256_constantTable[64] = {
+	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+	0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+	0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+	0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+	0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+	0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+	0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+	0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+};
 
-/*
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(tp, 7)
-#else
-#define tp 64
-__launch_bounds__(tp, 15)
-#endif
-*/
-#define tp80 256
-__global__ 
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 4)
-#endif
-void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ d_found, uint32_t target)
+__global__
+__launch_bounds__(1024)
+void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -2149,27 +2158,6 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *cons
 
 		uint32_t nounce = (startNounce + thread);
 		uint32_t *message = (uint32_t *)p;	
-		const uint32_t sha256_endingTable[] = {
-			0x80000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000200,
-			0x80000000, 0x01400000, 0x00205000, 0x00005088, 0x22000800, 0x22550014, 0x05089742, 0xa0000020,
-			0x5a880000, 0x005c9400, 0x0016d49d, 0xfa801f00, 0xd33225d0, 0x11675959, 0xf6e6bfda, 0xb30c1549,
-			0x08b2b050, 0x9d7c4c27, 0x0ce2a393, 0x88e6e1ea, 0xa52b4335, 0x67a16f49, 0xd732016f, 0x4eeb2e91,
-			0x5dbf55e5, 0x8eee2335, 0xe2bc5ec2, 0xa83f4394, 0x45ad78f7, 0x36f3d0cd, 0xd99c05e8, 0xb0511dc7,
-			0x69bc7ac4, 0xbd11375b, 0xe3ba71e5, 0x3b209ff2, 0x18feee17, 0xe25ad9e7, 0x13375046, 0x0515089d,
-			0x4f0d0f04, 0x2627484e, 0x310128d2, 0xc668b434, 0x420841cc, 0x62d311b8, 0xe59ba771, 0x85a7a484
-		};
-
-		const uint32_t sha256_constantTable[64] = {
-			0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-			0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-			0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-			0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-			0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-			0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-			0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-			0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-		};
 
 		uint32_t W1[16];
 		uint32_t W2[16];
@@ -2302,8 +2290,8 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *cons
 			regs[k] = hash[k];
 
 		// Progress W1
-#pragma unroll 64
-		for (int j = 0; j<64; j++)
+#pragma unroll 
+		for (int j = 0; j<61; j++)
 		{
 			uint32_t T1, T2;
 			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j] + sha256_endingTable[j];
@@ -2315,11 +2303,8 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *cons
 			regs[4] += T1;
 		}
 
-#pragma unroll 8
-		for (int k = 0; k<8; k++)
-			hash[k] += regs[k];
 
-		if (SWAB32(hash[7]) <= target)
+		if (SWAB32(hash[7] + regs[4]) <= target)
 		{
 			uint32_t tmp = atomicExch(&(d_found[0]), nounce);
 			if (tmp != 0xffffffff)
@@ -2327,6 +2312,257 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *cons
 		}
 	}
 }
+__global__
+void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ d_found, uint32_t target)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint2 h0, h1, h2, h3, h4, h5, h6, h7, h8;
+		uint2 t0, t1, t2;
+		uint2 p[8];
+
+		h0 = precalcvalues[0];
+		h1 = precalcvalues[1];
+		h2 = precalcvalues[2];
+		h3 = precalcvalues[3];
+		h4 = precalcvalues[4];
+		h5 = precalcvalues[5];
+		h6 = precalcvalues[6];
+		h7 = precalcvalues[7];
+		t2 = precalcvalues[8];
+
+		const uint2 nounce2 = make_uint2(_LOWORD(c_PaddedMessage80[1]), cuda_swab32(startNounce + thread));
+
+		// skein_big_close -> etype = 0x160, ptr = 16, bcount = 1, extra = 16
+		p[0] = vectorize(c_PaddedMessage80[0]);
+		p[1] = nounce2;
+
+#pragma unroll
+		for (int i = 2; i < 8; i++)
+			p[i] = make_uint2(0, 0);
+
+		t0 = vectorizelow(0x50ull); // SPH_T64(bcount << 6) + (sph_u64)(extra);
+		t1 = vectorize(0xB000000000000000ull); // (bcount >> 58) + ((sph_u64)(etype) << 55);
+		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		TFBIG_4e_UI2(0);
+		TFBIG_4o_UI2(1);
+		TFBIG_4e_UI2(2);
+		TFBIG_4o_UI2(3);
+		TFBIG_4e_UI2(4);
+		TFBIG_4o_UI2(5);
+		TFBIG_4e_UI2(6);
+		TFBIG_4o_UI2(7);
+		TFBIG_4e_UI2(8);
+		TFBIG_4o_UI2(9);
+		TFBIG_4e_UI2(10);
+		TFBIG_4o_UI2(11);
+		TFBIG_4e_UI2(12);
+		TFBIG_4o_UI2(13);
+		TFBIG_4e_UI2(14);
+		TFBIG_4o_UI2(15);
+		TFBIG_4e_UI2(16);
+		TFBIG_4o_UI2(17);
+		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+
+
+		t0 = vectorizelow(8); // extra
+		t1 = vectorize(0xFF00000000000000ull); // etype
+		t2 = vectorize(0xB000000000000050ull);
+
+		h0 = vectorize(c_PaddedMessage80[0]) ^ p[0];
+		h1 = nounce2 ^ p[1];
+		h2 = p[2];
+		h3 = p[3];
+		h4 = p[4];
+		h5 = p[5];
+		h6 = p[6];
+		h7 = p[7];
+
+		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+
+		// p[8] = { 0 };
+#pragma unroll 8
+		for (int i = 0; i<8; i++)
+			p[i] = make_uint2(0, 0);
+
+		TFBIG_4e_UI2(0);
+		TFBIG_4o_UI2(1);
+		TFBIG_4e_UI2(2);
+		TFBIG_4o_UI2(3);
+		TFBIG_4e_UI2(4);
+		TFBIG_4o_UI2(5);
+		TFBIG_4e_UI2(6);
+		TFBIG_4o_UI2(7);
+		TFBIG_4e_UI2(8);
+		TFBIG_4o_UI2(9);
+		TFBIG_4e_UI2(10);
+		TFBIG_4o_UI2(11);
+		TFBIG_4e_UI2(12);
+		TFBIG_4o_UI2(13);
+		TFBIG_4e_UI2(14);
+		TFBIG_4o_UI2(15);
+		TFBIG_4e_UI2(16);
+		TFBIG_4o_UI2(17);
+		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+
+		uint32_t nounce = (startNounce + thread);
+		uint32_t *message = (uint32_t *)p;
+
+		uint32_t W1[16];
+		uint32_t W2[16];
+
+		uint32_t regs[8];
+		uint32_t hash[8];
+
+		// Init with Hash-Table
+#pragma unroll 8
+		for (int k = 0; k < 8; k++)
+		{
+			hash[k] = regs[k] = sha256_hashTable[k];
+		}
+
+#pragma unroll 16
+		for (int k = 0; k<16; k++)
+			W1[k] = SWAB32(message[k]);
+
+		// Progress W1
+#pragma unroll 16
+		for (int j = 0; j<16; j++)
+		{
+			uint32_t T1, T2;
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j] + W1[j];
+			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+
+#pragma unroll 7
+			for (int k = 6; k >= 0; k--) regs[k + 1] = regs[k];
+			regs[0] = T1 + T2;
+			regs[4] += T1;
+		}
+
+		// Progress W2...W3
+
+		////// PART 1
+#pragma unroll 2
+		for (int j = 0; j<2; j++)
+			W2[j] = s1(W1[14 + j]) + W1[9 + j] + s0(W1[1 + j]) + W1[j];
+#pragma unroll 5
+		for (int j = 2; j<7; j++)
+			W2[j] = s1(W2[j - 2]) + W1[9 + j] + s0(W1[1 + j]) + W1[j];
+
+#pragma unroll 8
+		for (int j = 7; j<15; j++)
+			W2[j] = s1(W2[j - 2]) + W2[j - 7] + s0(W1[1 + j]) + W1[j];
+
+		W2[15] = s1(W2[13]) + W2[8] + s0(W2[0]) + W1[15];
+
+		// Round function
+#pragma unroll 16
+		for (int j = 0; j<16; j++)
+		{
+			uint32_t T1, T2;
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j + 16] + W2[j];
+			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+
+#pragma unroll 7
+			for (int l = 6; l >= 0; l--) regs[l + 1] = regs[l];
+			regs[0] = T1 + T2;
+			regs[4] += T1;
+		}
+
+		////// PART 2
+#pragma unroll 2
+		for (int j = 0; j<2; j++)
+			W1[j] = s1(W2[14 + j]) + W2[9 + j] + s0(W2[1 + j]) + W2[j];
+
+#pragma unroll 5
+		for (int j = 2; j<7; j++)
+			W1[j] = s1(W1[j - 2]) + W2[9 + j] + s0(W2[1 + j]) + W2[j];
+
+#pragma unroll 8
+		for (int j = 7; j<15; j++)
+			W1[j] = s1(W1[j - 2]) + W1[j - 7] + s0(W2[1 + j]) + W2[j];
+
+		W1[15] = s1(W1[13]) + W1[8] + s0(W1[0]) + W2[15];
+
+		// Round function
+#pragma unroll 16
+		for (int j = 0; j<16; j++)
+		{
+			uint32_t T1, T2;
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j + 32] + W1[j];
+			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+
+#pragma unroll 7
+			for (int l = 6; l >= 0; l--) regs[l + 1] = regs[l];
+			regs[0] = T1 + T2;
+			regs[4] += T1;
+		}
+
+		////// PART 3
+#pragma unroll 2
+		for (int j = 0; j<2; j++)
+			W2[j] = s1(W1[14 + j]) + W1[9 + j] + s0(W1[1 + j]) + W1[j];
+
+#pragma unroll 5
+		for (int j = 2; j<7; j++)
+			W2[j] = s1(W2[j - 2]) + W1[9 + j] + s0(W1[1 + j]) + W1[j];
+
+#pragma unroll 8
+		for (int j = 7; j<15; j++)
+			W2[j] = s1(W2[j - 2]) + W2[j - 7] + s0(W1[1 + j]) + W1[j];
+
+		W2[15] = s1(W2[13]) + W2[8] + s0(W2[0]) + W1[15];
+
+		// Round function
+#pragma unroll 16
+		for (int j = 0; j<16; j++)
+		{
+			uint32_t T1, T2;
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j + 48] + W2[j];
+			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+
+#pragma unroll 7
+			for (int l = 6; l >= 0; l--) regs[l + 1] = regs[l];
+			regs[0] = T1 + T2;
+			regs[4] += T1;
+		}
+
+#pragma unroll 8
+		for (int k = 0; k<8; k++)
+			hash[k] += regs[k];
+
+		/////
+		///// Second Pass (ending)
+		/////
+#pragma unroll 8
+		for (int k = 0; k<8; k++)
+			regs[k] = hash[k];
+
+		// Progress W1
+#pragma unroll 
+		for (int j = 0; j<61; j++)
+		{
+			uint32_t T1, T2;
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j] + sha256_endingTable[j];
+			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+
+#pragma unroll 7
+			for (int k = 6; k >= 0; k--) regs[k + 1] = regs[k];
+			regs[0] = T1 + T2;
+			regs[4] += T1;
+		}
+
+
+		if (SWAB32(hash[7] + regs[4]) <= target)
+		{
+			uint32_t tmp = atomicExch(&(d_found[0]), nounce);
+			if (tmp != 0xffffffff)
+				d_found[1] = tmp;
+		}
+	}
+}
+
 #define tp 128
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
@@ -2349,6 +2585,7 @@ void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t sta
 	CUDA_SAFE_CALL(cudaMemcpy(h_nonce, d_nonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
 	/* skeincoin */
 }
+
 
 static uint64_t PaddedMessage[16];
 
@@ -2423,15 +2660,20 @@ void skein512_cpu_setBlock_80(uint32_t thr_id, void *pdata)
 }
 
 __host__
-void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, int swapu,int32_t target, uint32_t *h_found)
+void skein512_cpu_hash_80_52(int thr_id, uint32_t threads, uint32_t startNounce, int swapu,int32_t target, uint32_t *h_found)
 {
-	dim3 grid((threads + tp80 - 1) / tp80);
-	dim3 block(tp80);
+	dim3 grid((threads + 1024 - 1) / 1024);
+	dim3 block(1024);
 	cudaMemset(d_found[thr_id], 0xffffffff, 2 * sizeof(uint32_t));
-	skein512_gpu_hash_80 << < grid, block >> > (threads, startNounce, d_found[thr_id], target);
-//	sha2_gpu_hash_64 << < grid, block >> >(threads, startNounce, d_hash, );
+	skein512_gpu_hash_80_52 << < grid, block >> > (threads, startNounce, d_found[thr_id], target);
 	cudaMemcpy(h_found, d_found[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-
-	//	skein512_gpu_hash_close <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash);
 }
-
+__host__
+void skein512_cpu_hash_80_50(int thr_id, uint32_t threads, uint32_t startNounce, int swapu, int32_t target, uint32_t *h_found)
+{
+	dim3 grid((threads + 256 - 1) / 256);
+	dim3 block(256);
+	cudaMemset(d_found[thr_id], 0xffffffff, 2 * sizeof(uint32_t));
+	skein512_gpu_hash_80_50 << < grid, block >> > (threads, startNounce, d_found[thr_id], target);
+	cudaMemcpy(h_found, d_found[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+}
