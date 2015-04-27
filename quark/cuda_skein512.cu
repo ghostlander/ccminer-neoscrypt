@@ -3,10 +3,11 @@
 #include <memory.h>
 
 #include "cuda_helper.h" 
-#define TPBf 128
 
-static __constant__ uint64_t c_PaddedMessage80[2]; // padded message (80 bytes + padding)
+static __constant__ uint64_t c_PaddedMessage80[2];
 __constant__ uint2 precalcvalues[9];
+__constant__ uint32_t sha256_endingTable[64];
+
 static uint32_t *d_found[MAX_GPUS];
 
 // Take a look at: https://www.schneier.com/skein1.3.pdf
@@ -370,10 +371,11 @@ static uint32_t *d_nonce[MAX_GPUS];
 		TFBIG_MIX8_PRE(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 25, 29, 39, 43); \
 		TFBIG_MIX8_PRE(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
 		}
-
 __global__
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(448, 2)
+__launch_bounds__(480, 3)
+#else
+__launch_bounds__(240, 6)
 #endif
 void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
@@ -1890,13 +1892,12 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 #undef h7
 	}
 }
-//#else
-//__launch_bounds__(128, 10)
-//#endif
 
 __global__
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(448, 2)
+__launch_bounds__(480, 3)
+#else
+__launch_bounds__(240, 6)
 #endif
 void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t startNounce, uint64_t * const __restrict__ g_hash, const uint32_t *g_nonceVector, uint32_t *d_nonce, uint32_t target)
 {
@@ -1904,101 +1905,1478 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 	if (thread < threads)
 	{
 		// Skein
-		uint2 p[8];
-		uint2 h0, h1, h2, h3, h4, h5, h6, h7, h8;
-		uint2 t0, t1, t2;
+		uint2 skein_p[8], h[9];
 
 		const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		const int hashPosition = nounce - startNounce;
-		const uint64_t *const inpHash = &g_hash[8 * hashPosition];
+		uint64_t *Hash = &g_hash[8 * hashPosition];
 
-		h0 = make_uint2(0x749C51CEull, 0x4903ADFF);
-		h1 = make_uint2(0x9746DF03ull, 0x0D95DE39);
-		h2 = make_uint2(0x27C79BCEull, 0x8FD19341);
-		h3 = make_uint2(0xFF352CB1ull, 0x9A255629);
-		h4 = make_uint2(0xDF6CA7B0ull, 0x5DB62599);
-		h5 = make_uint2(0xA9D5C3F4ull, 0xEABE394C);
-		h6 = make_uint2(0x1A75B523ull, 0x991112C7);
-		h7 = make_uint2(0x660FCC33ull, 0xAE18A40B);
+		h[0] = skein_p[0] = vectorize(Hash[0]);
+		h[1] = skein_p[1] = vectorize(Hash[1]);
+		h[2] = skein_p[2] = vectorize(Hash[2]);
+		h[3] = skein_p[3] = vectorize(Hash[3]);
+		h[4] = skein_p[4] = vectorize(Hash[4]);
+		h[5] = skein_p[5] = vectorize(Hash[5]);
+		h[6] = skein_p[6] = vectorize(Hash[6]);
+		h[7] = skein_p[7] = vectorize(Hash[7]);
 
-		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg
-#pragma unroll 8
-		for (int i = 0; i<8; i++)
-			p[i] = vectorize(inpHash[i]);
+		skein_p[0] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[1] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[2] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[3] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[4] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[5] += vectorize(0xEABE394CA9D5C434ULL);
+		skein_p[6] += vectorize(0x891112C71A75B523ULL);
+		skein_p[7] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[1] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[2] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[3] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[4] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[5] += vectorize(0x891112C71A75B523ULL);
+		skein_p[6] += vectorize(0x9E18A40B660FCC73ULL);
+		skein_p[7] += vectorize(0xcab2076d98173ec4ULL + 1);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[1] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[2] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[3] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[4] += vectorize(0x991112C71A75B523ULL);
+		skein_p[5] += vectorize(0x9E18A40B660FCC73ULL);
+		skein_p[6] += vectorize(0xCAB2076D98173F04ULL);
+		skein_p[7] += vectorize(0x4903ADFF749C51D0ULL);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[1] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[2] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[3] += vectorize(0x991112C71A75B523ULL);
+		skein_p[4] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[5] += vectorize(0xcab2076d98173f04ULL);
+		skein_p[6] += vectorize(0x3903ADFF749C51CEULL);
+		skein_p[7] += vectorize(0x0D95DE399746DF03ULL + 3);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[1] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[2] += vectorize(0x991112C71A75B523ULL);
+		skein_p[3] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[4] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[5] += vectorize(0x3903ADFF749C51CEULL);
+		skein_p[6] += vectorize(0xFD95DE399746DF43ULL);
+		skein_p[7] += vectorize(0x8FD1934127C79BD2ULL);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[1] += vectorize(0x991112C71A75B523ULL);
+		skein_p[2] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[3] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[4] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[5] += vectorize(0x0D95DE399746DF03ULL + 0xf000000000000040ULL);
+		skein_p[6] += vectorize(0x8FD1934127C79BCEULL + 0x0000000000000040ULL);
+		skein_p[7] += vectorize(0x9A255629FF352CB1ULL + 5);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0x991112C71A75B523ULL);
+		skein_p[1] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[2] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[3] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[4] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[5] += vectorize(0x8FD1934127C79BCEULL + 0x0000000000000040ULL);
+		skein_p[6] += vectorize(0x8A255629FF352CB1ULL);
+		skein_p[7] += vectorize(0x5DB62599DF6CA7B0ULL + 6);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[1] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[2] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[3] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[4] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[5] += vectorize(0x8A255629FF352CB1ULL);
+		skein_p[6] += vectorize(0x4DB62599DF6CA7F0ULL);
+		skein_p[7] += vectorize(0xEABE394CA9D5C3F4ULL + 7);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[1] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[2] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[3] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[4] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[5] += vectorize(0x4DB62599DF6CA7F0ULL);
+		skein_p[6] += vectorize(0xEABE394CA9D5C434ULL);
+		skein_p[7] += vectorize(0x991112C71A75B52BULL);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[1] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[2] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[3] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[4] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[5] += vectorize(0xEABE394CA9D5C434ULL);
+		skein_p[6] += vectorize(0x891112C71A75B523ULL);
+		skein_p[7] += vectorize(0xAE18A40B660FCC33ULL + 9);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[1] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[2] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[3] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[4] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[5] += vectorize(0x891112C71A75B523ULL);
+		skein_p[6] += vectorize(0x9E18A40B660FCC73ULL);
+		skein_p[7] += vectorize(0xcab2076d98173eceULL);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[1] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[2] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[3] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[4] += vectorize(0x991112C71A75B523ULL);
+		skein_p[5] += vectorize(0x9E18A40B660FCC73ULL);
+		skein_p[6] += vectorize(0xcab2076d98173ec4ULL + 0x0000000000000040ULL);
+		skein_p[7] += vectorize(0x4903ADFF749C51CEULL + 11);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[1] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[2] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[3] += vectorize(0x991112C71A75B523ULL);
+		skein_p[4] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[5] += vectorize(0xcab2076d98173ec4ULL + 0x0000000000000040ULL);
+		skein_p[6] += vectorize(0x3903ADFF749C51CEULL);
+		skein_p[7] += vectorize(0x0D95DE399746DF03ULL + 12);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[1] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[2] += vectorize(0x991112C71A75B523ULL);
+		skein_p[3] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[4] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[5] += vectorize(0x3903ADFF749C51CEULL);
+		skein_p[6] += vectorize(0x0D95DE399746DF03ULL + 0xf000000000000040ULL);
+		skein_p[7] += vectorize(0x8FD1934127C79BCEULL + 13);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0xEABE394CA9D5C3F4ULL);
+		skein_p[1] += vectorize(0x991112C71A75B523ULL);
+		skein_p[2] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[3] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[4] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[5] += vectorize(0x0D95DE399746DF03ULL + 0xf000000000000040ULL);
+		skein_p[6] += vectorize(0x8FD1934127C79BCEULL + 0x0000000000000040ULL);
+		skein_p[7] += vectorize(0x9A255629FF352CB1ULL + 14);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0x991112C71A75B523ULL);
+		skein_p[1] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[2] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[3] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[4] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[5] += vectorize(0x8FD1934127C79BCEULL + 0x0000000000000040ULL);
+		skein_p[6] += vectorize(0x8A255629FF352CB1ULL);
+		skein_p[7] += vectorize(0x5DB62599DF6CA7B0ULL + 15);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0xAE18A40B660FCC33ULL);
+		skein_p[1] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[2] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[3] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[4] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[5] += vectorize(0x8A255629FF352CB1ULL);
+		skein_p[6] += vectorize(0x4DB62599DF6CA7F0ULL);
+		skein_p[7] += vectorize(0xEABE394CA9D5C3F4ULL + 16ULL);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 46) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 36) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 19) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 37) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 33) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 27) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 14) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 42) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 17) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 49) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 36) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 39) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 44) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 9) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 54) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 56) ^ skein_p[4];
+		skein_p[0] += vectorize(0xcab2076d98173ec4ULL);
+		skein_p[1] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[2] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[3] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[4] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[5] += vectorize(0x4DB62599DF6CA7F0ULL);
+		skein_p[6] += vectorize(0xEABE394CA9D5C3F4ULL + 0x0000000000000040ULL);
+		skein_p[7] += vectorize(0x991112C71A75B523ULL + 17);
+		skein_p[0] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 30) ^ skein_p[2];
+		skein_p[4] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 34) ^ skein_p[4];
+		skein_p[6] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 24) ^ skein_p[6];
+		skein_p[2] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 13) ^ skein_p[2];
+		skein_p[4] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 50) ^ skein_p[4];
+		skein_p[6] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 10) ^ skein_p[6];
+		skein_p[0] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 17) ^ skein_p[0];
+		skein_p[4] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 25) ^ skein_p[4];
+		skein_p[6] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 29) ^ skein_p[6];
+		skein_p[0] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 39) ^ skein_p[0];
+		skein_p[2] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 43) ^ skein_p[2];
+		skein_p[6] += skein_p[1];
+		skein_p[1] = ROL2(skein_p[1], 8) ^ skein_p[6];
+		skein_p[0] += skein_p[7];
+		skein_p[7] = ROL2(skein_p[7], 35) ^ skein_p[0];
+		skein_p[2] += skein_p[5];
+		skein_p[5] = ROL2(skein_p[5], 56) ^ skein_p[2];
+		skein_p[4] += skein_p[3];
+		skein_p[3] = ROL2(skein_p[3], 22) ^ skein_p[4];
+		skein_p[0] += vectorize(0x4903ADFF749C51CEULL);
+		skein_p[1] += vectorize(0x0D95DE399746DF03ULL);
+		skein_p[2] += vectorize(0x8FD1934127C79BCEULL);
+		skein_p[3] += vectorize(0x9A255629FF352CB1ULL);
+		skein_p[4] += vectorize(0x5DB62599DF6CA7B0ULL);
+		skein_p[5] += vectorize(0xEABE394CA9D5C3F4ULL + 0x0000000000000040ULL);
+		skein_p[6] += vectorize(0x891112C71A75B523ULL);
+		skein_p[7] += vectorize(0xAE18A40B660FCC33ULL + 18);
 
-		t0 = vectorizelow(64); // ptr
-		t1 = vectorize(480ull << 55); // etype
-		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
-		TFBIG_4e(0);
-		TFBIG_4o(1);
-		TFBIG_4e(2);
-		TFBIG_4o(3);
-		TFBIG_4e(4);
-		TFBIG_4o(5);
-		TFBIG_4e(6);
-		TFBIG_4o(7);
-		TFBIG_4e(8);
-		TFBIG_4o(9);
-		TFBIG_4e(10);
-		TFBIG_4o(11);
-		TFBIG_4e(12);
-		TFBIG_4o(13);
-		TFBIG_4e(14);
-		TFBIG_4o(15);
-		TFBIG_4e(16);
-		TFBIG_4o(17);
-		TFBIG_ADDKEY(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+#define h0 skein_p[0]
+#define h1 skein_p[1]
+#define h2 skein_p[2]
+#define h3 skein_p[3]
+#define h4 skein_p[4]
+#define h5 skein_p[5]
+#define h6 skein_p[6]
+#define h7 skein_p[7]
+		h0 ^= h[0];
+		h1 ^= h[1];
+		h2 ^= h[2];
+		h3 ^= h[3];
+		h4 ^= h[4];
+		h5 ^= h[5];
+		h6 ^= h[6];
+		h7 ^= h[7];
 
-		h0 = vectorize(inpHash[0]) ^ p[0];
-		h1 = vectorize(inpHash[1]) ^ p[1];
-		h2 = vectorize(inpHash[2]) ^ p[2];
-		h3 = vectorize(inpHash[3]) ^ p[3];
-		h4 = vectorize(inpHash[4]) ^ p[4];
-		h5 = vectorize(inpHash[5]) ^ p[5];
-		h6 = vectorize(inpHash[6]) ^ p[6];
-		h7 = vectorize(inpHash[7]) ^ p[7];
+		uint2 skein_h8 = h0 ^ h1 ^ h2 ^ h3 ^ h4 ^ h5 ^ h6 ^ h7 ^ vectorize(0x1BD11BDAA9FC1A22ULL);
 
-		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
-#pragma unroll 8
-		for (int i = 0; i<8; i++)
-			p[i] = make_uint2(0, 0);
+		uint2 hash64[8];
 
-		t0 = vectorizelow(8); // ptr
-		t1 = vectorize(510ull << 55); // etype
-		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
-		TFBIG_4e(0);
-		TFBIG_4o(1);
-		TFBIG_4e(2);
-		TFBIG_4o(3);
-		TFBIG_4e(4);
-		TFBIG_4o(5);
-		TFBIG_4e(6);
-		TFBIG_4o(7);
-		TFBIG_4e(8);
-		TFBIG_4o(9);
-		TFBIG_4e(10);
-		TFBIG_4o(11);
-		TFBIG_4e(12);
-		TFBIG_4o(13);
-		TFBIG_4e(14);
-		TFBIG_4o(15);
-		TFBIG_4e(16);
-		TFBIG_ADDKEY(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 17); 
-		p[0] = p[0] + p[1];
-		p[1] = ROL2(p[1], 39) ^ p[0];
-		p[2] = p[2] + p[3];
-		p[3] = ROL2(p[3], 30) ^ p[2];
-		p[4] = p[4] + p[5];
-		p[5] = ROL2(p[5], 34) ^ p[4];
-		p[6] = p[6] + p[7];
-		p[7] = ROL2(p[7], 24) ^ p[6];
-		p[1] = ROL2(p[1], 13) ^ (p[2] + p[1]);
-		p[3] = ROL2(p[3], 17) ^ (p[0] + p[3]);
-		p[3] = ROL2(p[3], 29) ^ (p[6] + p[5] + p[3]);
-		p[3] = (ROL2(p[3], 22) ^ (p[4] + p[7] + p[1] + p[3])) + h3;
+		hash64[0] = (h0);
+		//		hash64[1] = (h1);
+		hash64[2] = (h2);
+		//		hash64[3] = (h3);
+		hash64[4] = (h4);
+		hash64[5] = (h5 + vectorizelow(8ULL));
+		hash64[6] = (h6 + vectorize(0xff00000000000000ULL));
+		//		hash64[7] = (h7);
 
-		if (p[3].y <= target)
+		hash64[0] += h1;
+		hash64[1] = ROL2(h1, 46) ^ hash64[0];
+		hash64[2] += h3;
+		hash64[3] = ROL2(h3, 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += h7;
+		hash64[7] = ROL2(h7, 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h1);
+		hash64[1] = (hash64[1] + h2);
+		hash64[2] = (hash64[2] + h3);
+		hash64[3] = (hash64[3] + h4);
+		hash64[4] = (hash64[4] + h5);
+		hash64[5] = (hash64[5] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h7 + vectorize(0xff00000000000008ULL));
+		hash64[7] = (hash64[7] + skein_h8 + vectorizelow(1));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + h2);
+		hash64[1] = (hash64[1] + h3);
+		hash64[2] = (hash64[2] + h4);
+		hash64[3] = (hash64[3] + h5);
+		hash64[4] = (hash64[4] + h6);
+		hash64[5] = (hash64[5] + h7 + vectorize(0xff00000000000008ULL));
+		hash64[6] = (hash64[6] + skein_h8 + vectorizelow(8ULL));
+		hash64[7] = (hash64[7] + h0 + vectorize(2));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h3);
+		hash64[1] = (hash64[1] + h4);
+		hash64[2] = (hash64[2] + h5);
+		hash64[3] = (hash64[3] + h6);
+		hash64[4] = (hash64[4] + h7);
+		hash64[5] = (hash64[5] + skein_h8 + vectorizelow(8));
+		hash64[6] = (hash64[6] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[7] = (hash64[7] + h1 + vectorizelow(3));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + h4);
+		hash64[1] = (hash64[1] + h5);
+		hash64[2] = (hash64[2] + h6);
+		hash64[3] = (hash64[3] + h7);
+		hash64[4] = (hash64[4] + skein_h8);
+		hash64[5] = (hash64[5] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h1 + vectorize(0xff00000000000008ULL));
+		hash64[7] = (hash64[7] + h2 + vectorizelow(4));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h5);
+		hash64[1] = (hash64[1] + h6);
+		hash64[2] = (hash64[2] + h7);
+		hash64[3] = (hash64[3] + skein_h8);
+		hash64[4] = (hash64[4] + h0);
+		hash64[5] = (hash64[5] + h1 + vectorize(0xff00000000000008ULL));
+		hash64[6] = (hash64[6] + h2 + vectorizelow(8ULL));
+		hash64[7] = (hash64[7] + h3 + vectorizelow(5));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + h6);
+		hash64[1] = (hash64[1] + h7);
+		hash64[2] = (hash64[2] + skein_h8);
+		hash64[3] = (hash64[3] + h0);
+		hash64[4] = (hash64[4] + h1);
+		hash64[5] = (hash64[5] + h2 + vectorizelow(8ULL));
+		hash64[6] = (hash64[6] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[7] = (hash64[7] + h4 + vectorizelow(6));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h7);
+		hash64[1] = (hash64[1] + skein_h8);
+		hash64[2] = (hash64[2] + h0);
+		hash64[3] = (hash64[3] + h1);
+		hash64[4] = (hash64[4] + h2);
+		hash64[5] = (hash64[5] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h4 + vectorize(0xff00000000000008ULL));
+		hash64[7] = (hash64[7] + h5 + vectorizelow(7));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + skein_h8);
+		hash64[1] = (hash64[1] + h0);
+		hash64[2] = (hash64[2] + h1);
+		hash64[3] = (hash64[3] + h2);
+		hash64[4] = (hash64[4] + h3);
+		hash64[5] = (hash64[5] + h4 + vectorize(0xff00000000000008ULL));
+		hash64[6] = (hash64[6] + h5 + vectorizelow(8));
+		hash64[7] = (hash64[7] + h6 + vectorizelow(8));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h0);
+		hash64[1] = (hash64[1] + h1);
+		hash64[2] = (hash64[2] + h2);
+		hash64[3] = (hash64[3] + h3);
+		hash64[4] = (hash64[4] + h4);
+		hash64[5] = (hash64[5] + h5 + vectorizelow(8));
+		hash64[6] = (hash64[6] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[7] = (hash64[7] + h7 + vectorizelow(9));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+
+		hash64[0] = (hash64[0] + h1);
+		hash64[1] = (hash64[1] + h2);
+		hash64[2] = (hash64[2] + h3);
+		hash64[3] = (hash64[3] + h4);
+		hash64[4] = (hash64[4] + h5);
+		hash64[5] = (hash64[5] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h7 + vectorize(0xff00000000000008ULL));
+		hash64[7] = (hash64[7] + skein_h8 + (vectorizelow(10)));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h2);
+		hash64[1] = (hash64[1] + h3);
+		hash64[2] = (hash64[2] + h4);
+		hash64[3] = (hash64[3] + h5);
+		hash64[4] = (hash64[4] + h6);
+		hash64[5] = (hash64[5] + h7 + vectorize(0xff00000000000008ULL));
+		hash64[6] = (hash64[6] + skein_h8 + vectorizelow(8ULL));
+		hash64[7] = (hash64[7] + h0 + vectorizelow(11));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + h3);
+		hash64[1] = (hash64[1] + h4);
+		hash64[2] = (hash64[2] + h5);
+		hash64[3] = (hash64[3] + h6);
+		hash64[4] = (hash64[4] + h7);
+		hash64[5] = (hash64[5] + skein_h8 + vectorizelow(8));
+		hash64[6] = (hash64[6] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[7] = (hash64[7] + h1 + vectorizelow(12));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h4);
+		hash64[1] = (hash64[1] + h5);
+		hash64[2] = (hash64[2] + h6);
+		hash64[3] = (hash64[3] + h7);
+		hash64[4] = (hash64[4] + skein_h8);
+		hash64[5] = (hash64[5] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h1 + vectorize(0xff00000000000008ULL));
+		hash64[7] = (hash64[7] + h2 + vectorizelow(13));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + h5);
+		hash64[1] = (hash64[1] + h6);
+		hash64[2] = (hash64[2] + h7);
+		hash64[3] = (hash64[3] + skein_h8);
+		hash64[4] = (hash64[4] + h0);
+		hash64[5] = (hash64[5] + h1 + vectorize(0xff00000000000008ULL));
+		hash64[6] = (hash64[6] + h2 + vectorizelow(8ULL));
+		hash64[7] = (hash64[7] + h3 + vectorizelow(14));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + h6);
+		hash64[1] = (hash64[1] + h7);
+		hash64[2] = (hash64[2] + skein_h8);
+		hash64[3] = (hash64[3] + h0);
+		hash64[4] = (hash64[4] + h1);
+		hash64[5] = (hash64[5] + h2 + vectorizelow(8ULL));
+		hash64[6] = (hash64[6] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[7] = (hash64[7] + h4 + vectorizelow(15));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 34) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 50) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 10) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 25) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 29) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 39) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 43) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 8) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 35) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
+		hash64[0] = (hash64[0] + h7);
+		hash64[1] = (hash64[1] + skein_h8);
+		hash64[2] = (hash64[2] + h0);
+		hash64[3] = (hash64[3] + h1);
+		hash64[4] = (hash64[4] + h2);
+		hash64[5] = (hash64[5] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h4 + vectorize(0xff00000000000008ULL));
+		hash64[7] = (hash64[7] + h5 + vectorizelow(16));
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 36) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 19) ^ hash64[4];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 37) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 33) ^ hash64[2];
+		hash64[4] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 27) ^ hash64[4];
+		hash64[6] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 14) ^ hash64[6];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 42) ^ hash64[0];
+		hash64[4] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 17) ^ hash64[4];
+		hash64[6] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 49) ^ hash64[6];
+		hash64[0] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 36) ^ hash64[0];
+		hash64[2] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 39) ^ hash64[2];
+		hash64[6] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 44) ^ hash64[6];
+		hash64[0] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 9) ^ hash64[0];
+		hash64[2] += hash64[5];
+		hash64[5] = ROL2(hash64[5], 54) ^ hash64[2];
+		hash64[4] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 56) ^ hash64[4];
+		hash64[0] = (hash64[0] + skein_h8);
+		hash64[1] = (hash64[1] + h0);
+		hash64[2] = (hash64[2] + h1);
+		hash64[3] = (hash64[3] + h2);
+		hash64[4] = (hash64[4] + h3);
+		hash64[5] = (hash64[5] + h4 + vectorize(0xff00000000000008ULL));
+		hash64[6] = (hash64[6] + h5 + vectorizelow(8ULL));
+		hash64[7] = (hash64[7] + h6 + vectorizelow(17));
+
+		hash64[0] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
+		hash64[2] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 30) ^ hash64[2];
+		hash64[4] += hash64[5];
+		hash64[6] += hash64[7];
+		hash64[7] = ROL2(hash64[7], 24) ^ hash64[6];
+		hash64[2] += hash64[1];
+		hash64[1] = ROL2(hash64[1], 13) ^ hash64[2];
+		hash64[4] += hash64[7] + hash64[1] + hash64[3];
+		hash64[0] += hash64[3];
+		hash64[3] = ROL2(hash64[3], 17) ^ hash64[0];
+		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4]+ h3;
+
+		if (hash64[3].y <= target)
 		{
 			uint32_t tmp = atomicExch(&d_nonce[0], nounce);
 			if (tmp != 0xffffffff)
@@ -2006,6 +3384,14 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		}
 	}
 }
+#undef h0
+#undef h1
+#undef h2
+#undef h3
+#undef h4
+#undef h5
+#undef h6
+#undef h7
 
 
 __host__ void quark_skein512_cpu_init(int thr_id)
@@ -2039,16 +3425,6 @@ static __device__ __constant__ uint32_t sha256_hashTable[] = {
 #define s0(x)         (ROTR32(x, 7) ^ ROTR32(x, 18) ^ R(x, 3))
 #define s1(x)         (ROTR32(x, 17) ^ ROTR32(x, 19) ^ R(x, 10))
 
-__constant__ uint32_t sha256_endingTable[] = {
-	0x80000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000200,
-	0x80000000, 0x01400000, 0x00205000, 0x00005088, 0x22000800, 0x22550014, 0x05089742, 0xa0000020,
-	0x5a880000, 0x005c9400, 0x0016d49d, 0xfa801f00, 0xd33225d0, 0x11675959, 0xf6e6bfda, 0xb30c1549,
-	0x08b2b050, 0x9d7c4c27, 0x0ce2a393, 0x88e6e1ea, 0xa52b4335, 0x67a16f49, 0xd732016f, 0x4eeb2e91,
-	0x5dbf55e5, 0x8eee2335, 0xe2bc5ec2, 0xa83f4394, 0x45ad78f7, 0x36f3d0cd, 0xd99c05e8, 0xb0511dc7,
-	0x69bc7ac4, 0xbd11375b, 0xe3ba71e5, 0x3b209ff2, 0x18feee17, 0xe25ad9e7, 0x13375046, 0x0515089d,
-	0x4f0d0f04, 0x2627484e, 0x310128d2, 0xc668b434, 0x420841cc, 0x62d311b8, 0xe59ba771, 0x85a7a484
-		};
 
 __constant__ uint32_t sha256_constantTable[64] = {
 	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -2061,8 +3437,7 @@ __constant__ uint32_t sha256_constantTable[64] = {
 	0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-__global__
-__launch_bounds__(1024)
+__global__ __launch_bounds__(1024)
 void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ d_found, uint64_t target)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2118,7 +3493,6 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 
 		t0 = vectorizelow(8); // extra
 		t1 = vectorize(0xFF00000000000000ull); // etype
-		t2 = vectorize(0xB000000000000050ull);
 
 		h0 = vectorize(c_PaddedMessage80[0]) ^ p[0];
 		h1 = nounce2 ^ p[1];
@@ -2129,7 +3503,8 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 		h6 = p[6];
 		h7 = p[7];
 
-		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		h8 = h0 ^ h1 ^ p[2] ^ p[3] ^ p[4] ^ p[5] ^ p[6] ^ p[7] ^ vectorize(0x1BD11BDAA9FC1A22);
+		t2 = vectorize(0xFF00000000000008ull);
 
 		// p[8] = { 0 };
 		#pragma unroll 8
@@ -2156,7 +3531,6 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 		TFBIG_4o_UI2(17);
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
 
-		uint32_t nounce = (startNounce + thread);
 		uint32_t *message = (uint32_t *)p;	
 
 		uint32_t W1[16];
@@ -2290,26 +3664,40 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 			regs[k] = hash[k];
 
 		// Progress W1
+		uint32_t T1, T2;
 #pragma unroll 
-		for (int j = 0; j<62; j++)
+		for (int j = 0; j<56; j++)
 		{
-			uint32_t T1, T2;
-			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j] + sha256_endingTable[j];
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_endingTable[j];
 			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
 
 #pragma unroll 7
-			for (int k = 6; k >= 0; k--) regs[k + 1] = regs[k];
+			for (int k = 6; k >= 0; k--)
+				regs[k + 1] = regs[k];
 			regs[0] = T1 + T2;
 			regs[4] += T1;
 		}
+		T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_endingTable[56];
+		T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+		regs[7] = T1 + T2;
+		regs[3] += T1;
 
+		T1 = regs[6] + S1(regs[3]) + Ch(regs[3], regs[4], regs[5]) + sha256_endingTable[57];
+		T2 = S0(regs[7]) + Maj(regs[7], regs[0], regs[1]);
+		regs[6] = T1 + T2;
+		regs[2] += T1;
+		//************
+		regs[1] += regs[5] + S1(regs[2]) + Ch(regs[2], regs[3], regs[4]) + sha256_endingTable[58];
+		regs[0] += regs[4] + S1(regs[1]) + Ch(regs[1], regs[2], regs[3]) + sha256_endingTable[59];
+		regs[7] += regs[3] + S1(regs[0]) + Ch(regs[0], regs[1], regs[2]) + sha256_endingTable[60];
+		regs[6] += regs[2] + S1(regs[7]) + Ch(regs[7], regs[0], regs[1]) + sha256_endingTable[61];
 
-		uint64_t test = SWAB32(hash[7] + regs[5]);
+		uint64_t test = SWAB32(hash[7] + regs[7]);
 		test <<= 32;
-		test |= SWAB32(hash[6] + regs[4]);
+		test |= SWAB32(hash[6] + regs[6]);
 		if (test <= target)
 		{
-			uint32_t tmp = atomicExch(&(d_found[0]), nounce);
+			uint32_t tmp = atomicExch(&(d_found[0]), startNounce + thread);
 			if (tmp != 0xffffffff)
 				d_found[1] = tmp;
 		}
@@ -2371,7 +3759,6 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 
 		t0 = vectorizelow(8); // extra
 		t1 = vectorize(0xFF00000000000000ull); // etype
-		t2 = vectorize(0xB000000000000050ull);
 
 		h0 = vectorize(c_PaddedMessage80[0]) ^ p[0];
 		h1 = nounce2 ^ p[1];
@@ -2382,7 +3769,8 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 		h6 = p[6];
 		h7 = p[7];
 
-		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		h8 = h0 ^ h1 ^ p[2] ^ p[3] ^ p[4] ^ p[5] ^ p[6] ^ p[7] ^ vectorize(0x1BD11BDAA9FC1A22);
+		t2 = vectorize(0xFF00000000000008ull);
 
 		// p[8] = { 0 };
 #pragma unroll 8
@@ -2409,7 +3797,6 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 		TFBIG_4o_UI2(17);
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
 
-		uint32_t nounce = (startNounce + thread);
 		uint32_t *message = (uint32_t *)p;
 
 		uint32_t W1[16];
@@ -2543,31 +3930,51 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 			regs[k] = hash[k];
 
 		// Progress W1
-#pragma unroll 
-		for (int j = 0; j<62; j++)
+		uint32_t T1, T2;
+#pragma unroll 1
+		for (int j = 0; j<56; j++)//62
 		{
-			uint32_t T1, T2;
-			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_constantTable[j] + sha256_endingTable[j];
+			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_endingTable[j];
 			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
 
 #pragma unroll 7
-			for (int k = 6; k >= 0; k--) regs[k + 1] = regs[k];
+			for (int k = 6; k >= 0; k--)
+				regs[k + 1] = regs[k];
 			regs[0] = T1 + T2;
 			regs[4] += T1;
 		}
-		uint64_t test = SWAB32(hash[7] + regs[5]);
+		T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6])+sha256_endingTable[56];
+		T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
+		regs[7] = T1 + T2;
+		regs[3] += T1;
+
+		T1 = regs[6] + S1(regs[3]) + Ch(regs[3], regs[4], regs[5]) + sha256_endingTable[57];
+		T2 = S0(regs[7]) + Maj(regs[7], regs[0], regs[1]);
+		regs[6] = T1 + T2;
+		regs[2] += T1;
+		//************
+		regs[1] += regs[5] + S1(regs[2]) + Ch(regs[2], regs[3], regs[4]) + sha256_endingTable[58];
+		regs[0] += regs[4] + S1(regs[1]) + Ch(regs[1], regs[2], regs[3]) + sha256_endingTable[59];
+		regs[7] += regs[3] + S1(regs[0]) + Ch(regs[0], regs[1], regs[2]) + sha256_endingTable[60];
+		regs[6] += regs[2] + S1(regs[7]) + Ch(regs[7], regs[0], regs[1]) + sha256_endingTable[61];
+
+		uint64_t test = SWAB32(hash[7] + regs[7]);
 		test <<= 32;
-		test|= SWAB32(hash[6] + regs[4]);
+		test|= SWAB32(hash[6] + regs[6]);
 		if (test <= target)
 		{
-			uint32_t tmp = atomicExch(&(d_found[0]), nounce);
+			uint32_t tmp = atomicExch(&(d_found[0]), startNounce + thread);
 			if (tmp != 0xffffffff)
 				d_found[1] = tmp;
 		}
 	}
 }
-
+#if __CUDA_ARCH__ > 500
+#define tp 448
+#else
 #define tp 128
+#endif
+
 __host__
 void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
@@ -2648,7 +4055,37 @@ static void precalc()
 	buffer[7] = PaddedMessage[7] ^ p[7];
 	buffer[8] = t2;
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(precalcvalues, buffer, sizeof(buffer), 0, cudaMemcpyHostToDevice));
+
+	int endingTable[] = {
+		0x80000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000200,
+		0x80000000, 0x01400000, 0x00205000, 0x00005088, 0x22000800, 0x22550014, 0x05089742, 0xa0000020,
+		0x5a880000, 0x005c9400, 0x0016d49d, 0xfa801f00, 0xd33225d0, 0x11675959, 0xf6e6bfda, 0xb30c1549,
+		0x08b2b050, 0x9d7c4c27, 0x0ce2a393, 0x88e6e1ea, 0xa52b4335, 0x67a16f49, 0xd732016f, 0x4eeb2e91,
+		0x5dbf55e5, 0x8eee2335, 0xe2bc5ec2, 0xa83f4394, 0x45ad78f7, 0x36f3d0cd, 0xd99c05e8, 0xb0511dc7,
+		0x69bc7ac4, 0xbd11375b, 0xe3ba71e5, 0x3b209ff2, 0x18feee17, 0xe25ad9e7, 0x13375046, 0x0515089d,
+		0x4f0d0f04, 0x2627484e, 0x310128d2, 0xc668b434, 0x420841cc, 0x62d311b8, 0xe59ba771, 0x85a7a484
+	};
+
+	int constantTable[64] = {
+		0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+		0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+		0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+		0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+		0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+		0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+		0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+		0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+	};
+	for (int i = 0; i < 64; i++)
+	{
+		endingTable[i] = constantTable[i] + endingTable[i];
+	}
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(sha256_endingTable, endingTable, sizeof(uint32_t) * 64, 0, cudaMemcpyHostToDevice));
+
 }
+
+
 
 __host__
 void skein512_cpu_setBlock_80(uint32_t thr_id, void *pdata)

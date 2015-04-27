@@ -82,7 +82,6 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	skein512_cpu_setBlock_80(thr_id, (void*)endiandata);
 	do
 	{
-		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		if (device_sm[device_map[thr_id]] > 500)
 			skein512_cpu_hash_80_52(thr_id, throughput, pdata[19], swap, target, foundnonces[thr_id]);
@@ -101,6 +100,8 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 			if (test <= target && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
+				*hashes_done = pdata[19] - first_nonce + throughput;
+
 				if (opt_debug || opt_benchmark)
 					applog(LOG_INFO, "GPU #%d: found nonce $%08X", thr_id, foundnonces[thr_id][0]);
 				if (foundnonces[thr_id][1] != 0xffffffff)
@@ -132,9 +133,7 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 
 			}
 		}
-
 		pdata[19] += throughput;
-
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
