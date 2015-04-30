@@ -227,7 +227,7 @@ uint32_t rejected_count = 0L;
 static double thr_hashrates[MAX_GPUS];
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
-int opt_statsavg = 30;
+uint32_t opt_statsavg = 60;
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
 char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
