@@ -334,12 +334,11 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 	if (threadIdx.x < 256) 
 	{
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
-		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
-		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
+		sharedMemory[threadIdx.x + 256] = ROTL32(sharedMemory[threadIdx.x], 8);
+		sharedMemory[threadIdx.x + 512] = ROTL32(sharedMemory[threadIdx.x], 16);
+		sharedMemory[threadIdx.x + 768] = ROTL32(sharedMemory[threadIdx.x], 24);
 	}
 }
-
 
 __global__ __launch_bounds__(256, 4)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)

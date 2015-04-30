@@ -785,6 +785,8 @@ __device__ __forceinline__ ushort2 vectorize16(uint32_t x)
 	return result;
 }
 
+#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+
 
 #endif // #ifndef CUDA_HELPER_H
 

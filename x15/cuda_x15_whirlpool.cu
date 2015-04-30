@@ -185,7 +185,7 @@ __constant__  __align__(64) uint64_t mixTob0Tox[256] = {
 
 #if USE_ALL_TABLES
 
-
+/*
 __constant__  __align__(64) uint64_t  mixTob1Tox[256] = {
 	SPH_C64(0x3078C018601818D8), SPH_C64(0x46AF05238C232326),
 	SPH_C64(0x91F97EC63FC6C6B8), SPH_C64(0xCD6F13E887E8E8FB),
@@ -1409,7 +1409,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 	{
 #if USE_ALL_TABLES
 		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 256] = vectorize(mixTob1Tox[threadIdx.x]);
+		sharedMemory[threadIdx.x + 256] = ROL2(sharedMemory[threadIdx.x], 8);
 		sharedMemory[threadIdx.x + 512] = ROL2(sharedMemory[threadIdx.x], 16);
 		sharedMemory[threadIdx.x + 768] = ROL2(sharedMemory[threadIdx.x + 256], 16);
 //		sharedMemory[threadIdx.x + 1024] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
@@ -1425,9 +1425,6 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-
-
-
 		const uint2 InitVector_RC[10] =
 		{
 			{ 0xE8C62318UL, 0x4F01B887UL },

@@ -43,13 +43,6 @@ __constant__ uint32_t myr_sha256_gpu_w2Table[64] = {
 
 #define SWAB32(x)        ( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define ROTR32(x, n) __funnelshift_r( (x), (x), (n) )
-#endif
 #define R(x, n)            ((x) >> (n))
 #define Ch(x, y, z)        ((x & (y ^ z)) ^ z)
 #define Maj(x, y, z)    ((x & (y | z)) | (y & z))

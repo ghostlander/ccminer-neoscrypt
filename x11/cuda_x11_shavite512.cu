@@ -1251,11 +1251,11 @@ void shavite_gpu_init(uint32_t *sharedMemory)
 {
 	/* each thread startup will fill a uint32 */
 	if (threadIdx.x < 256) {
-		sharedMemory[threadIdx.x ] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
-		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
-		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
-
+		/* each thread startup will fill a uint32 */
+		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
+		sharedMemory[threadIdx.x + 256] = ROTL32(sharedMemory[threadIdx.x], 8);
+		sharedMemory[threadIdx.x + 512] = ROTL32(sharedMemory[threadIdx.x], 16);
+		sharedMemory[threadIdx.x + 768] = ROTL32(sharedMemory[threadIdx.x], 24);
 //		sharedMemory[threadIdx.x + 64 * 2 ] = d_AES0[threadIdx.x + 64 * 2];
 //		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
 //		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
@@ -2517,16 +2517,12 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 {
 	__shared__ uint32_t sharedMemory[1024];
 
-	if (threadIdx.x < 256) {
+	if (threadIdx.x < 256) 
+	{
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
-		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
-		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
-
-//		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
-//		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
-//		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
-//		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 256] = ROTL32(sharedMemory[threadIdx.x], 8);
+		sharedMemory[threadIdx.x + 512] = ROTL32(sharedMemory[threadIdx.x], 16);
+		sharedMemory[threadIdx.x + 768] = ROTL32(sharedMemory[threadIdx.x], 24);
 	}
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);

@@ -143,7 +143,7 @@ __constant__ uint32_t mixTab0Tex[] = {
 	SPH_C32(0xb0b03df6), SPH_C32(0x5454b74b), SPH_C32(0xbbbb0cda),
 	SPH_C32(0x16166258)
 };
-
+/*
 __constant__ uint32_t mixTab1Tex[] = {
 	SPH_C32(0x97636332), SPH_C32(0xeb7c7c6f), SPH_C32(0xc777775e),
 	SPH_C32(0xf77b7b7a), SPH_C32(0xe5f2f2e8), SPH_C32(0xb76b6b0a),
@@ -410,6 +410,7 @@ __constant__ uint32_t mixTab3Tex[] = {
 	SPH_C32(0xb03df6b0), SPH_C32(0x54b74b54), SPH_C32(0xbb0cdabb),
 	SPH_C32(0x16625816)
 };
+*/
 
 #define TIX4(q, x00, x01, x04, x07, x08, x22, x24, x27, x30) { \
 		x22 ^= x00; \
@@ -609,12 +610,12 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
 		{
 			mixtabs[threadIdx.x] = mixTab0Tex[threadIdx.x];
 			mixtabs[threadIdx.x + 128] = mixTab0Tex[threadIdx.x + 128];
-			mixtabs[256 + threadIdx.x] = mixTab1Tex[threadIdx.x];
-			mixtabs[256 + threadIdx.x + 128] = mixTab1Tex[threadIdx.x + 128];
-			mixtabs[(512 + threadIdx.x)] = mixTab2Tex[threadIdx.x];
-			mixtabs[(512 + threadIdx.x) + 128] = mixTab2Tex[threadIdx.x + 128];
-			mixtabs[(768 + threadIdx.x)] = mixTab3Tex[threadIdx.x];
-			mixtabs[(768 + threadIdx.x) + 128] = mixTab3Tex[threadIdx.x + 128];
+			mixtabs[256 + threadIdx.x] = ROTR32(mixtabs[threadIdx.x], 8);
+			mixtabs[256 + threadIdx.x + 128] = ROTR32(mixtabs[threadIdx.x + 128], 8);
+			mixtabs[512 + threadIdx.x] = ROTR32(mixtabs[threadIdx.x], 16);
+			mixtabs[512 + threadIdx.x + 128] = ROTR32(mixtabs[threadIdx.x + 128], 16);
+			mixtabs[768 + threadIdx.x] = ROTR32(mixtabs[threadIdx.x], 24);
+			mixtabs[768 + threadIdx.x + 128] = ROTR32(mixtabs[threadIdx.x + 128], 24);
 		}
 		const uint32_t nounce =  (startNounce + thread);
 
@@ -819,9 +820,9 @@ void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t start
 		if (threadIdx.x < 256)
 		{
 			mixtabs[threadIdx.x] = mixTab0Tex[threadIdx.x];
-			mixtabs[256 + threadIdx.x] = mixTab1Tex[threadIdx.x];
-			mixtabs[(512 + threadIdx.x)] = mixTab2Tex[threadIdx.x];
-			mixtabs[(768 + threadIdx.x)] = mixTab3Tex[threadIdx.x];
+			mixtabs[256 + threadIdx.x] = ROTR32(mixtabs[threadIdx.x], 8);
+			mixtabs[(512 + threadIdx.x)] = ROTR32(mixtabs[threadIdx.x], 16);
+			mixtabs[(768 + threadIdx.x)] = ROTR32(mixtabs[threadIdx.x], 24);
 		}
 		const uint32_t nounce =  (startNounce + thread);
 		const int hashPosition = nounce - startNounce;
