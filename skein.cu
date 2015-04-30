@@ -65,12 +65,10 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		else
-		{
-		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}

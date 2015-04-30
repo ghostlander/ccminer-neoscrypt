@@ -75,13 +75,9 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		else
-		{
-			MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
-		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);

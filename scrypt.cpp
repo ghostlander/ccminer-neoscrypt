@@ -697,7 +697,7 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 		return -1;
 
 	cudaSetDevice(device_map[thr_id]);
-	cudaSetDeviceFlags(cudaDeviceBlockingSync);
+	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 

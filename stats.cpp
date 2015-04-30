@@ -15,7 +15,7 @@ static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;
 
 //#define STATS_AVG_SAMPLES 60
-#define STATS_PURGE_TIMEOUT 2*120*60 /* 120 mn */
+#define STATS_PURGE_TIMEOUT 120*30 /* 60 mn */
 
 extern uint64_t global_hashrate;
 extern uint32_t opt_statsavg;
@@ -30,12 +30,12 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 	const uint64_t key = ((uid++ % UINT32_MAX) << 32) + gpu;
 	stats_data data;
 	// to enough hashes to give right stats
-	if (hashcount < 1000 || hashrate < 0.01)
-		return;
+//	if (hashcount < 1000 || hashrate < 0.01)
+//		return;
 
 	// first hash rates are often erroneous
-	if (uid < opt_n_threads * 2*opt_n_gputhreads)
-		return;
+//	if (uid < opt_n_threads * 2*opt_n_gputhreads)
+//		return;
 
 	memset(&data, 0, sizeof(data));
 	data.uid = (uint32_t) uid;

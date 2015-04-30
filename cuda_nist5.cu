@@ -86,13 +86,9 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		else
-		{
-			MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
-		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		// Konstanten kopieren, Speicher belegen
 		quark_groestl512_cpu_init(thr_id, throughput);

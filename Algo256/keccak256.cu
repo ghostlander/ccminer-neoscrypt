@@ -53,14 +53,10 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		else
-		{
-		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		keccak256_cpu_init(thr_id, (int)throughput);
-//		CUDA_SAFE_CALL(cudaMallocHost(&h_nounce[thr_id], 2 * sizeof(uint32_t)));
 		init[thr_id] = true;
 	}
 

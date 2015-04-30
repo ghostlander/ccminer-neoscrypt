@@ -70,9 +70,9 @@ extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
 

@@ -51,7 +51,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		60
+#define LP_SCANTIME		25
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -227,7 +227,7 @@ uint32_t rejected_count = 0L;
 static double thr_hashrates[MAX_GPUS];
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
-uint32_t opt_statsavg = 60;
+uint32_t opt_statsavg = 25;
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
 char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
@@ -1581,10 +1581,12 @@ static void *miner_thread(void *userdata)
 				int index = thr_id / opt_n_gputhreads;
 				if (thr_id < active_gpus)
 				{
+					pthread_mutex_lock(&stats_lock);
 					for (int i = 0; i < opt_n_gputhreads; i++)
 					{
 						hashrate += thr_hashrates[(index*opt_n_gputhreads) + i];
 					}
+					pthread_mutex_unlock(&stats_lock);
 					sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
 						1e-3 * hashrate);
 					applog(LOG_INFO, "GPU #%d: %s, %s", device_map[thr_id], device_name[device_map[thr_id]], s);
@@ -1600,7 +1602,8 @@ static void *miner_thread(void *userdata)
 		}
 
 		/* loopcnt: ignore first loop hashrate */
-		if ((loopcnt>0) && thr_id == (opt_n_threads - 1)) {
+		if ((loopcnt>0) && thr_id == (opt_n_threads - 1)) 
+		{
 			double hashrate = 0.;
 			pthread_mutex_lock(&stats_lock);
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)

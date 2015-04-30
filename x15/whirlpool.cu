@@ -64,7 +64,8 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 	if (opt_benchmark)
 		ptarget[7] = 0x0000ff;
 
-	if (!init[thr_id]) {
+	if (!init[thr_id]) 
+	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);

@@ -155,13 +155,9 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		else
-		{
-	//		MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
-		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		// Konstanten kopieren, Speicher belegen
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));

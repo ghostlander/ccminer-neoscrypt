@@ -101,9 +101,9 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]), 0);
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 

@@ -172,13 +172,9 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		if (opt_n_gputhreads == 1)
 		{
-			cudaSetDeviceFlags(cudaDeviceBlockingSync);
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		else
-		{
-			MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
-		}
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
