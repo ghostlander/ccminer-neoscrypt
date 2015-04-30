@@ -1536,7 +1536,8 @@ static void *miner_thread(void *userdata)
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
-		if (diff.tv_sec > 0 || (diff.tv_sec==0 && diff.tv_usec>2000)) // avoid totally wrong hash rates
+//		diff.tv_sec == 0 &&
+		if (diff.tv_sec > 0 || (diff.tv_usec>2000)) // avoid totally wrong hash rates
 		{
 			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
 
@@ -1579,14 +1580,12 @@ static void *miner_thread(void *userdata)
 			if (opt_n_gputhreads != 1)
 			{
 				int index = thr_id / opt_n_gputhreads;
-				if (thr_id < active_gpus)
+				if (thr_id <  (active_gpus / opt_n_gputhreads))
 				{
-					pthread_mutex_lock(&stats_lock);
 					for (int i = 0; i < opt_n_gputhreads; i++)
 					{
 						hashrate += thr_hashrates[(index*opt_n_gputhreads) + i];
 					}
-					pthread_mutex_unlock(&stats_lock);
 					sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
 						1e-3 * hashrate);
 					applog(LOG_INFO, "GPU #%d: %s, %s", device_map[thr_id], device_name[device_map[thr_id]], s);
