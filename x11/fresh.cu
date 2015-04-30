@@ -86,11 +86,11 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
 		{
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);

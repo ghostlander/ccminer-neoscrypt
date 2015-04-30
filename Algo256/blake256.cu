@@ -411,11 +411,11 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		CUDA_CALL_OR_RET_X(cudaSetDevice(device_map[thr_id]),0);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
 		{
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		init[thr_id] = true;
 	}
 
