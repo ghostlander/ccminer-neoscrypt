@@ -144,21 +144,24 @@ __device__ __forceinline__ void block_tox(const uint32_t *in, uint32_t x[2][2][2
 
 __device__ __forceinline__ void hash_fromx(uint32_t *out, uint32_t x[2][2][2][2][2])
 {
-	int j;
-	int k;
-	int l;
-	int m;
-	//	uint32_t *out = hash;
+	out[0] = x[0][0][0][0][0];
+	out[1] = x[0][0][0][0][1];
+	out[2] = x[0][0][0][1][0];
+	out[3] = x[0][0][0][1][1];
+	out[4] = x[0][0][1][0][0];
+	out[5] = x[0][0][1][0][1];
+	out[6] = x[0][0][1][1][0];
+	out[7] = x[0][0][1][1][1];
 
-#pragma unroll 2
-	for (j = 0; j < 2; ++j)
-#pragma unroll 2
-		for (k = 0; k < 2; ++k)
-#pragma unroll 2
-			for (l = 0; l < 2; ++l)
-#pragma unroll 2
-				for (m = 0; m < 2; ++m)
-					*out++ = x[0][j][k][l][m];
+	out[8] = x[0][1][0][0][0];
+	out[9] = x[0][1][0][0][1];
+	out[10] = x[0][1][0][1][0];
+	out[11] = x[0][1][0][1][1];
+	out[12] = x[0][1][1][0][0];
+	out[13] = x[0][1][1][0][1];
+	out[14] = x[0][1][1][1][0];
+	out[15] = x[0][1][1][1][1];
+
 }
 
 void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const uint32_t *data)
@@ -185,7 +188,7 @@ void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], uint32_t *hashv
 	x[1][1][1][1][1] ^= 1;
 
 	/* "the state is then transformed invertibly through 10r identical rounds" */
-	#pragma unroll 10
+	#pragma unroll 2
 	for (i = 0; i < 10; ++i) rrounds(x);
 
 	/* "output the first h/8 bytes of the state" */
