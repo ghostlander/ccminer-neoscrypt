@@ -15,7 +15,7 @@ static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;
 
 //#define STATS_AVG_SAMPLES 60
-#define STATS_PURGE_TIMEOUT 120*30 /* 60 mn */
+#define STATS_PURGE_TIMEOUT 240*30 /* 60 mn */
 
 extern uint64_t global_hashrate;
 extern uint32_t opt_statsavg;

@@ -51,7 +51,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		25
+#define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -1056,8 +1056,12 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			sha256d(merkle_root, merkle_root, 64);
 	}
 	
-	/* Increment extranonce2 */
-	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
+//	/+Increment extranonce2 +/
+//	for (i = 0; i < (int)sctx->xnonce2_size ; i++);
+//	{
+//		sctx->job.xnonce2[i]++;		
+//	}
+	sctx->job.xnonce2[i] = sctx->xnonce2_size;
 
 	/* Assemble block header */
 	memset(work->data, 0, sizeof(work->data));
