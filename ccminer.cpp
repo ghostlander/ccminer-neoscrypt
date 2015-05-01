@@ -1201,11 +1201,11 @@ static void *miner_thread(void *userdata)
 
 	while (1) 
 	{
-//		if (opt_benchmark)
-//		{
-//			work.data[19] = work.data[19] & 0xfffffffU;	//reset Hashcounters
-//			work.data[21] = work.data[21] & 0xfffffffU;
-//		}
+		if (opt_benchmark)
+		{
+			work.data[19] = work.data[19] & 0xfffffffU;	//reset Hashcounters
+			work.data[21] = work.data[21] & 0xfffffffU;
+		}
 
 		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done=0;
@@ -1573,8 +1573,9 @@ static void *miner_thread(void *userdata)
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
 
+		//(rc || diff.tv_sec > 0)
 
-		if ((rc||diff.tv_sec > 0) && !opt_quiet && (loopcnt > 0))
+		if ( !opt_quiet && (loopcnt > 0))
 		{
 			double hashrate = 0.0;
 

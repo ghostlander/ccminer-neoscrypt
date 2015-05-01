@@ -693,18 +693,14 @@ __device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
 
 __device__ __forceinline__ void block_tox(uint32_t *in, uint32_t x[2][2][2][2][2])
 {
-	int k;
-	int l;
-	int m;
-//	uint32_t *in = block;
-
-#pragma unroll 2
-	for (k = 0; k < 2; ++k)
-#pragma unroll 2
-		for (l = 0; l < 2; ++l)
-#pragma unroll 2
-			for (m = 0; m < 2; ++m)
-				x[0][0][k][l][m] ^= *in++;
+	x[0][0][0][0][0] ^= in[0];
+	x[0][0][0][0][1] ^= in[1];
+	x[0][0][0][1][0] ^= in[2];
+	x[0][0][0][1][1] ^= in[3];
+	x[0][0][1][0][0] ^= in[4];
+	x[0][0][1][0][1] ^= in[5];
+	x[0][0][1][1][0] ^= in[6];
+	x[0][0][1][1][1] ^= in[7];
 }
 
 __device__ __forceinline__ void hash_fromx(uint32_t *out, uint32_t x[2][2][2][2][2])
@@ -801,7 +797,16 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 			0xBC796576, 0x1921C8F7, 0xE7989AF1,
 			0x7795D246, 0xD43E3B44
 		};
-		Update32(x, Hash);
+		x[0][0][0][0][0] ^= Hash[0];
+		x[0][0][0][0][1] ^= Hash[1];
+		x[0][0][0][1][0] ^= Hash[2];
+		x[0][0][0][1][1] ^= Hash[3];
+		x[0][0][1][0][0] ^= Hash[4];
+		x[0][0][1][0][1] ^= Hash[5];
+		x[0][0][1][1][0] ^= Hash[6];
+		x[0][0][1][1][1] ^= Hash[7];
+
+		rrounds(x);
 		Update32(x, &Hash[8]);
 		Update32_const(x);
 		Final(x, Hash);
