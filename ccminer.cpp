@@ -457,9 +457,6 @@ void get_currentalgo(char* buf, int sz)
 void proper_exit(int reason)
 {
 	abort_flag = true;
-#ifdef WIN32
-	timeEndPeriod(1); // else never executed
-#endif
 
 #ifdef USE_WRAPNVML
 	if (hnvml)
@@ -1577,7 +1574,7 @@ static void *miner_thread(void *userdata)
 			hashlog_remember_scan_range(&work);
 
 
-		if (!opt_quiet && (loopcnt > 0))
+		if ((rc||diff.tv_sec > 0) && !opt_quiet && (loopcnt > 0))
 		{
 			double hashrate = 0.0;
 
