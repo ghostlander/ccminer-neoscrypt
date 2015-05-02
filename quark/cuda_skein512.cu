@@ -1155,7 +1155,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 //		hash64[3] = (h3);
 		hash64[4] = (h4);
 		hash64[5] = (h5 + vectorizelow(8ULL));
-		hash64[6] = (h6 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (h6 + vectorizehigh(0xff000000UL));
 //		hash64[7] = (h7);
 
 		hash64[0] += h1;
@@ -1195,7 +1195,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[2] = (hash64[2] + h3);
 		hash64[3] = (hash64[3] + h4);
 		hash64[4] = (hash64[4] + h5);
-		hash64[5] = (hash64[5] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h6 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h7 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + skein_h8 + vectorizelow(1));
 		hash64[0] += hash64[1];
@@ -1276,7 +1276,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[3] = (hash64[3] + h6);
 		hash64[4] = (hash64[4] + h7);
 		hash64[5] = (hash64[5] + skein_h8 + vectorizelow(8));
-		hash64[6] = (hash64[6] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h0 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h1 + vectorizelow(3));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
@@ -1315,7 +1315,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[2] = (hash64[2] + h6);
 		hash64[3] = (hash64[3] + h7);
 		hash64[4] = (hash64[4] + skein_h8);
-		hash64[5] = (hash64[5] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h0 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h1 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h2 + vectorizelow(4));
 		hash64[0] += hash64[1];
@@ -1396,7 +1396,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[3] = (hash64[3] + h0);
 		hash64[4] = (hash64[4] + h1);
 		hash64[5] = (hash64[5] + h2 + vectorizelow(8ULL));
-		hash64[6] = (hash64[6] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h3 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h4 + vectorizelow(6));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
@@ -1435,7 +1435,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[2] = (hash64[2] + h0);
 		hash64[3] = (hash64[3] + h1);
 		hash64[4] = (hash64[4] + h2);
-		hash64[5] = (hash64[5] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h3 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h4 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h5 + vectorizelow(7));
 		hash64[0] += hash64[1];
@@ -1516,7 +1516,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[3] = (hash64[3] + h3);
 		hash64[4] = (hash64[4] + h4);
 		hash64[5] = (hash64[5] + h5 + vectorizelow(8));
-		hash64[6] = (hash64[6] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h6 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h7 + vectorizelow(9));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
@@ -1556,7 +1556,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[2] = (hash64[2] + h3);
 		hash64[3] = (hash64[3] + h4);
 		hash64[4] = (hash64[4] + h5);
-		hash64[5] = (hash64[5] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h6 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h7 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + skein_h8 + (vectorizelow(10)));
 		hash64[0] += hash64[1];
@@ -1637,7 +1637,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[3] = (hash64[3] + h6);
 		hash64[4] = (hash64[4] + h7);
 		hash64[5] = (hash64[5] + skein_h8 + vectorizelow(8));
-		hash64[6] = (hash64[6] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h0 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h1 + vectorizelow(12));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
@@ -1676,7 +1676,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[2] = (hash64[2] + h6);
 		hash64[3] = (hash64[3] + h7);
 		hash64[4] = (hash64[4] + skein_h8);
-		hash64[5] = (hash64[5] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h0 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h1 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h2 + vectorizelow(13));
 		hash64[0] += hash64[1];
@@ -1757,7 +1757,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[3] = (hash64[3] + h0);
 		hash64[4] = (hash64[4] + h1);
 		hash64[5] = (hash64[5] + h2 + vectorizelow(8ULL));
-		hash64[6] = (hash64[6] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h3 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h4 + vectorizelow(15));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
@@ -1796,7 +1796,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[2] = (hash64[2] + h0);
 		hash64[3] = (hash64[3] + h1);
 		hash64[4] = (hash64[4] + h2);
-		hash64[5] = (hash64[5] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h3 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h4 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h5 + vectorizelow(16));
 		hash64[0] += hash64[1];
@@ -1871,7 +1871,6 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[5] = ROL2(hash64[5], 56) ^ hash64[2];
 		hash64[4] += hash64[3];
 		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
-
 
 		Hash[0] = devectorize(hash64[0] + h0);
 		Hash[1] = devectorize(hash64[1] + h1);
@@ -2677,7 +2676,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		//		hash64[3] = (h3);
 		hash64[4] = (h4);
 		hash64[5] = (h5 + vectorizelow(8ULL));
-		hash64[6] = (h6 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (h6 + vectorizehigh(0xff000000UL));
 		//		hash64[7] = (h7);
 
 		hash64[0] += h1;
@@ -2717,7 +2716,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[2] = (hash64[2] + h3);
 		hash64[3] = (hash64[3] + h4);
 		hash64[4] = (hash64[4] + h5);
-		hash64[5] = (hash64[5] + h6 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h6 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h7 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + skein_h8 + vectorizelow(1));
 		hash64[0] += hash64[1];
@@ -2798,7 +2797,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[3] = (hash64[3] + h6);
 		hash64[4] = (hash64[4] + h7);
 		hash64[5] = (hash64[5] + skein_h8 + vectorizelow(8));
-		hash64[6] = (hash64[6] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h0 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h1 + vectorizelow(3));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
@@ -2837,7 +2836,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[2] = (hash64[2] + h6);
 		hash64[3] = (hash64[3] + h7);
 		hash64[4] = (hash64[4] + skein_h8);
-		hash64[5] = (hash64[5] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h0 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h1 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h2 + vectorizelow(4));
 		hash64[0] += hash64[1];
@@ -3159,7 +3158,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[3] = (hash64[3] + h6);
 		hash64[4] = (hash64[4] + h7);
 		hash64[5] = (hash64[5] + skein_h8 + vectorizelow(8));
-		hash64[6] = (hash64[6] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h0 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h1 + vectorizelow(12));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 46) ^ hash64[0];
@@ -3198,7 +3197,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[2] = (hash64[2] + h6);
 		hash64[3] = (hash64[3] + h7);
 		hash64[4] = (hash64[4] + skein_h8);
-		hash64[5] = (hash64[5] + h0 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h0 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h1 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h2 + vectorizelow(13));
 		hash64[0] += hash64[1];
@@ -3279,7 +3278,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[3] = (hash64[3] + h0);
 		hash64[4] = (hash64[4] + h1);
 		hash64[5] = (hash64[5] + h2 + vectorizelow(8ULL));
-		hash64[6] = (hash64[6] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[6] = (hash64[6] + h3 + vectorizehigh(0xff000000UL));
 		hash64[7] = (hash64[7] + h4 + vectorizelow(15));
 		hash64[0] += hash64[1];
 		hash64[1] = ROL2(hash64[1], 39) ^ hash64[0];
@@ -3318,7 +3317,7 @@ void quark_skein512_gpu_hash_64_final(const uint32_t threads, const uint32_t sta
 		hash64[2] = (hash64[2] + h0);
 		hash64[3] = (hash64[3] + h1);
 		hash64[4] = (hash64[4] + h2);
-		hash64[5] = (hash64[5] + h3 + vectorize(0xff00000000000000ULL));
+		hash64[5] = (hash64[5] + h3 + vectorizehigh(0xff000000UL));
 		hash64[6] = (hash64[6] + h4 + vectorize(0xff00000000000008ULL));
 		hash64[7] = (hash64[7] + h5 + vectorizelow(16));
 		hash64[0] += hash64[1];
@@ -3468,7 +3467,7 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 			p[i] = make_uint2(0,0);
 
 		t0 = vectorizelow(0x50ull); // SPH_T64(bcount << 6) + (sph_u64)(extra);
-		t1 = vectorize(0xB000000000000000ull); // (bcount >> 58) + ((sph_u64)(etype) << 55);
+		t1 = vectorizehigh(0xB0000000ul); // (bcount >> 58) + ((sph_u64)(etype) << 55);
 		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e_UI2(0);
 		TFBIG_4o_UI2(1);
@@ -3492,7 +3491,7 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 
 
 		t0 = vectorizelow(8); // extra
-		t1 = vectorize(0xFF00000000000000ull); // etype
+		t1 = vectorizehigh(0xFF000000ul); // etype
 
 		h0 = vectorize(c_PaddedMessage80[0]) ^ p[0];
 		h1 = nounce2 ^ p[1];
@@ -3734,7 +3733,7 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 			p[i] = make_uint2(0, 0);
 
 		t0 = vectorizelow(0x50ull); // SPH_T64(bcount << 6) + (sph_u64)(extra);
-		t1 = vectorize(0xB000000000000000ull); // (bcount >> 58) + ((sph_u64)(etype) << 55);
+		t1 = vectorizehigh(0xB0000000ul); // (bcount >> 58) + ((sph_u64)(etype) << 55);
 		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e_UI2(0);
 		TFBIG_4o_UI2(1);
@@ -3758,7 +3757,7 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 
 
 		t0 = vectorizelow(8); // extra
-		t1 = vectorize(0xFF00000000000000ull); // etype
+		t1 = vectorizehigh(0xFF000000ul); // etype
 
 		h0 = vectorize(c_PaddedMessage80[0]) ^ p[0];
 		h1 = nounce2 ^ p[1];

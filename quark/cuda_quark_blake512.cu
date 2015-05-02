@@ -61,7 +61,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		block[5] = vectorizeswap(inpHash[5]);
 		block[6] = vectorizeswap(inpHash[6]);
 		block[7] = vectorizeswap(inpHash[7]);
-		block[8] = vectorize(0x8000000000000000);
+		block[8] = vectorizehigh(0x80000000);
 		block[9] = vectorizelow(0x0);
 		block[10] = vectorizelow(0x0);
 		block[11] = vectorizelow(0x0);
@@ -280,7 +280,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 		block[7] = c_PaddedM[7];
 		block[8] = c_PaddedM[8];
 		block[9] = c_PaddedM[9];
-		block[10] = vectorize(0x8000000000000000);
+		block[10] = vectorizehigh(0x80000000);
 		block[11] = vectorizelow(0);
 		block[12] = vectorizelow(0);
 		block[13] = vectorizelow(0x1);
@@ -498,7 +498,7 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 		block[7] = c_PaddedMessage[7];
 		block[8] = c_PaddedMessage[8];
 		block[9] = c_PaddedMessage[9];
-		block[10] = vectorize(0x8000000000000000);
+		block[10] = vectorizehigh(0x80000000);
 		block[11] = vectorizelow(0);
 		block[12] = vectorizelow(0);
 		block[13] = vectorizelow(0x1);
