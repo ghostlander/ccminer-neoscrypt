@@ -465,11 +465,6 @@ void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *
     }
 }
 
-// Setup-Funktionen
-__host__ void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
-{
-}
-
 // Bmw512 für 80 Byte grosse Eingangsdaten
 __host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
 {
@@ -488,7 +483,7 @@ __host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
 
-__host__ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void quark_bmw512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 64;
 
@@ -497,10 +492,9 @@ __host__ void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
     dim3 block(threadsperblock);
 
     quark_bmw512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-//	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+__host__ void quark_bmw512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 128;
 

@@ -345,7 +345,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 }
 
 
-__host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void quark_jh512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 32;
 
@@ -355,12 +355,7 @@ __host__ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
     quark_jh512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 }
 
-// Setup-Funktionen
-__host__ void  quark_jh512_cpu_init(int thr_id, uint32_t threads)
-{
-}
-
-__host__ void quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void quark_jh512_cpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
 	dim3 grid((threads + TPB2 - 1) / TPB2);
 	dim3 block(TPB2);

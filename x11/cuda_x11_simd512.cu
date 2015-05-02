@@ -279,9 +279,11 @@ void FFT_128_full(int *y)
 	FFT_8(y+0,2); // eight parallel FFT8's
 	FFT_8(y+1,2); // eight parallel FFT8's
 
-#pragma unroll 16
-	for (i=0; i<16; i++)
-	/*if (i & 7)*/ y[i] = REDUCE(y[i]*c_FFT128_8_16_Twiddle[i*8+(threadIdx.x&7)]);
+	y[0] = REDUCE(y[0]);
+	y[1] = REDUCE(y[1]);
+#pragma unroll
+	for (i=2; i<16; i++)
+	 y[i] = REDUCE(y[i]*c_FFT128_8_16_Twiddle[i*8+(threadIdx.x&7)]);
 
 //#pragma unroll 8
 	for (i=0; i<16; i+=2)
@@ -567,35 +569,6 @@ x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, const uint64_t
 }
 
 __global__ void __launch_bounds__(TPB, 1)
-x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash,  uint4 *g_fft4, uint32_t *g_state)
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint32_t nounce = (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
-
-		Compression1(Hash, hashPosition, g_fft4, g_state);
-	}
-}
-__global__ void __launch_bounds__(TPB, 1)
-x11_simd512_gpu_compress2_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint32_t nounce =  (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-
-		Compression2(hashPosition, g_fft4, g_state);
-	}
-}
-
-
-__global__ void __launch_bounds__(TPB, 1)
 x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -653,22 +626,7 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 	dim3 grid8(((threads + TPB-1)/TPB)*8);
 
 	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id]);
-	//MyStreamSynchronize(NULL, order, thr_id);
-
 	dim3 grid((threads + TPB-1)/TPB);
-
-	if (device_sm[device_map[thr_id]] >= 500) 
-	{
-		x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
-		//MyStreamSynchronize(NULL, order, thr_id);
-	}
-	else 
-	{
-		x11_simd512_gpu_compress1_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
-		x11_simd512_gpu_compress2_64 << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
-		//	MyStreamSynchronize(NULL, order, thr_id);
-	}
-
+	x11_simd512_gpu_compress_64_maxwell << < grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_temp4[thr_id], d_state[thr_id]);
 	x11_simd512_gpu_final_64 << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash,d_temp4[thr_id], d_state[thr_id]);
-//	MyStreamSynchronize(NULL, order, thr_id);
 }

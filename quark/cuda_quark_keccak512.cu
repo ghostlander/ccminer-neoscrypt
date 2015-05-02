@@ -276,7 +276,7 @@ __host__ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t
     quark_keccak512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint2 *)d_hash, d_nonceVector);
 }
 
-__host__ void quark_keccak512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
+__host__ void quark_keccak512_cpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 32;
 

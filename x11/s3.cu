@@ -15,15 +15,16 @@ extern "C" {
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void x11_shavite512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 extern void x11_shavite512_setBlock_80(void *pdata);
 
 extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 extern void quark_skein512_cpu_init(int thr_id);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
-extern void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_found, uint32_t target);
+extern void quark_skein512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+//extern void quark_skein512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t *h_found, uint32_t target);
+extern void quark_skein512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 
 /* CPU HASH */
 extern "C" void s3hash(void *output, const void *input)
@@ -50,7 +51,6 @@ extern "C" void s3hash(void *output, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
-static uint32_t *h_found[MAX_GPUS];
 
 /* Main S3 entry point */
 extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
@@ -82,7 +82,6 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 		quark_skein512_cpu_init(thr_id);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
-		CUDA_CALL_OR_RET_X(cudaMallocHost(&(h_found[thr_id]), 2 * sizeof(uint32_t)), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -98,15 +97,16 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 
 	do {
 
-		x11_shavite512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		x11_shavite512_cpu_hash_80(throughput, pdata[19], d_hash[thr_id]);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		quark_skein512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], h_found[thr_id], ptarget[7]);
+		quark_skein512_cpu_hash_64(throughput, pdata[19], NULL, d_hash[thr_id]);
+		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 
-		if (h_found[thr_id][0] != 0xffffffff)
+		if (foundNonce != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], h_found[thr_id][0]);
+			be32enc(&endiandata[19], foundNonce);
 			s3hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
@@ -114,6 +114,7 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 				int res = 1;
 				// check if there was some other ones...
 				*hashes_done = pdata[19] - first_nonce + throughput;
+				/*
 				if (h_found[thr_id][1] != 0xffffffff)
 				{
 					pdata[21] = h_found[thr_id][1];
@@ -121,17 +122,17 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 					if (opt_benchmark)
 						applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, h_found[thr_id][1]);
 				}
-				pdata[19] = h_found[thr_id][0];
+				*/
+				pdata[19] = foundNonce;
 				if (opt_benchmark)
-					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0]);
-				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce);
 				return res;
 			}
 			else
 			{
 				if (vhash64[7] != Htarg)
 				{
-					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, h_found[thr_id][0]);
+					applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 				}
 			}
 		}
@@ -139,6 +140,5 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }

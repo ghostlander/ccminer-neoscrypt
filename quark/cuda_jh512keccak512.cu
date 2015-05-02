@@ -416,7 +416,7 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 }
 
 
-__host__ void cuda_jh512Keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+__host__ void cuda_jh512Keccak512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
     const uint32_t threadsperblock = 256;
 
