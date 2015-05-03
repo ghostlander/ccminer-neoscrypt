@@ -22,6 +22,8 @@
 #include <string.h>
 #include <stdio.h>
 #include "sph/yescrypt.h"
+#include <pthread.h>
+//#include <thread> 
 
 #define BYTES2CHARS(bytes) \
 	((((bytes) * 8) + 5) / 6)
