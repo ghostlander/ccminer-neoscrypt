@@ -23,7 +23,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		((uint32_t*)ptarget)[7] = 0x01ff;
 
 //	const int throughput = gpus_intensity[thr_id] ? 256 * 64 * gpus_intensity[thr_id] : 256 * 64 * 3.5;
 	int intensity = (256 * 64 * 3.5);
@@ -89,6 +89,9 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
 //		foundNonce = 10 + pdata[19];
 		if  (foundNonce != 0xffffffff)
 		{
+			if (opt_benchmark)
+				applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce);
+
 			uint32_t vhash64[8];
              
 			 if (stratum) {
@@ -107,6 +110,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
 			*hashes_done = foundNonce - first_nonce + 1; // keeps hashrate calculation happy
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
+
 		}
 
 		pdata[19] += throughput;
