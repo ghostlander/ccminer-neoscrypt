@@ -34,9 +34,9 @@
 #include <stdlib.h> /* for size_t */
 #include <errno.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 
 //extern void yescrypt_hash_sp(const unsigned char *input, unsigned char *output);
@@ -369,8 +369,8 @@ extern uint8_t * yescrypt_gensalt(
 	yescrypt_flags_t __flags,
 	const uint8_t * __src, size_t __srclen);
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif /* !_YESCRYPT_H_ */
