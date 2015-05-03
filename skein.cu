@@ -10,7 +10,6 @@ extern "C" {
 
 #include "miner.h"
 #include "cuda_helper.h"
-#define ROTR32(x, i) ROTL32(x, 32-i)
 #include <openssl/sha.h>
 
 static uint32_t foundnonces[MAX_GPUS][2];

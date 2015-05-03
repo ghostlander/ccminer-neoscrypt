@@ -113,6 +113,9 @@ enum sha_algos {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
+	ALGO_NEO,
+	ALGO_YES
+
 };
 
 static const char *algo_names[] = {
@@ -149,6 +152,8 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
+	"neoscrypt",
+	"yesscrypt"
 };
 
 bool opt_debug = false;
@@ -264,6 +269,7 @@ Options:\n\
 			lyra2       VertCoin\n\
 			mjollnir    Mjollnircoin\n\
 			myr-gr      Myriad-Groestl\n\
+            neoscrypt   neoscrypt (FeatherCoin)\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			quark       Quark\n\
@@ -278,6 +284,7 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17 (peoplecurrency)\n\
+			yescrypt    yescrypt\n\
 			whirl       Whirlcoin (old whirlpool)\n\
 			whirlpoolx  Vanillacoin \n\
   -d, --devices         Comma separated list of CUDA devices to use. \n\
@@ -512,6 +519,9 @@ static bool work_decode(const json_t *val, struct work *work)
 	int adata_sz = ARRAY_SIZE(work->data), atarget_sz = ARRAY_SIZE(work->target);
 	int i;
 
+	data_size = (opt_algo == ALGO_NEO) ? 84 : data_size; //silly and lazy
+	adata_sz = (opt_algo == ALGO_NEO) ? 21 : adata_sz;
+
 	if (unlikely(!jobj_binary(val, "data", work->data, data_size))) {
 		applog(LOG_ERR, "JSON inval data");
 		return false;
@@ -619,6 +629,32 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
+	/* discard if a newer bloc was received */
+	/*
+	stale_work = work->height && work->height < g_work.height;
+	if (have_stratum && !stale_work) {
+	pthread_mutex_lock(&g_work_lock);
+	if (strlen(work->job_id + 8))
+	stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
+	pthread_mutex_unlock(&g_work_lock);
+	}
+	*/
+	if (!have_stratum && !stale_work && allow_gbt) {
+		struct work wheight = { 0 };
+		if (get_blocktemplate(curl, &wheight)) {
+			if (work->height && work->height < wheight.height) {
+				if (opt_debug)
+					applog(LOG_WARNING, "bloc %u was already solved", work->height, wheight.height);
+				return true;
+			}
+		}
+	}
+
+	if (stale_work) {
+		if (opt_debug)
+			applog(LOG_WARNING, "stale work detected, discarding");
+		return true;
+	}
 	calc_diff(work, 0);
 
 	if (have_stratum) {
@@ -626,16 +662,14 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		uint32_t ntime, nonce;
 		uint16_t nvote;
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
-
 		le32enc(&ntime, work->data[17]);
 		le32enc(&nonce, work->data[19]);
-
 		noncestr = bin2hex((const uchar*)(&nonce), 4);
 
 		if (check_dups)
 			sent = hashlog_already_submittted(work->job_id, nonce);
 		if (sent > 0) {
-			sent = (uint32_t) time(NULL) - sent;
+			sent = (uint32_t)time(NULL) - sent;
 			if (!opt_quiet) {
 				applog(LOG_WARNING, "nonce %s was already sent %u seconds ago", noncestr, sent);
 				hashlog_dump_job(work->job_id);
@@ -658,7 +692,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
 				rpc_user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr);
 			free(nvotestr);
-		} else {
+		}
+		else {
 			sprintf(s,
 				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
 				rpc_user, work->job_id + 8, xnonce2str, ntimestr, noncestr);
@@ -668,16 +703,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		free(noncestr);
 
 		gettimeofday(&stratum.tv_submit, NULL);
-
-/*		pthread_mutex_lock(&g_work_lock);
-		stale_work = work->height != g_work.height;
-		pthread_mutex_unlock(&g_work_lock);
-		if (stale_work)
-		{
-			applog(LOG_WARNING, "stale work detected, discarding");
-			return true;
-		}
-		*/
 		if (unlikely(!stratum_send_line(&stratum, s))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
@@ -686,25 +711,17 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		if (check_dups)
 			hashlog_remember_submit(work, nonce);
 
-	} else 
-	{
-		/*
-		stale_work = work->height != g_work.height;
+	}
+	else {
 
-		if (stale_work)
-		{
-			applog(LOG_WARNING, "stale work detected, discarding");
-			return true;
-		}
-		*/
 		/* build hex string */
 		char *str = NULL;
-
+		int data_size = (opt_algo == ALGO_NEO) ? 80 : sizeof(work->data);
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
-			for (int i = 0; i < ARRAY_SIZE(work->data); i++)
+			for (int i = 0; i < (data_size >> 2); i++)
 				le32enc(work->data + i, work->data[i]);
 		}
-		str = bin2hex((uchar*)work->data, sizeof(work->data));
+		str = bin2hex((uchar*)work->data, data_size);
 		if (unlikely(!str)) {
 			applog(LOG_ERR, "submit_upstream_work OOM");
 			return false;
@@ -1102,6 +1119,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_JACKPOT:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
+		case ALGO_NEO:
+		case ALGO_YES:
 			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
 		case ALGO_DMD_GR:
@@ -1312,6 +1331,7 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_BITCOIN:
 			case ALGO_WHCX:
+			case ALGO_NEO:
 				minmax = 0x40000000U;
 				break;
 			case ALGO_DOOM:
@@ -1522,6 +1542,14 @@ static void *miner_thread(void *userdata)
 				max_nonce, &hashes_done);
 			break;
 
+			case ALGO_NEO:
+			rc = scanhash_neoscrypt(have_stratum, thr_id, work.data, work.target, max_nonce, &hashes_done);
+			break;
+				
+			case ALGO_YES:
+			rc = scanhash_yescrypt(thr_id, work.data, work.target, max_nonce, &hashes_done);
+			break;
+						
 		default:
 			/* should never happen */
 			goto out;
@@ -1538,7 +1566,7 @@ static void *miner_thread(void *userdata)
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
 //		diff.tv_sec == 0 &&
-		if (diff.tv_sec > 0 || (diff.tv_usec>2000)) // avoid totally wrong hash rates
+		if (diff.tv_sec > 0 || (diff.tv_sec == 0 && diff.tv_usec>2000)) // avoid totally wrong hash rates
 		{
 			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
 

@@ -9,6 +9,16 @@
 #include <device_functions.h>
 #include <device_launch_parameters.h>
 #define __launch_bounds__(max_tpb, min_blocks)
+#define asm("a" : "=l"(result) : "l"(a))
+
+uint32_t __byte_perm(uint32_t x, uint32_t y, uint32_t z);
+uint32_t __shfl(uint32_t x, uint32_t y, uint32_t z);
+uint32_t atomicExch(uint32_t *x, uint32_t y);
+uint32_t atomicAdd(uint32_t *x, uint32_t y);
+void __syncthreads(void);
+void __threadfence(void);
+
+
 uint32_t __byte_perm(uint32_t x, uint32_t y, uint32_t z);
 uint32_t __shfl(uint32_t x, uint32_t y, uint32_t z);
 uint32_t atomicExch(uint32_t *x, uint32_t y);
@@ -29,6 +39,7 @@ extern "C"  long device_sm[MAX_GPUS];
 // common functions
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
 extern void cuda_check_cpu_setTarget(const void *ptarget);
+extern void cuda_check_cpu_setTarget_mod(const void *ptarget, const void *ptarget2);
 extern uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash);
 extern uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint32_t foundnonce);
 extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
@@ -793,6 +804,122 @@ __device__ __forceinline__ ushort2 vectorize16(uint32_t x)
 
 #define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 
+
+static __device__ __forceinline__ uint4 mul4(uint4 a)
+{
+	uint4 result;
+	asm("{\n\t"
+		 "mul.lo.u32        %0,%4,%5;  \n\t"
+		 "mul.hi.u32        %1,%4,%5;  \n\t"
+		 "mul.lo.u32        %2,%6,%7;  \n\t"
+		 "mul.hi.u32        %3,%6,%7;  \n\t"
+		 "}\n\t"
+		 : "=r"(result.x), "=r"(result.y), "=r"(result.z), "=r"(result.w) : "r"(a.x), "r"(a.y), "r"(a.z), "r"(a.w));
+	return result;
+}
+static __device__ __forceinline__ uint4 add4(uint4 a, uint4 b)
+ {
+	uint4 result;
+	asm("{\n\t"
+		 "add.cc.u32           %0,%4,%8;  \n\t"
+		 "addc.u32             %1,%5,%9;  \n\t"
+		 "add.cc.u32           %2,%6,%10;  \n\t"
+		 "addc.u32             %3,%7,%11;  \n\t"
+		 "}\n\t"
+		 : "=r"(result.x), "=r"(result.y), "=r"(result.z), "=r"(result.w) : "r"(a.x), "r"(a.y), "r"(a.z), "r"(a.w), "r"(b.x), "r"(b.y), "r"(b.z), "r"(b.w));
+	return result;
+	}
+
+static __device__ __forceinline__ uint4 madd4(uint4 a, uint4 b)
+ {
+	uint4 result;
+	asm("{\n\t"
+		 "mad.lo.cc.u32        %0,%4,%5,%8;  \n\t"
+		 "madc.hi.u32          %1,%4,%5,%9;  \n\t"
+		 "mad.lo.cc.u32        %2,%6,%7,%10;  \n\t"
+		 "madc.hi.u32          %3,%6,%7,%11;  \n\t"
+		 "}\n\t"
+		 : "=r"(result.x), "=r"(result.y), "=r"(result.z), "=r"(result.w) : "r"(a.x), "r"(a.y), "r"(a.z), "r"(a.w), "r"(b.x), "r"(b.y), "r"(b.z), "r"(b.w));
+	return result;
+	}
+
+static __device__ __forceinline__ ulonglong2 madd4long(ulonglong2 a, ulonglong2 b)
+ {
+	ulonglong2 result;
+	asm("{\n\t"
+		 ".reg .u32 a0,a1,a2,a3,b0,b1,b2,b3;\n\t"
+		 "mov.b64 {a0,a1}, %2;\n\t"
+		 "mov.b64 {a2,a3}, %3;\n\t"
+		 "mov.b64 {b0,b1}, %4;\n\t"
+		 "mov.b64 {b2,b3}, %5;\n\t"
+		 "mad.lo.cc.u32        b0,a0,a1,b0;  \n\t"
+		 "madc.hi.u32          b1,a0,a1,b1;  \n\t"
+		 "mad.lo.cc.u32        b2,a2,a3,b2;  \n\t"
+		 "madc.hi.u32          b3,a2,a3,b3;  \n\t"
+		 "mov.b64 %0, {b0,b1};\n\t"
+		 "mov.b64 %1, {b2,b3};\n\t"
+		 "}\n\t"
+		 : "=l"(result.x), "=l"(result.y) : "l"(a.x), "l"(a.y), "l"(b.x), "l"(b.y));
+	return result;
+	}
+static __device__ __forceinline__ void madd4long2(ulonglong2 &a, ulonglong2 b)
+ {
+	
+		asm("{\n\t"
+		 ".reg .u32 a0,a1,a2,a3,b0,b1,b2,b3;\n\t"
+		 "mov.b64 {a0,a1}, %0;\n\t"
+		 "mov.b64 {a2,a3}, %1;\n\t"
+		 "mov.b64 {b0,b1}, %2;\n\t"
+		 "mov.b64 {b2,b3}, %3;\n\t"
+		 "mad.lo.cc.u32        b0,a0,a1,b0;  \n\t"
+		 "madc.hi.u32          b1,a0,a1,b1;  \n\t"
+		 "mad.lo.cc.u32        b2,a2,a3,b2;  \n\t"
+		 "madc.hi.u32          b3,a2,a3,b3;  \n\t"
+		 "mov.b64 %0, {b0,b1};\n\t"
+		 "mov.b64 %1, {b2,b3};\n\t"
+		 "}\n\t"
+		 : "+l"(a.x), "+l"(a.y) : "l"(b.x), "l"(b.y));
+	
+}
+
+__device__ __forceinline__
+uint32_t xor3b(uint32_t a, uint32_t b, uint32_t c) {
+	uint32_t result;
+	asm("{ .reg .u32 t1;\n\t"
+		"xor.b32 t1, %2, %3;\n\t"
+		"xor.b32 %0, %1, t1;\n\t"
+		"}"
+		: "=r"(result) : "r"(a), "r"(b), "r"(c));
+	return result;
+}
+
+__device__ __forceinline__
+uint32_t shr_t32(uint32_t x, uint32_t n) {
+	uint32_t result;
+	asm("shr.b32 %0,%1,%2;"	: "=r"(result) : "r"(x), "r"(n));
+	return result;
+}
+
+__device__ __forceinline__
+uint32_t shl_t32(uint32_t x, uint32_t n) {
+	uint32_t result;
+	asm("shl.b32 %0,%1,%2;" : "=r"(result) : "r"(x), "r"(n));
+	return result;
+}
+
+// device asm 32 for pluck
+__device__ __forceinline__
+uint32_t andor32(uint32_t a, uint32_t b, uint32_t c) {
+	uint32_t result;
+	asm("{ .reg .u32 m,n,o;\n\t"
+		"and.b32 m,  %1, %2;\n\t"
+		" or.b32 n,  %1, %2;\n\t"
+		"and.b32 o,   n, %3;\n\t"
+		" or.b32 %0,  m, o ;\n\t"
+		"}\n\t"
+		: "=r"(result) : "r"(a), "r"(b), "r"(c));
+	return result;
+}
 
 #endif // #ifndef CUDA_HELPER_H
 
