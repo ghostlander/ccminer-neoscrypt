@@ -599,6 +599,26 @@ __device__ __inline__ uint2 ROR2(const uint2 v, const int n)
 }
 #endif
 
+
+
+__device__ __inline__ uint2 ROR16(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x1076);
+	result.y = __byte_perm(a.y, a.x, 0x5432);
+
+	return result;
+}
+
+__device__ __inline__ uint2 ROL16(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x5432);
+	result.y = __byte_perm(a.y, a.x, 0x1076);
+
+	return result;
+}
+
 #if  __CUDA_ARCH__ >= 350
 __inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
 	uint2 result;
@@ -920,7 +940,14 @@ uint32_t andor32(uint32_t a, uint32_t b, uint32_t c) {
 		: "=r"(result) : "r"(a), "r"(b), "r"(c));
 	return result;
 }
+__device__ __inline__ uint2 ROL8(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x6543);
+	result.y = __byte_perm(a.y, a.x, 0x2107);
 
+	return result;
+}
 #endif // #ifndef CUDA_HELPER_H
 
 

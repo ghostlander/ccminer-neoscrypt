@@ -13,14 +13,13 @@ __constant__ uint2 c_PaddedM[16];
 
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
 
-
 #define Gprecalc(a,b,c,d,idx1,idx2) { \
 	v[a] += (block[idx2] ^ u512[idx1]) + v[b]; \
 	v[d] = SWAPDWORDS2( v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROR2(v[b] ^ v[c], 25); \
 	v[a] += (block[idx1] ^ u512[idx2]) + v[b]; \
-	v[d] = ROR2(v[d] ^ v[a],16); \
+	v[d] = ROR16(v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROR2(v[b] ^ v[c], 11); \
 	}

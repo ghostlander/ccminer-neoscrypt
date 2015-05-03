@@ -21,6 +21,8 @@ __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + paddi
                     q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
                     q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
+
+
 __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 {
 
@@ -138,7 +140,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 			((precalc[6]+ ROTL64(msg[6], 6 + 1) +
 			ROTL64(msg[6 + 3], 6 + 4) - ROTL64(msg[6 - 6], (6 - 6) + 1)) ^ hash[6 + 7]);
 		q[7 + 16] = CONST_EXP2(7) +
-			((precalc[7] + ROTL64(msg[7], 7 + 1) +
+			((precalc[7] + ROL8(msg[7]) +
 			ROTL64(msg[7 + 3], 7 + 4) - ROTL64(msg[7 - 6], (7 - 6) + 1)) ^ hash[7 + 7]);
 		q[8 + 16] = CONST_EXP2(8) +
 			((precalc[8] + ROTL64(msg[8], 8 + 1) +
@@ -155,7 +157,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 		ROTL64(msg[11 + 3], 11 + 4) - ROTL64(msg[11 - 6], (11 - 6) + 1)) ^ hash[11 - 9]);
 	q[12 + 16] = CONST_EXP2(12) +
 		((precalc[12] + ROTL64(msg[12], 12 + 1) +
-		ROTL64(msg[12 + 3], 12 + 4) - ROTL64(msg[12 - 6], (12 - 6) + 1)) ^ hash[12 - 9]);
+		ROL16(msg[12 + 3]) - ROTL64(msg[12 - 6], (12 - 6) + 1)) ^ hash[12 - 9]);
 
 	
 
@@ -166,7 +168,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 			((precalc[14] + ROTL64(msg[14], 14 + 1) +
 			ROTL64(msg[14 - 13], (14 - 13) + 1) - ROTL64(msg[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
 		q[15 + 16] = CONST_EXP2(15) +
-			((precalc[15] + ROTL64(msg[15], 15 + 1) +
+			((precalc[15] + ROL16(msg[15]) +
 			ROTL64(msg[15 - 13], (15 - 13) + 1) - ROTL64(msg[15 - 6], (15 - 6) + 1)) ^ hash[15 - 9]);
 
     uint2 XL64 = q[16]^q[17]^q[18]^q[19]^q[20]^q[21]^q[22]^q[23];
@@ -188,7 +190,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
     hash[12] = ROTL64(hash[0],13) + (    XH64     ^     q[28]    ^ msg[12]) + (SHR(XL64,3) ^ q[19] ^ q[12]);
     hash[13] = ROTL64(hash[1],14) + (    XH64     ^     q[29]    ^ msg[13]) + (SHR(XL64,4) ^ q[20] ^ q[13]);
     hash[14] = ROTL64(hash[2],15) + (    XH64     ^     q[30]    ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
-	hash[15] = ROTL64(hash[3],16) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
+	hash[15] = ROL16(hash[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
 
 __global__
@@ -369,7 +371,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 			((precalcf[7] + 
 			ROTL64(msg[14 - 13], (14 - 13) + 1) - ROTL64(msg[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
 		q[15 + 16] = CONST_EXP2(15) +
-			((precalcf[8] + ROTL64(msg[15], 15 + 1) +
+			((precalcf[8] + ROL16(msg[15]) +
 			ROTL64(msg[15 - 13], (15 - 13) + 1)) ^ hash[15 - 9]);
 
 		uint2 XL64 = q[16] ^ q[17] ^ q[18] ^ q[19] ^ q[20] ^ q[21] ^ q[22] ^ q[23];
@@ -391,7 +393,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		h[12] = ROTL64(h[0], 13) + (XH64     ^     q[28]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
 		h[13] = ROTL64(h[1], 14) + (XH64     ^     q[29]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
 		h[14] = ROTL64(h[2], 15) + (XH64     ^     q[30]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
-		h[15] = ROTL64(h[3], 16) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
+		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
 		// Final
 #pragma unroll 16
