@@ -58,7 +58,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x11/s3.cu \
 			  bitcoin.cu cuda_bitcoin.cu\
 			  x15/cuda_whirlpoolx.cu x15/whirlpoolx.cu \
-  			  yescrypt/cuda_yescrypt.cu yescrypt/yescrypt.cu \
+  			  yescrypt/cuda_yescrypt.cu yescrypt/yescrypt.cu
 
 # scrypt
 ccminer_SOURCES += scrypt.cpp scrypt-jane.cpp \
