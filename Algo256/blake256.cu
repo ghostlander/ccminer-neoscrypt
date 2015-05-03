@@ -103,12 +103,12 @@ static const uint32_t __align__(32) c_u256[16] = {
 	const uint32_t idx1 = c_sigma[r][x]; \
 	const uint32_t idx2 = c_sigma[r][x+1]; \
 	v[a] += (m[idx1] ^ c_u256[idx2]) + v[b]; \
-	v[d] = SPH_ROTL32(v[d] ^ v[a], 16); \
+	v[d] = __byte_perm(v[d] ^ v[a],0, 0x1032); \
 	v[c] += v[d]; \
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 12); \
 \
 	v[a] += (m[idx2] ^ c_u256[idx1]) + v[b]; \
-	v[d] = SPH_ROTR32(v[d] ^ v[a], 8); \
+	v[d] = __byte_perm(v[d] ^ v[a],0, 0x0321); \
 	v[c] += v[d]; \
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
 }
@@ -254,7 +254,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 		return result;
 
 	blake256_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];
@@ -339,7 +339,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 		return result;
 
 	blake256_gpu_hash_16 <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int) rounds, opt_tracegpu);
-	cudaDeviceSynchronize();
+//	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];

@@ -79,7 +79,7 @@ int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, uint32_t *ptarget, uint32_t
 			/* check now with the CPU to confirm */
 			be32enc(&endiandata[19], foundNonce[0]);
 			whirlxHash(vhash64, endiandata);
-			cudaDeviceSynchronize();
+	//		cudaDeviceSynchronize();
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;

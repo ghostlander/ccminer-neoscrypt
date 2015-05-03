@@ -121,7 +121,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_hash_64(thr_id,throughput, pdata[19], d_hash[thr_id]);
 		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], d_hash[thr_id], ptarget[7], h_found[thr_id]);
 
-		cudaDeviceSynchronize();
+	//	cudaDeviceSynchronize();
 		if (h_found[thr_id][0] != 0xffffffff)
 		{
 			uint32_t vhash64[8];
