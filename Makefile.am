@@ -28,6 +28,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
 			  sph/neoscrypt.h sph/neoscrypt.c \
+			  sph/sha256_Y.h sph/sha256_Y.c \
 			  sph/yescrypt.h sph/yescryptcommon.c sph/yescrypt-opt.c \
 			  fuguecoin.cpp Algo256/cuda_fugue256.cu sph/fugue.c uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
@@ -58,6 +59,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x11/s3.cu \
 			  bitcoin.cu cuda_bitcoin.cu\
 			  x15/cuda_whirlpoolx.cu x15/whirlpoolx.cu \
+			  neoscrypt/neoscrypt.cu neoscrypt/cuda_neoscrypt.cu \
   			  yescrypt/cuda_yescrypt.cu yescrypt/yescrypt.cu
 
 # scrypt
