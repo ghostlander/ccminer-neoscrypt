@@ -88,6 +88,16 @@ static const uint32_t  c_u256[16] = {
 	v[b] = ROTR32(v[b] ^ v[c], 7); \
 	}
 
+#define GSPREC(a,b,c,d,x,y) { \
+	v[a] += (m[x] ^ u256[y]) + v[b]; \
+	v[d] = __byte_perm(v[d] ^ v[a],0, 0x1032); \
+	v[c] += v[d]; \
+	v[b] = SPH_ROTR32(v[b] ^ v[c], 12); \
+	v[a] += (m[y] ^ u256[x]) + v[b]; \
+	v[d] = __byte_perm(v[d] ^ v[a],0, 0x0321); \
+	v[c] += v[d]; \
+	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
+		}
 
 __host__ __forceinline__
 static void blake256_compress1st(uint32_t *h, const uint32_t *block, const uint32_t T0)
@@ -139,12 +149,19 @@ __device__ __forceinline__
 static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint32_t T0)
 {
 	uint32_t v[16];
-	uint32_t m[16]=
-	{
-		block[0], block[1], block[2], block[3],
+
+	const uint32_t c_Padding[12] = {
 		0x80000000, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 1, 0, 640
+	};
+
+	uint32_t m[16]=
+	{
+		block[0], block[1], block[2], block[3],
+		c_Padding[0], c_Padding[1], c_Padding[2], c_Padding[3],
+		c_Padding[4], c_Padding[5], c_Padding[6], c_Padding[7],
+		c_Padding[8], c_Padding[9], c_Padding[10], c_Padding[11]
 	};
 
 	#pragma unroll 8
@@ -160,18 +177,138 @@ static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint3
 	v[14] = u256[6];
 	v[15] = u256[7];
 
-	for (int r = 0; r < 14; r++) {
-		/* column step */
-		GS2(0, 4, 0x8, 0xC, 0x0);
-		GS2(1, 5, 0x9, 0xD, 0x2);
-		GS2(2, 6, 0xA, 0xE, 0x4);
-		GS2(3, 7, 0xB, 0xF, 0x6);
-		/* diagonal step */
-		GS2(0, 5, 0xA, 0xF, 0x8);
-		GS2(1, 6, 0xB, 0xC, 0xA);
-		GS2(2, 7, 0x8, 0xD, 0xC);
-		GS2(3, 4, 0x9, 0xE, 0xE);
-	}
+	//	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	GSPREC(0, 4, 0x8, 0xC, 0, 1);
+	GSPREC(1, 5, 0x9, 0xD, 2, 3);
+	GSPREC(2, 6, 0xA, 0xE, 4, 5);
+	GSPREC(3, 7, 0xB, 0xF, 6, 7);
+	GSPREC(0, 5, 0xA, 0xF, 8, 9);
+	GSPREC(1, 6, 0xB, 0xC, 10, 11);
+	GSPREC(2, 7, 0x8, 0xD, 12, 13);
+	GSPREC(3, 4, 0x9, 0xE, 14, 15);
+	//	{ 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	GSPREC(0, 4, 0x8, 0xC, 14, 10);
+	GSPREC(1, 5, 0x9, 0xD, 4, 8);
+	GSPREC(2, 6, 0xA, 0xE, 9, 15);
+	GSPREC(3, 7, 0xB, 0xF, 13, 6);
+	GSPREC(0, 5, 0xA, 0xF, 1, 12);
+	GSPREC(1, 6, 0xB, 0xC, 0, 2);
+	GSPREC(2, 7, 0x8, 0xD, 11, 7);
+	GSPREC(3, 4, 0x9, 0xE, 5, 3);
+	//	{ 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	GSPREC(0, 4, 0x8, 0xC, 11, 8);
+	GSPREC(1, 5, 0x9, 0xD, 12, 0);
+	GSPREC(2, 6, 0xA, 0xE, 5, 2);
+	GSPREC(3, 7, 0xB, 0xF, 15, 13);
+	GSPREC(0, 5, 0xA, 0xF, 10, 14);
+	GSPREC(1, 6, 0xB, 0xC, 3, 6);
+	GSPREC(2, 7, 0x8, 0xD, 7, 1);
+	GSPREC(3, 4, 0x9, 0xE, 9, 4);
+	//	{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	GSPREC(0, 4, 0x8, 0xC, 7, 9);
+	GSPREC(1, 5, 0x9, 0xD, 3, 1);
+	GSPREC(2, 6, 0xA, 0xE, 13, 12);
+	GSPREC(3, 7, 0xB, 0xF, 11, 14);
+	GSPREC(0, 5, 0xA, 0xF, 2, 6);
+	GSPREC(1, 6, 0xB, 0xC, 5, 10);
+	GSPREC(2, 7, 0x8, 0xD, 4, 0);
+	GSPREC(3, 4, 0x9, 0xE, 15, 8);
+
+	//	{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+	GSPREC(0, 4, 0x8, 0xC, 9, 0);
+	GSPREC(1, 5, 0x9, 0xD, 5, 7);
+	GSPREC(2, 6, 0xA, 0xE, 2, 4);
+	GSPREC(3, 7, 0xB, 0xF, 10, 15);
+	GSPREC(0, 5, 0xA, 0xF, 14, 1);
+	GSPREC(1, 6, 0xB, 0xC, 11, 12);
+	GSPREC(2, 7, 0x8, 0xD, 6, 8);
+	GSPREC(3, 4, 0x9, 0xE, 3, 13);
+	//	{ 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
+	GSPREC(0, 4, 0x8, 0xC, 2, 12);
+	GSPREC(1, 5, 0x9, 0xD, 6, 10);
+	GSPREC(2, 6, 0xA, 0xE, 0, 11);
+	GSPREC(3, 7, 0xB, 0xF, 8, 3);
+	GSPREC(0, 5, 0xA, 0xF, 4, 13);
+	GSPREC(1, 6, 0xB, 0xC, 7, 5);
+	GSPREC(2, 7, 0x8, 0xD, 15, 14);
+	GSPREC(3, 4, 0x9, 0xE, 1, 9);
+
+	//	{ 12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
+	GSPREC(0, 4, 0x8, 0xC, 12, 5);
+	GSPREC(1, 5, 0x9, 0xD, 1, 15);
+	GSPREC(2, 6, 0xA, 0xE, 14, 13);
+	GSPREC(3, 7, 0xB, 0xF, 4, 10);
+	GSPREC(0, 5, 0xA, 0xF, 0, 7);
+	GSPREC(1, 6, 0xB, 0xC, 6, 3);
+	GSPREC(2, 7, 0x8, 0xD, 9, 2);
+	GSPREC(3, 4, 0x9, 0xE, 8, 11);
+
+	//	{ 13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
+	GSPREC(0, 4, 0x8, 0xC, 13, 11);
+	GSPREC(1, 5, 0x9, 0xD, 7, 14);
+	GSPREC(2, 6, 0xA, 0xE, 12, 1);
+	GSPREC(3, 7, 0xB, 0xF, 3, 9);
+	GSPREC(0, 5, 0xA, 0xF, 5, 0);
+	GSPREC(1, 6, 0xB, 0xC, 15, 4);
+	GSPREC(2, 7, 0x8, 0xD, 8, 6);
+	GSPREC(3, 4, 0x9, 0xE, 2, 10);
+	//	{ 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
+	GSPREC(0, 4, 0x8, 0xC, 6, 15);
+	GSPREC(1, 5, 0x9, 0xD, 14, 9);
+	GSPREC(2, 6, 0xA, 0xE, 11, 3);
+	GSPREC(3, 7, 0xB, 0xF, 0, 8);
+	GSPREC(0, 5, 0xA, 0xF, 12, 2);
+	GSPREC(1, 6, 0xB, 0xC, 13, 7);
+	GSPREC(2, 7, 0x8, 0xD, 1, 4);
+	GSPREC(3, 4, 0x9, 0xE, 10, 5);
+	//	{ 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0 },
+	GSPREC(0, 4, 0x8, 0xC, 10, 2);
+	GSPREC(1, 5, 0x9, 0xD, 8, 4);
+	GSPREC(2, 6, 0xA, 0xE, 7, 6);
+	GSPREC(3, 7, 0xB, 0xF, 1, 5);
+	GSPREC(0, 5, 0xA, 0xF, 15, 11);
+	GSPREC(1, 6, 0xB, 0xC, 9, 14);
+	GSPREC(2, 7, 0x8, 0xD, 3, 12);
+	GSPREC(3, 4, 0x9, 0xE, 13, 0);
+	//	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	GSPREC(0, 4, 0x8, 0xC, 0, 1);
+	GSPREC(1, 5, 0x9, 0xD, 2, 3);
+	GSPREC(2, 6, 0xA, 0xE, 4, 5);
+	GSPREC(3, 7, 0xB, 0xF, 6, 7);
+	GSPREC(0, 5, 0xA, 0xF, 8, 9);
+	GSPREC(1, 6, 0xB, 0xC, 10, 11);
+	GSPREC(2, 7, 0x8, 0xD, 12, 13);
+	GSPREC(3, 4, 0x9, 0xE, 14, 15);
+
+	//	{ 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	GSPREC(0, 4, 0x8, 0xC, 14, 10);
+	GSPREC(1, 5, 0x9, 0xD, 4, 8);
+	GSPREC(2, 6, 0xA, 0xE, 9, 15);
+	GSPREC(3, 7, 0xB, 0xF, 13, 6);
+	GSPREC(0, 5, 0xA, 0xF, 1, 12);
+	GSPREC(1, 6, 0xB, 0xC, 0, 2);
+	GSPREC(2, 7, 0x8, 0xD, 11, 7);
+	GSPREC(3, 4, 0x9, 0xE, 5, 3);
+
+	//	{ 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	GSPREC(0, 4, 0x8, 0xC, 11, 8);
+	GSPREC(1, 5, 0x9, 0xD, 12, 0);
+	GSPREC(2, 6, 0xA, 0xE, 5, 2);
+	GSPREC(3, 7, 0xB, 0xF, 15, 13);
+	GSPREC(0, 5, 0xA, 0xF, 10, 14);
+	GSPREC(1, 6, 0xB, 0xC, 3, 6);
+	GSPREC(2, 7, 0x8, 0xD, 7, 1);
+	GSPREC(3, 4, 0x9, 0xE, 9, 4);
+	//	{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	GSPREC(0, 4, 0x8, 0xC, 7, 9);
+	GSPREC(1, 5, 0x9, 0xD, 3, 1);
+	GSPREC(2, 6, 0xA, 0xE, 13, 12);
+	GSPREC(3, 7, 0xB, 0xF, 11, 14);
+	GSPREC(0, 5, 0xA, 0xF, 2, 6);
+	GSPREC(1, 6, 0xB, 0xC, 5, 10);
+	GSPREC(2, 7, 0x8, 0xD, 4, 0);
+	GSPREC(3, 4, 0x9, 0xE, 15, 8);
+
 
 	h[0] ^= v[0] ^ v[8];
 	h[1] ^= v[1] ^ v[9];
@@ -212,7 +349,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 __host__
 void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash)
 {
-	const uint32_t threadsperblock = 64;
+	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

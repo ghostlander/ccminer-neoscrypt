@@ -63,12 +63,12 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	unsigned int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 25 : 256 * 256 * 14;
+	unsigned int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 25 : 256 * 256 * 19;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 18=256*256*4;
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000f;
+		((uint32_t*)ptarget)[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
