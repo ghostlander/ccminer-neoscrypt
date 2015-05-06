@@ -1078,6 +1078,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		sctx->job.xnonce2[i]++;		
 	}
 
+
+
 	/* Assemble block header */
 	memset(work->data, 0, sizeof(work->data));
 	work->data[0] = le32dec(sctx->job.version);
@@ -1611,7 +1613,7 @@ static void *miner_thread(void *userdata)
 			if (opt_n_gputhreads != 1)
 			{
 				int index = thr_id / opt_n_gputhreads;
-				if (thr_id <  (active_gpus / opt_n_gputhreads))
+				if((thr_id%opt_n_gputhreads)==0)
 				{
 					for (int i = 0; i < opt_n_gputhreads; i++)
 					{
