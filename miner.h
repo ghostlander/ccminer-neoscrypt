@@ -638,7 +638,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx);
 bool stratum_connect(struct stratum_ctx *sctx, const char *url);
 void stratum_disconnect(struct stratum_ctx *sctx);
 bool stratum_subscribe(struct stratum_ctx *sctx);
-bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
+bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass,bool extranonce);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
 void hashlog_remember_submit(struct work* work, uint32_t nonce);

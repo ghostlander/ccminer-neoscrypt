@@ -35,6 +35,7 @@ void __threadfence(void);
 
 extern "C" int device_map[MAX_GPUS];
 extern "C"  long device_sm[MAX_GPUS];
+extern cudaStream_t gpustream[MAX_GPUS];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);

@@ -19,6 +19,7 @@
 #include "miner.h"
 
 #include "cuda_runtime.h"
+cudaStream_t gpustream[MAX_GPUS] = { 0 };
 
 // CUDA Devices on the System
 int cuda_num_devices()

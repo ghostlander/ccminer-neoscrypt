@@ -1054,7 +1054,7 @@ out:
 	return ret;
 }
 
-bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass)
+bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass,bool extranonce)
 {
 	json_t *val = NULL, *res_val, *err_val;
 	char *s, *sret;
@@ -1098,18 +1098,18 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 
 	sctx->tm_connected = time(NULL);
 	ret = true;
-
-	// subscribe to extranonce (optional)
-	sprintf(s, "{\"id\": 3, \"method\": \"mining.extranonce.subscribe\", \"params\": []}");
-
-	if (!stratum_send_line(sctx, s))
+	if (extranonce)
+	{
+		// subscribe to extranonce (optional)
+		sprintf(s, "{\"id\": 3, \"method\": \"mining.extranonce.subscribe\", \"params\": []}");
+		if (!stratum_send_line(sctx, s))
 		goto out;
-
-	// reduced timeout to handle pools ignoring this method without answer (like xpool.ca)
-	if (!socket_full(sctx->sock, 1)) {
+		// reduced timeout to handle pools ignoring this method without answer (like xpool.ca)
+		if (!socket_full(sctx->sock, 1)) {
 		if (opt_debug)
 			applog(LOG_DEBUG, "stratum extranonce subscribe timed out");
 		goto out;
+		}
 	}
 
 	sret = stratum_recv_line(sctx);
@@ -1131,7 +1131,6 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 		}
 		free(sret);
 	}
-
 out:
 	free(s);
 	if (val)

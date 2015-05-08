@@ -182,6 +182,7 @@ int opt_n_gputhreads = 1;
 int opt_affinity = -1;
 int opt_priority = 0;
 static double opt_difficulty = 1; // CH
+static bool opt_extranonce = true;
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
@@ -338,7 +339,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:";
+	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -376,6 +377,7 @@ static struct option const options[] = {
 #endif
 	{ "threads", 1, NULL, 't' },
 	{ "gputhreads", 1, NULL, 'g' },
+	{ "Disable extranounce support", 1, NULL, 'e' },
 	{ "vote", 1, NULL, 'v' },
 	{ "trust-pool", 0, NULL, 'm' },
 	{ "timeout", 1, NULL, 'T' },
@@ -1548,9 +1550,8 @@ static void *miner_thread(void *userdata)
 			break;
 
 			case ALGO_NEO:
-			rc = scanhash_neoscrypt(have_stratum, thr_id, work.data, work.target, max_nonce, &hashes_done);
-			break;
-				
+				rc = scanhash_neoscrypt(have_stratum, thr_id, work.data, work.target, max_nonce, &hashes_done);			break;
+			
 			case ALGO_YES:
 			rc = scanhash_yescrypt(thr_id, work.data, work.target, max_nonce, &hashes_done);
 			break;
@@ -1840,7 +1841,7 @@ static void *stratum_thread(void *userdata)
 
 			if (!stratum_connect(&stratum, stratum.url) ||
 			    !stratum_subscribe(&stratum) ||
-			    !stratum_authorize(&stratum, rpc_user, rpc_pass)) {
+			    !stratum_authorize(&stratum, rpc_user, rpc_pass,opt_extranonce)) {
 				stratum_disconnect(&stratum);
 				if (opt_retries >= 0 && ++failures > opt_retries) {
 					applog(LOG_ERR, "...terminating workio thread");
@@ -2280,6 +2281,11 @@ static void parse_arg(int key, char *arg)
 			show_usage_and_exit(1);
 		opt_difficulty = d;
 		break;
+
+	case 'e':
+		opt_extranonce = false;
+		break;
+
 	case 'g':
 		v = atoi(arg);
 		if (v < 1 || v > 9999)	/* sanity check */
@@ -2300,6 +2306,7 @@ static void parse_arg(int key, char *arg)
 		}
 		opt_n_threads = active_gpus*opt_n_gputhreads;
 		active_gpus= opt_n_threads;
+		opt_extranonce = false;
 		break;
 	case 'V':
 		show_version_and_exit();
