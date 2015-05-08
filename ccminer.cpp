@@ -1637,7 +1637,7 @@ static void *miner_thread(void *userdata)
 		{
 			double hashrate = 0.;
 			pthread_mutex_lock(&stats_lock);
-			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
+			for (int i = 0; i < opt_n_threads; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			pthread_mutex_unlock(&stats_lock);
 			if (opt_benchmark) {
