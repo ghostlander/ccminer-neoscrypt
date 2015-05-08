@@ -1346,15 +1346,17 @@ static void *miner_thread(void *userdata)
 			case ALGO_QUBIT:
 				minmax = 0xe00000;
 				break;
-			case ALGO_S3:
 			case ALGO_X11:
+				minmax = 0x800000;
+				break;
+			case ALGO_S3:
 			case ALGO_X13:
 				minmax = 0x400000;
 				break;
+			case ALGO_LYRA2:
 			case ALGO_X15:
 				minmax = 0x300000;
 				break;
-			case ALGO_LYRA2:
 			case ALGO_SCRYPT:
 				minmax = 0x100000;
 				break;
