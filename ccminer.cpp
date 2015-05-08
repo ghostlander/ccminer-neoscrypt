@@ -1345,6 +1345,8 @@ static void *miner_thread(void *userdata)
 				minmax = 0x2000000;
 				break;
 			case ALGO_QUARK:
+				minmax = 0x1000000;
+				break;
 			case ALGO_QUBIT:
 				minmax = 0xe00000;
 				break;
