@@ -611,6 +611,16 @@ __device__ __inline__ uint2 ROR16(const uint2 a)
 	return result;
 }
 
+__device__ __inline__ uint2 ROR24(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x2107);
+	result.y = __byte_perm(a.y, a.x, 0x6543);
+
+	return result;
+}
+
+
 __device__ __inline__ uint2 ROL16(const uint2 a)
 {
 	uint2 result;

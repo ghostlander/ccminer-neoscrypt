@@ -10,8 +10,8 @@ static __device__ __forceinline__
 void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
 {
 	a += b; d = SWAPDWORDS2(d ^ a);
-	c += d; b = ROR2(b ^ c, 24);
-	a += b; d = ROR2(d ^ a, 16);
+	c += d; b = ROR24(b ^ c);
+	a += b; d = ROR16(d ^ a);
 	c += d; b = ROR2(b ^ c, 63);
 }
 static __device__ __forceinline__ void round_lyra_v35(uint2 *s)
