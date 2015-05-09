@@ -60,8 +60,8 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 		s[20] = ROL2(inpHash[2] ^ bc[1], 62);
 		s[2] = ROL2(bc[1], 43);
 		s[12] = ROL2(bc[2], 25);
-		s[13] = ROL2(bc[3], 8);
-		s[19] = ROL2(bc[2], 56);
+		s[13] = ROL8(bc[3]);
+		s[19] = ROR8(bc[2]);
 		s[23] = ROL2(bc[4], 41);
 		s[15] = ROL2(inpHash[4] ^ bc[3], 27);
 		s[4] = ROL2(bc[3], 14);
@@ -109,8 +109,8 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 			s[20] = ROL2(s[2] ^ bc[1], 62);
 			s[2] = ROL2(s[12] ^ bc[1], 43);
 			s[12] = ROL2(s[13] ^ bc[2], 25);
-			s[13] = ROL2(s[19] ^ bc[3], 8);
-			s[19] = ROL2(s[23] ^ bc[2], 56);
+			s[13] = ROL8(s[19] ^ bc[3]);
+			s[19] = ROR8(s[23] ^ bc[2]);
 			s[23] = ROL2(s[15] ^ bc[4], 41);
 			s[15] = ROL2(s[4] ^ bc[3], 27);
 			s[4] = ROL2(s[24] ^ bc[3], 14);
@@ -175,8 +175,8 @@ void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, u
 		s[20] = ROL2(inpHash[2] ^ bc[1], 62);
 		s[2] = ROL2(bc[1], 43);
 		s[12] = ROL2(bc[2], 25);
-		s[13] = ROL2(bc[3], 8);
-		s[19] = ROL2(bc[2], 56);
+		s[13] = ROL8(bc[3]);
+		s[19] = ROR8(bc[2]);
 		s[23] = ROL2(bc[4], 41);
 		s[15] = ROL2(inpHash[4] ^ bc[3], 27);
 		s[4] = ROL2(bc[3], 14);
@@ -224,8 +224,8 @@ void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, u
 			s[20] = ROL2(s[2] ^ bc[1], 62);
 			s[2] = ROL2(s[12] ^ bc[1], 43);
 			s[12] = ROL2(s[13] ^ bc[2], 25);
-			s[13] = ROL2(s[19] ^ bc[3], 8);
-			s[19] = ROL2(s[23] ^ bc[2], 56);
+			s[13] = ROL8(s[19] ^ bc[3]);
+			s[19] = ROR8(s[23] ^ bc[2]);
 			s[23] = ROL2(s[15] ^ bc[4], 41);
 			s[15] = ROL2(s[4] ^ bc[3], 27);
 			s[4] = ROL2(s[24] ^ bc[3], 14);

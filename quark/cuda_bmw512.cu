@@ -131,10 +131,11 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 			ROTL64(msg[3 + 3], 3 + 4) - ROTL64(msg[3 + 10], 3 + 11)) ^ hash[3 + 7]);
 		q[4 + 16] = CONST_EXP2(4) +
 			((precalc[4] + ROTL64(msg[4], 4 + 1) +
-			ROTL64(msg[4 + 3], 4 + 4) - ROTL64(msg[4 + 10], 4 + 11)) ^ hash[4 + 7]);
+			ROL8(msg[4 + 3]) - ROTL64(msg[4 + 10], 4 + 11)) ^ hash[4 + 7]);
 		q[5 + 16] = CONST_EXP2(5) +
 			((precalc[5] + ROTL64(msg[5], 5 + 1) +
-			ROTL64(msg[5 + 3], 5 + 4) - ROTL64(msg[5 + 10], 5 + 11)) ^ hash[5 + 7]);
+			ROTL64(msg[5 + 3], 5 + 4) - ROL16(msg[5 + 10])) ^ hash[5 + 7]);
+
 
 		q[6 + 16] = CONST_EXP2(6) +
 			((precalc[6]+ ROTL64(msg[6], 6 + 1) +
@@ -163,7 +164,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 
 		q[13 + 16] = CONST_EXP2(13) +
 			((precalc[13] + ROTL64(msg[13], 13 + 1) +
-			ROTL64(msg[13 - 13], (13 - 13) + 1) - ROTL64(msg[13 - 6], (13 - 6) + 1)) ^ hash[13 - 9]);
+			ROTL64(msg[13 - 13], (13 - 13) + 1) - ROL8(msg[13 - 6])) ^ hash[13 - 9]);
 		q[14 + 16] = CONST_EXP2(14) +
 			((precalc[14] + ROTL64(msg[14], 14 + 1) +
 			ROTL64(msg[14 - 13], (14 - 13) + 1) - ROTL64(msg[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
@@ -342,10 +343,10 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 			ROTL64(msg[3 + 3], 3 + 4)) ^ hash[3 + 7]);
 		q[4 + 16] = CONST_EXP2(4) +
 			((precalcf[4] + ROTL64(msg[4], 4 + 1) +
-			ROTL64(msg[4 + 3], 4 + 4)) ^ hash[4 + 7]);
+			ROL8(msg[4 + 3])) ^ hash[4 + 7]);
 		q[5 + 16] = CONST_EXP2(5) +
 			((precalcf[5] + ROTL64(msg[5], 5 + 1) +
-			ROTL64(msg[5 + 3], 5 + 4) - ROTL64(msg[5 + 10], 5 + 11)) ^ hash[5 + 7]);
+			ROTL64(msg[5 + 3], 5 + 4) - ROL16(msg[5 + 10])) ^ hash[5 + 7]);
 
 
 		//#pragma unroll 3
@@ -362,11 +363,11 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		q[27] = CONST_EXP2(11) +
 			((vectorize((27)*(0x0555555555555555ull)) - ROTL64(msg[5], 6)) ^ hash[2]);
 		q[28] = CONST_EXP2(12) +
-			((vectorize((28)*(0x0555555555555555ull)) +	ROTL64(msg[15], 16) - ROTL64(msg[6], 7)) ^ hash[3]);
+			((vectorize((28)*(0x0555555555555555ull)) +	ROL16(msg[15]) - ROTL64(msg[6], 7)) ^ hash[3]);
 
 		q[13 + 16] = CONST_EXP2(13) +
 			((precalcf[6] + 
-			ROTL64(msg[13 - 13], (13 - 13) + 1) - ROTL64(msg[13 - 6], (13 - 6) + 1)) ^ hash[13 - 9]);
+			ROTL64(msg[13 - 13], (13 - 13) + 1) - ROL8(msg[13 - 6])) ^ hash[13 - 9]);
 		q[14 + 16] = CONST_EXP2(14) +
 			((precalcf[7] + 
 			ROTL64(msg[14 - 13], (14 - 13) + 1) - ROTL64(msg[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
@@ -396,7 +397,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
 		// Final
-#pragma unroll 16
+//#pragma unroll 16
 		for (int i = 0; i < 16; i++)
 		{
 			msg[i].y = 0xaaaaaaaa;

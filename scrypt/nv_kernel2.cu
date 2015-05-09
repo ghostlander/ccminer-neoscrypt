@@ -16,6 +16,7 @@
 
 #include "salsa_kernel.h"
 #include "nv_kernel2.h"
+#include "cuda_helper.h"
 
 #define THREADS_PER_WU 1  // single thread per hash
 
@@ -103,14 +104,14 @@ bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr
 	return success;
 }
 
-static __device__ uint4& operator^=(uint4& left, const uint4& right)
-{
-	left.x ^= right.x;
-	left.y ^= right.y;
-	left.z ^= right.z;
-	left.w ^= right.w;
-	return left;
-}
+//static __device__ uint4& operator^=(uint4& left, const uint4& right)
+//{
+//	left.x ^= right.x;
+//	left.y ^= right.y;
+//	left.z ^= right.z;
+//	left.w ^= right.w;
+//	return left;
+//}
 
 __device__ __forceinline__ uint4 __shfl(const uint4 val, unsigned int lane, unsigned int width)
 {
@@ -663,13 +664,13 @@ __inline__ __device__ uint2 ROL(const uint2 a, const int offset) {
 }
 #define ROL_mult8(a, offset) ROL(a, offset)
 
-__inline__ __device__ uint64_t devectorize(uint2 v) { return __double_as_longlong(__hiloint2double(v.y, v.x)); }
-__inline__ __device__ uint2 vectorize(uint64_t v) { return make_uint2(__double2loint(__longlong_as_double(v)), __double2hiint(__longlong_as_double(v))); }
-__inline__ __device__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }
-__inline__ __device__ uint2 operator& (uint2 a, uint2 b) { return make_uint2(a.x & b.x, a.y & b.y); }
-__inline__ __device__ uint2 operator| (uint2 a, uint2 b) { return make_uint2(a.x | b.x, a.y | b.y); }
-__inline__ __device__ uint2 operator~ (uint2 a) { return make_uint2(~a.x, ~a.y); }
-__inline__ __device__ void operator^= (uint2 &a, uint2 b) { a = a ^ b; }
+//__inline__ __device__ uint64_t devectorize(uint2 v) { return __double_as_longlong(__hiloint2double(v.y, v.x)); }
+//__inline__ __device__ uint2 vectorize(uint64_t v) { return make_uint2(__double2loint(__longlong_as_double(v)), __double2hiint(__longlong_as_double(v))); }
+//__inline__ __device__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }
+//__inline__ __device__ uint2 operator& (uint2 a, uint2 b) { return make_uint2(a.x & b.x, a.y & b.y); }
+//__inline__ __device__ uint2 operator| (uint2 a, uint2 b) { return make_uint2(a.x | b.x, a.y | b.y); }
+//__inline__ __device__ uint2 operator~ (uint2 a) { return make_uint2(~a.x, ~a.y); }
+//__inline__ __device__ void operator^= (uint2 &a, uint2 b) { a = a ^ b; }
 
 __constant__ uint64_t KeccakF_RoundConstants[24];
 
@@ -703,11 +704,11 @@ static uint64_t host_KeccakF_RoundConstants[24] =
 
 __constant__ uint64_t pdata64[10];
 
-static __device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
-{
-	return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
-		  | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
-}
+//static __device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
+//{
+//	return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
+//		  | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
+//}
 
 // in this implementation the first and last iteration of the for() loop were explicitly
 // unrolled and redundant operations were removed (e.g. operations on zero inputs, and
@@ -803,7 +804,7 @@ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool 
 	Ami = Di;
 	BCo = ROL(Ami, 15);
 	Aso = Do;
-	BCu = ROL(Aso, 56);
+	BCu = ROR8(Aso);
 	Ema =   BCa ^((~BCe)&  BCi );
 	Eme =   BCe ^((~BCi)&  BCo );
 	Emi =   BCi ^((~BCo)&  BCu );
@@ -898,7 +899,7 @@ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool 
 	Emi ^= Di;
 	BCo = ROL(Emi, 15);
 	Eso ^= Do;
-	BCu = ROL(Eso, 56);
+	BCu = ROR8(Eso);
 	Ama =   BCa ^((~BCe)&  BCi );
 	Ame =   BCe ^((~BCi)&  BCo );
 	Ami =   BCi ^((~BCo)&  BCu );
@@ -996,7 +997,7 @@ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool 
 		Ami ^= Di;
 		BCo = ROL(Ami, 15);
 		Aso ^= Do;
-		BCu = ROL(Aso, 56);
+		BCu = ROR8(Aso);
 		Ema =   BCa ^((~BCe)&  BCi );
 		Eme =   BCe ^((~BCi)&  BCo );
 		Emi =   BCi ^((~BCo)&  BCu );
@@ -1091,7 +1092,7 @@ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool 
 		Emi ^= Di;
 		BCo = ROL(Emi, 15);
 		Eso ^= Do;
-		BCu = ROL(Eso, 56);
+		BCu = ROR8(Eso);
 		Ama =   BCa ^((~BCe)&  BCi );
 		Ame =   BCe ^((~BCi)&  BCo );
 		Ami =   BCi ^((~BCo)&  BCu );
@@ -1187,7 +1188,7 @@ void titan_crypto_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool 
 	Ami ^= Di;
 	BCo = ROL(Ami, 15);
 	Aso ^= Do;
-	BCu = ROL(Aso, 56);
+	BCu = ROR8(Aso);
 	Ema =   BCa ^((~BCe)&  BCi );
 	Eme =   BCe ^((~BCi)&  BCo );
 	Emi =   BCi ^((~BCo)&  BCu );
@@ -1309,8 +1310,8 @@ void NV2Kernel::do_keccak256(dim3 grid, dim3 threads, int thr_id, int stream, ui
 //
 
 typedef uint32_t sph_u32;
-#define SPH_C32(x) ((sph_u32)(x))
-#define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
+//#define SPH_C32(x) ((sph_u32)(x))
+//#define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
 #if __CUDA_ARCH__ < 350
 	// Kepler (Compute 3.0)
 	#define SPH_ROTL32(a, b) ((a)<<(b))|((a)>>(32-(b)))
