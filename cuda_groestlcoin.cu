@@ -74,8 +74,6 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
 // Setup-Funktionen
 __host__ void groestlcoin_cpu_init(int thr_id, uint32_t threads)
 {
-    CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-
     // Speicher für Gewinner-Nonce belegen
     cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
 }
