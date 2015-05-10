@@ -43,7 +43,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
     uint32_t *outputHash = (uint32_t*)malloc(throughput * 16 * sizeof(uint32_t));
 
     if (opt_benchmark)
-        ((uint32_t*)ptarget)[7] = 0x000000ff;
+        ((uint32_t*)ptarget)[7] = 0x0000f;
 
     // init
     if(!init[thr_id])
@@ -73,13 +73,18 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
             endiandata[19] = SWAP32(foundNounce);
             groestlhash(tmpHash, endiandata);
 
-            if (tmpHash[7] <= Htarg && fulltest(tmpHash, ptarget)) {
+            if (tmpHash[7] <= Htarg && fulltest(tmpHash, ptarget)) 
+			{
                 pdata[19] = foundNounce;
                 *hashes_done = foundNounce - start_nonce + 1;
                 free(outputHash);
+				if (opt_benchmark)
+					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNounce);
+
                 return true;
-            } else {
-                applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
+            } else 
+			{
+				if (tmpHash[7] != Htarg) applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
             }
 
             foundNounce = 0xffffffff;

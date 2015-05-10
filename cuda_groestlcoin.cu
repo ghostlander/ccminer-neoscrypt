@@ -18,7 +18,7 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 
 #define SWAB32(x) cuda_swab32(x)
 
-__global__ __launch_bounds__(256, 4)
+__global__ __launch_bounds__(512, 2)
 void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
@@ -32,7 +32,7 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
 
         uint32_t nounce = startNounce + thread;
         if ((threadIdx.x & 3) == 3)
-            paddedInput[4] = SWAB32(nounce);  // 4*4+3 = 19
+            paddedInput[4] = SWAB32(nounce);
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(paddedInput, msgBitsliced);
@@ -44,7 +44,6 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
 
             if (round < 1)
             {
-                // Verkettung zweier Runden inclusive Padding.
                 msgBitsliced[ 0] = __byte_perm(state[ 0], 0x00800100, 0x4341 + ((threadIdx.x & 3)==3)*0x2000);
                 msgBitsliced[ 1] = __byte_perm(state[ 1], 0x00800100, 0x4341);
                 msgBitsliced[ 2] = __byte_perm(state[ 2], 0x00800100, 0x4341);
@@ -56,34 +55,18 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
             }
         }
 
-        // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
         uint32_t out_state[16];
-        from_bitslice_quad(state, out_state);
+        from_bitslice_quad_final(state, out_state);
         
 		if ((threadIdx.x & 3) == 0)
         {
-            int i, position = -1;
-            bool rc = true;
 
-    #pragma unroll 8
-            for (i = 7; i >= 0; i--) {
-                if (out_state[i] > pTarget[i]) {
-                    if(position < i) {
-                        position = i;
-                        rc = false;
-                    }
-                 }
-                 if (out_state[i] < pTarget[i]) {
-                    if(position < i) {
-                        position = i;
-                        rc = true;
-                    }
-                 }
-            }
-
-            if(rc == true)
-                if(resNounce[0] > nounce)
-                    resNounce[0] = nounce;
+			if (out_state[7] <= pTarget[7]) 
+			{
+				atomicExch(&(resNounce[0]), nounce);
+//				if (resNounce[0] > nounce)
+//					resNounce[0] = nounce;
+			}
         }
     }
 }
@@ -126,7 +109,7 @@ __host__ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 
 __host__ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
 {
-    uint32_t threadsperblock = 256;
+    uint32_t threadsperblock = 512;
 
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
