@@ -47,7 +47,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
     uint32_t *outputHash = (uint32_t*)malloc(throughput * 16 * sizeof(uint32_t));
 
     if (opt_benchmark)
-        ((uint32_t*)ptarget)[7] = 0x0000f;
+        ((uint32_t*)ptarget)[7] = 0xf;
 
     // init
     if(!init[thr_id])
@@ -69,14 +69,14 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
         be32enc(&endiandata[kk], pdata[kk]);
 
     // Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
-    groestlcoin_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
+    groestlcoin_cpu_setBlock(thr_id, endiandata);
 
     do {
         // GPU
         uint32_t foundNounce = 0xFFFFFFFF;
         const uint32_t Htarg = ptarget[7];
 
-        groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
+		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce, ptarget[7]);
 
         if(foundNounce < 0xffffffff)
         {
@@ -86,9 +86,8 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
 
             if (tmpHash[7] <= Htarg && fulltest(tmpHash, ptarget)) 
 			{
-                pdata[19] = foundNounce;
-                *hashes_done = foundNounce - start_nonce + 1;
-                free(outputHash);
+				*hashes_done = pdata[19] - start_nonce + throughput + 1;
+				pdata[19] = foundNounce;
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNounce);
 

@@ -7,10 +7,9 @@
 #include <host_defines.h>
 
 // globaler Speicher für alle HeftyHashes aller Threads
-__constant__ uint32_t pTarget[8]; // Single GPU
-extern uint32_t *d_resultNonce[MAX_GPUS];
+static uint32_t *d_resultNonce[MAX_GPUS];
 
-__constant__ uint32_t groestlcoin_gpu_msg[32];
+__constant__ uint32_t groestlcoin_gpu_msg[20];
 
 // 64 Register Variante für Compute 3.0
 #include "groestl_functions_quad.cu"
@@ -19,25 +18,29 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define SWAB32(x) cuda_swab32(x)
 
 __global__ __launch_bounds__(512, 2)
-void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
+void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t target)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;
     if (thread < threads)
     {
         // GROESTL
-        uint32_t paddedInput[8];
-#pragma unroll 8
-        for(int k=0;k<8;k++) paddedInput[k] = groestlcoin_gpu_msg[4*k+(threadIdx.x & 3)];
-
-        uint32_t nounce = startNounce + thread;
-        if ((threadIdx.x & 3) == 3)
-            paddedInput[4] = SWAB32(nounce);
+		uint32_t paddedInput[8] = { 0 };
+		uint32_t nounce = startNounce + thread;
+		paddedInput[0] = groestlcoin_gpu_msg[(threadIdx.x & 3)];
+		paddedInput[1] = groestlcoin_gpu_msg[4 + (threadIdx.x & 3)];
+		paddedInput[2] = groestlcoin_gpu_msg[8 + (threadIdx.x & 3)];
+		paddedInput[3] = groestlcoin_gpu_msg[12 + (threadIdx.x & 3)];
+		paddedInput[4] = groestlcoin_gpu_msg[16 + (threadIdx.x & 3)];
+		if ((threadIdx.x & 3) == 3) paddedInput[4] = SWAB32(nounce);
+		if ((threadIdx.x & 3) == 0) paddedInput[5] = 0x80;
+		if ((threadIdx.x & 3)==3) paddedInput[7] = 0x01000000;
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(paddedInput, msgBitsliced);
 
         uint32_t state[8];
+
         for (int round=0; round<2; round++)
         {
             groestl512_progressMessage_quad(state, msgBitsliced);
@@ -61,7 +64,7 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
 		if ((threadIdx.x & 3) == 0)
         {
 
-			if (out_state[7] <= pTarget[7]) 
+			if (out_state[7] <= target) 
 			{
 				atomicExch(&(resNounce[0]), nounce);
 //				if (resNounce[0] > nounce)
@@ -78,34 +81,18 @@ __host__ void groestlcoin_cpu_init(int thr_id, uint32_t threads)
     cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
 }
 
-__host__ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
+__host__ void groestlcoin_cpu_setBlock(int thr_id, void *data )
 {
-    // Nachricht expandieren und setzen
-    uint32_t msgBlock[32];
-
-    memset(msgBlock, 0, sizeof(uint32_t) * 32);
+    uint32_t msgBlock[20];
     memcpy(&msgBlock[0], data, 80);
-
-    // Erweitere die Nachricht auf den Nachrichtenblock (padding)
-    // Unsere Nachricht hat 80 Byte
-    msgBlock[20] = 0x80;
-    msgBlock[31] = 0x01000000;
-
-    // groestl512 braucht hierfür keinen CPU-Code (die einzige Runde wird
-    // auf der GPU ausgeführt)
-
-    // Blockheader setzen (korrekte Nonce und Hefty Hash fehlen da drin noch)
     cudaMemcpyToSymbol( groestlcoin_gpu_msg,
                         msgBlock,
-                        128);
+                        80);
 
     cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
-    cudaMemcpyToSymbol( pTarget,
-                        pTargetIn,
-                        sizeof(uint32_t) * 8 );
 }
 
-__host__ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
+__host__ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce, uint32_t target)
 {
     uint32_t threadsperblock = 512;
 
@@ -113,12 +100,12 @@ __host__ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startN
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     int factor = 4;
 
-        // berechne wie viele Thread Blocks wir brauchen
+     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
     cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
-    groestlcoin_gpu_hash_quad<<<grid, block>>>(threads, startNounce, d_resultNonce[thr_id]);
+    groestlcoin_gpu_hash_quad<<<grid, block>>>(threads, startNounce, d_resultNonce[thr_id], target);
 
     cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
