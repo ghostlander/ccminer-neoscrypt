@@ -1265,7 +1265,7 @@ void shavite_gpu_init(uint32_t *sharedMemory)
 __global__ __launch_bounds__(TPB, 3)
 void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
-	__shared__  uint32_t sharedMemory[1024];
+	__shared__  __align__(128) uint32_t sharedMemory[1024];
 
 	shavite_gpu_init(sharedMemory);
 

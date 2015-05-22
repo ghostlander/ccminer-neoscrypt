@@ -343,7 +343,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 __global__ __launch_bounds__(256, 4)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
-	__shared__ uint32_t sharedMemory[1024];
+	__shared__ __align__(128) uint32_t sharedMemory[1024];
 
 	echo_gpu_init(sharedMemory);
 
@@ -380,80 +380,82 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-__global__ __launch_bounds__(256, 4)
-void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
+
+__constant__ uint32_t P[48] = {
+	0xe7e9f5f5,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+	0xa4213d7e,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+	//8-12
+	0x01425eb8,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+	0x65978b09,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+	//21-25
+	0x2cb6b661,
+	0x6b23b3b3,
+	0xcf93a7cf,
+	0x9d9d3751,
+
+	0x9ac2dea3,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+	//34-38
+	0x579f9f33,
+	0xfbfbfbfb,
+	0xfbfbfbfb,
+	0xefefd3c7,
+
+	0xdbfde1dd,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+	0x34514d9e,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+
+	0xb134347e,
+	0xea6f7e7e,
+	0xbd7731bd,
+	0x8a8a1968,
+
+	0x14b8a457,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af,
+
+	0x265f4382,
+	0xf5e7e9f5,
+	0xb3b36b23,
+	0xb3dbe7af
+	//58-61
+};
+
+__global__
+void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
 {
-	const uint32_t P[48] = {
-		0xe7e9f5f5,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-		0xa4213d7e,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-		//8-12
-		0x01425eb8,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-		0x65978b09,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-		//21-25
-		0x2cb6b661,
-		0x6b23b3b3,
-		0xcf93a7cf,
-		0x9d9d3751,
-
-		0x9ac2dea3,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-		//34-38
-		0x579f9f33,
-		0xfbfbfbfb,
-		0xfbfbfbfb,
-		0xefefd3c7,
-
-		0xdbfde1dd,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-		0x34514d9e,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-
-		0xb134347e,
-		0xea6f7e7e,
-		0xbd7731bd,
-		0x8a8a1968,
-
-		0x14b8a457,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af,
-
-		0x265f4382,
-		0xf5e7e9f5,
-		0xb3b36b23,
-		0xb3dbe7af
-		//58-61
-	};
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 
-		__shared__ uint32_t sharedMemory[1024];
+		__shared__ __align__(128) uint32_t sharedMemory[1024];
 		echo_gpu_init(sharedMemory);
 
 		uint32_t nounce = (startNounce + thread);
@@ -585,10 +587,9 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 #pragma unroll 4
 			for (int i = 0; i < 4; i++)
 			{
-				uint32_t t;
 
 				/// 1, 5, 9, 13
-				t = W[4 + i];
+				uint32_t t = W[4 + i];
 				W[4 + i] = W[20 + i];
 				W[20 + i] = W[36 + i];
 				W[36 + i] = W[52 + i];
@@ -673,10 +674,8 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			512 + (9 * 16) + 15);
 
 		uint32_t bc = W[23] ^ W[43];
-		uint32_t cd = W[43] ^ W[63];
 		uint32_t t2 = (bc & 0x80808080);
-
-		uint32_t test = (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[3] ^ cd;
+		uint32_t test = (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[3] ^ W[43] ^ W[63];
 		bc = W[55] ^ W[11];
 		t2 = (bc & 0x80808080);
 		test ^= (t2 >> 7) * 27 ^ ((bc^t2) << 1) ^ W[35] ^ W[11] ^ W[31] ^ backup;
@@ -688,9 +687,11 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		}
 	}
 }
+
+const uint32_t threadsperblock = 256;
 __host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t target, uint32_t *h_found)
 {
-	uint32_t threadsperblock = 256;
+
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
