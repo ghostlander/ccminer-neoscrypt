@@ -21,11 +21,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
-
 #include <curl/curl.h>
 #include <jansson.h>
 #include <openssl/sha.h>
-
 #ifdef WIN32
 #include <windows.h>
 #include <stdint.h>
@@ -41,6 +39,9 @@
 #endif
 #endif
 
+//#include "nvml.h"
+#include "cuda_runtime.h"
+//#include "gpu_utils.h"
 #include "miner.h"
 
 #ifdef WIN32
@@ -190,6 +191,8 @@ int active_gpus;
 char * device_name[MAX_GPUS];
 int device_map[MAX_GPUS] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 };
 long  device_sm[MAX_GPUS] = { 0 };
+int device_memspeed[MAX_GPUS] = { 0 };
+int device_gpuspeed[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 int device_interactive[MAX_GPUS] = { 0 };
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -339,7 +342,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e";
+	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e:M:C";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -377,6 +380,8 @@ static struct option const options[] = {
 #endif
 	{ "threads", 1, NULL, 't' },
 	{ "gputhreads", 1, NULL, 'g' },
+	{ "gpu-memclock", 1, NULL, 'M' },
+	{ "gpu-engine", 1, NULL, 'E' },
 	{ "Disable extranounce support", 1, NULL, 'e' },
 	{ "vote", 1, NULL, 'v' },
 	{ "trust-pool", 0, NULL, 'm' },
@@ -2287,6 +2292,19 @@ static void parse_arg(int key, char *arg)
 	case 'e':
 		opt_extranonce = false;
 		break;
+	case 'E':
+		opt_extranonce = false;
+		v = atoi(arg);
+		if (v < 1 || v > 9999)	/* sanity check */
+			show_usage_and_exit(1);
+		device_gpuspeed[0] = v;
+		break;
+	case 'M':
+		v = atoi(arg);
+		if (v < 1 || v > 9999)	/* sanity check */
+			show_usage_and_exit(1);
+		device_memspeed[0]= v;
+		break;
 
 	case 'g':
 		v = atoi(arg);
@@ -2321,6 +2339,7 @@ static void parse_arg(int key, char *arg)
 	if (use_syslog)
 		use_colors = false;
 }
+
 
 /**
  * Parse json config file
@@ -2510,7 +2529,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s: no URL supplied\n", argv[0]);
 		show_usage_and_exit(1);
 	}
-
+		
 	if (!rpc_userpass) {
 		rpc_userpass = (char*)malloc(strlen(rpc_user) + strlen(rpc_pass) + 2);
 		if (!rpc_userpass)
@@ -2616,6 +2635,15 @@ int main(int argc, char *argv[])
 	}
 	if (!opt_n_threads)
 		opt_n_threads = active_gpus;
+
+
+
+// set memspeed /clockspeed
+	if (device_memspeed[0] != 0 || device_gpuspeed != 0)
+	{
+		//Donate some beers to the coder :)
+	}
+
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)
