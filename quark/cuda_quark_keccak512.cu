@@ -140,7 +140,7 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
     }
 }
 
-__global__  __launch_bounds__(192, 4)
+__global__
 void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint2 *g_hash, uint32_t *g_nonceVector)
 {
     const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
