@@ -473,8 +473,10 @@ void proper_exit(int reason)
 	abort_flag = true;
 
 #ifdef USE_WRAPNVML
-	if (hnvml)
-		nvml_destroy(hnvml);
+		if (hnvml)
+			nvml_destroy(hnvml);
+ 	#endif
+
 #endif
 
 
@@ -1294,7 +1296,6 @@ static void *miner_thread(void *userdata)
 			memcpy(work.target, g_work.target, sizeof(work.target));
 			work.difficulty = g_work.difficulty;
 			work.height = g_work.height;
-			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
 			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 				if (check_dups)
