@@ -380,8 +380,8 @@ static struct option const options[] = {
 #endif
 	{ "threads", 1, NULL, 't' },
 	{ "gputhreads", 1, NULL, 'g' },
-	{ "gpu-memclock", 1, NULL, 'M' },
-	{ "gpu-engine", 1, NULL, 'E' },
+	{ "gpu-memclock", 1, NULL, '1070' },
+	{ "gpu-engine", 1, NULL, '1071' },
 	{ "Disable extranounce support", 1, NULL, 'e' },
 	{ "vote", 1, NULL, 'v' },
 	{ "trust-pool", 0, NULL, 'm' },
@@ -473,10 +473,10 @@ void proper_exit(int reason)
 	abort_flag = true;
 
 #ifdef USE_WRAPNVML
+	#ifndef WIN32
 		if (hnvml)
 			nvml_destroy(hnvml);
  	#endif
-
 #endif
 
 
@@ -1935,6 +1935,9 @@ static void parse_arg(int key, char *arg)
 	char *p = arg;
 	int v, i;
 	double d;
+	char *pch;
+	int n;
+	int last;
 
 	switch(key) {
 	case 'a':
@@ -2293,18 +2296,23 @@ static void parse_arg(int key, char *arg)
 	case 'e':
 		opt_extranonce = false;
 		break;
-	case 'E':
-		opt_extranonce = false;
-		v = atoi(arg);
-		if (v < 1 || v > 9999)	/* sanity check */
-			show_usage_and_exit(1);
-		device_gpuspeed[0] = v;
+	case '1070':
+		pch = strtok(arg, ",");
+		n = 0, last = atoi(arg);
+		while (pch != NULL)
+		{
+			device_gpuspeed[n++] = last = atoi(pch);
+			pch = strtok(NULL, ",");
+		}
 		break;
-	case 'M':
-		v = atoi(arg);
-		if (v < 1 || v > 9999)	/* sanity check */
-			show_usage_and_exit(1);
-		device_memspeed[0]= v;
+	case '1071':
+		pch = strtok(arg, ",");
+		n = 0, last = atoi(arg);
+		while (pch != NULL) 
+		{
+			device_memspeed[n++] = last = atoi(pch);
+			pch = strtok(NULL, ",");		
+		}
 		break;
 
 	case 'g':
@@ -2642,7 +2650,20 @@ int main(int argc, char *argv[])
 // set memspeed /clockspeed
 	if (device_memspeed[0] != 0 || device_gpuspeed != 0)
 	{
-		//Donate some beers to the coder :)
+#ifdef WIN32
+		applog(LOG_ERR, "Trying to set memclock to: %d, and coreclock to: %d", device_memspeed[0], device_gpuspeed[0]);
+
+		char path[1024];
+		system("C:\\Progra~1\\NVIDIA~1\\NVSMI\\nvidia-smi -acp 0");
+		for (int i = 0; i < active_gpus; i++)
+		{
+			sprintf(path, "C:\\Progra~1\\NVIDIA~1\\NVSMI\\nvidia-smi -i %d -ac %d,%d", device_map[i], device_gpuspeed[0], device_memspeed[0]);
+			system(path);
+		}
+#else
+		applog(LOG_ERR, "Change the clock is not supported on linux");
+
+#endif
 	}
 
 
