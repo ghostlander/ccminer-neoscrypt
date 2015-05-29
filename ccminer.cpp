@@ -380,8 +380,8 @@ static struct option const options[] = {
 #endif
 	{ "threads", 1, NULL, 't' },
 	{ "gputhreads", 1, NULL, 'g' },
-	{ "gpu-memclock", 1, NULL, '1070' },
-	{ "gpu-engine", 1, NULL, '1071' },
+	{ "gpu-engine", 1, NULL, 1070 },
+	{ "gpu-memclock", 1, NULL, 1071 },
 	{ "Disable extranounce support", 1, NULL, 'e' },
 	{ "vote", 1, NULL, 'v' },
 	{ "trust-pool", 0, NULL, 'm' },
@@ -2296,7 +2296,7 @@ static void parse_arg(int key, char *arg)
 	case 'e':
 		opt_extranonce = false;
 		break;
-	case '1070':
+	case 1070:
 		pch = strtok(arg, ",");
 		n = 0, last = atoi(arg);
 		while (pch != NULL)
@@ -2305,7 +2305,7 @@ static void parse_arg(int key, char *arg)
 			pch = strtok(NULL, ",");
 		}
 		break;
-	case '1071':
+	case 1071:
 		pch = strtok(arg, ",");
 		n = 0, last = atoi(arg);
 		while (pch != NULL) 
@@ -2648,16 +2648,16 @@ int main(int argc, char *argv[])
 
 
 // set memspeed /clockspeed
-	if (device_memspeed[0] != 0 || device_gpuspeed != 0)
+	if (device_memspeed[0] != 0 || device_gpuspeed[0] != 0)
 	{
 #ifdef WIN32
-		applog(LOG_ERR, "Trying to set memclock to: %d, and coreclock to: %d", device_memspeed[0], device_gpuspeed[0]);
+		applog(LOG_ERR, "Trying to set coreclock to: %d, and memclock to: %d", device_gpuspeed[0],device_memspeed[0]);
 
 		char path[1024];
 		system("C:\\Progra~1\\NVIDIA~1\\NVSMI\\nvidia-smi -acp 0");
 		for (int i = 0; i < active_gpus; i++)
 		{
-			sprintf(path, "C:\\Progra~1\\NVIDIA~1\\NVSMI\\nvidia-smi -i %d -ac %d,%d", device_map[i], device_gpuspeed[0], device_memspeed[0]);
+			sprintf(path, "C:\\Progra~1\\NVIDIA~1\\NVSMI\\nvidia-smi -i %d -ac %d,%d", device_map[i], device_memspeed[0], device_gpuspeed[0]);
 			system(path);
 		}
 #else
