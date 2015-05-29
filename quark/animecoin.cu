@@ -29,10 +29,10 @@ extern void quark_skein512_cpu_init(int thr_id);
 extern void quark_skein512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 
 extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
-extern void quark_keccak512_cpu_hash_64_final( uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+extern void quark_keccak512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, uint32_t *h_found);
 
 extern void quark_jh512_cpu_hash_64( uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
-extern void quark_jh512_cpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
+extern void quark_jh512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, uint32_t target, uint32_t *h_found);
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
@@ -165,7 +165,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		((uint32_t*)ptarget)[7] = 0x0ff;
 
 	if (!init[thr_id])
 	{
@@ -235,12 +235,10 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2);
-
-		quark_keccak512_cpu_hash_64_final(nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id]);
-		quark_jh512_cpu_hash_64_final( nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id]);
-
 		uint32_t foundnonces[2];
-		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], foundnonces);
+		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces[0]);
+		quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces[0]);
+//		cuda_check_quarkcoin(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], foundnonces);
 		if (foundnonces[0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
