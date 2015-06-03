@@ -715,6 +715,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		gettimeofday(&stratum.tv_submit, NULL);
 		if (unlikely(!stratum_send_line(&stratum, s))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
+			sleep(10);
 			return false;
 		}
 
@@ -1321,6 +1322,13 @@ static void *miner_thread(void *userdata)
 
 		work_restart[thr_id].restart = 0;
 		pthread_mutex_unlock(&g_work_lock);
+
+		/* prevent gpu scans before a job is received */
+		if (have_stratum && loopcnt>0 && work.data[0] == 0) 
+		{
+			sleep(1);
+			continue;	
+		}
 
 		/* adjust max_nonce to meet target scan time */
 		if (have_stratum)
