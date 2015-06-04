@@ -44,7 +44,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	throughput = min(throughput, max_nonce - start_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00f;
+		((uint32_t*)ptarget)[7] = 0x0ff;
 
 	// init
 	if(!init[thr_id])

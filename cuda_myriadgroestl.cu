@@ -218,7 +218,7 @@ __global__ void __launch_bounds__(256, 4)
 		paddedInput[6] = 0;
 		paddedInput[7] = 0;
 
-		if (threadIdx.x & 3) paddedInput[5] = 0x80;
+		if ((threadIdx.x & 3) == 0) paddedInput[5] = 0x80;
 		if ((threadIdx.x & 3) == 3) paddedInput[7] = 0x01000000;
 
 		uint32_t nounce = startNounce + thread;
@@ -244,7 +244,7 @@ __global__ void __launch_bounds__(256, 4)
     }
 }
 
-__global__ void __launch_bounds__(256, 4)
+__global__ void __launch_bounds__(2048, 1)
  myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -286,10 +286,10 @@ __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
     // Nachricht expandieren und setzen
-    uint32_t msgBlock[32];
-	uint32_t sha256_gpu_constantTable2[20];
+    uint32_t msgBlock[20];
+	uint32_t sha256_gpu_constantTable2[64];
 
-    memset(msgBlock, 0, sizeof(uint32_t) * 32);
+    memset(msgBlock, 0, sizeof(uint32_t) * 20);
     memcpy(&msgBlock[0], data, 80);
 
     cudaMemcpyToSymbol( myriadgroestl_gpu_msg,
@@ -309,7 +309,8 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
 
 __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *nounce)
 {
-    uint32_t threadsperblock = 512;
+    const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock2 = 2048;
 
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
@@ -321,7 +322,7 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     dim3 block(threadsperblock);
 
     myriadgroestl_gpu_hash_quad<<<grid, block>>>(threads, startNounce, d_outputHashes[thr_id]);
-    dim3 grid2((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid2((threads + threadsperblock2 - 1) / threadsperblock2);
     myriadgroestl_gpu_hash_quad2<<<grid2, block>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
 
