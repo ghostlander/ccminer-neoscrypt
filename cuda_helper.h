@@ -81,9 +81,9 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 // Kepler (Compute 3.5, 5.0)
 __device__ __forceinline__ uint32_t ROTL32(uint32_t x, const uint32_t n)
 {	
-	if(n==8) return __byte_perm(x, x, 0x1230);
-	else if(n==16) return __byte_perm(x, x, 0x2301);
-	else if(n==24) return __byte_perm(x, x, 0x3012);
+//	if(n==8) return __byte_perm(x, x, 0x2103);
+//	else if(n==16) return __byte_perm(x, x, 0x1032);
+//	else if(n==24) return __byte_perm(x, x, 0x0321);
 	return(__funnelshift_l((x), (x), (n)));
 }
 #endif
@@ -94,9 +94,9 @@ __device__ __forceinline__ uint32_t ROTL32(uint32_t x, const uint32_t n)
 __device__ __forceinline__ uint32_t ROTR32(uint32_t x, const uint32_t n)
 {	
 	// Kepler (Compute 3.5, 5.0)
-	if(n==8) return __byte_perm(x, x, 0x3012);
-	else if(n==16) return __byte_perm(x, x, 0x2301);
-	else if (n == 24) return __byte_perm(x, x, 0x1230);
+//	if(n==8) return __byte_perm(x, x, 0x0321);
+//	else if(n==16) return __byte_perm(x, x, 0x1032);
+//	else if (n == 24) return __byte_perm(x, x, 0x2103);
 	return(__funnelshift_r((x), (x), (n)));
 }
 #endif
@@ -1004,21 +1004,22 @@ uint32_t andor32(uint32_t a, uint32_t b, uint32_t c) {
 	return result;
 }
 
-
 __device__ __forceinline__
- uint32_t bfe(uint32_t x, uint32_t bit, uint32_t numBits) {
+uint32_t bfe(uint32_t x, uint32_t bit, uint32_t numBits) {
 	uint32_t ret;
 	asm("bfe.u32 %0, %1, %2, %3;" : "=r"(ret) : "r"(x), "r"(bit), "r"(numBits));
 	return ret;
-	
+
 }
 
 __device__ __forceinline__
- uint32_t bfi(uint32_t x, uint32_t a, uint32_t bit, uint32_t numBits) {
+uint32_t bfi(uint32_t x, uint32_t a, uint32_t bit, uint32_t numBits) {
 	uint32_t ret;
 	asm("bfi.b32 %0, %1, %2, %3,%4;" : "=r"(ret) : "r"(x), "r"(a), "r"(bit), "r"(numBits));
-	return ret;	
+	return ret;
 }
+
+
 
 #endif // #ifndef CUDA_HELPER_H
 
