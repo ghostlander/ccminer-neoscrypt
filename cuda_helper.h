@@ -1004,6 +1004,22 @@ uint32_t andor32(uint32_t a, uint32_t b, uint32_t c) {
 	return result;
 }
 
+
+__device__ __forceinline__
+ uint32_t bfe(uint32_t x, uint32_t bit, uint32_t numBits) {
+	uint32_t ret;
+	asm("bfe.u32 %0, %1, %2, %3;" : "=r"(ret) : "r"(x), "r"(bit), "r"(numBits));
+	return ret;
+	
+}
+
+__device__ __forceinline__
+ uint32_t bfi(uint32_t x, uint32_t a, uint32_t bit, uint32_t numBits) {
+	uint32_t ret;
+	asm("bfi.b32 %0, %1, %2, %3,%4;" : "=r"(ret) : "r"(x), "r"(a), "r"(bit), "r"(numBits));
+	return ret;	
+}
+
 #endif // #ifndef CUDA_HELPER_H
 
 
