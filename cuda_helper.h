@@ -72,13 +72,37 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define SPH_T64(x) (x)
 // #define SPH_T64(x) ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 #endif
+
+
 #if __CUDA_ARCH__ < 320
 // Kepler (Compute 3.0)
 #define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
 #else
 // Kepler (Compute 3.5, 5.0)
-#define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
+__device__ __forceinline__ uint32_t ROTL32(uint32_t x, const uint32_t n)
+{	
+	if(n==8) return __byte_perm(x, x, 0x1230);
+	else if(n==16) return __byte_perm(x, x, 0x2301);
+	else if(n==24) return __byte_perm(x, x, 0x3012);
+	return(__funnelshift_l((x), (x), (n)));
+}
 #endif
+#if __CUDA_ARCH__ < 320
+// Kepler (Compute 3.0)
+#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+#else
+__device__ __forceinline__ uint32_t ROTR32(uint32_t x, const uint32_t n)
+{	
+	// Kepler (Compute 3.5, 5.0)
+	if(n==8) return __byte_perm(x, x, 0x3012);
+	else if(n==16) return __byte_perm(x, x, 0x2301);
+	else if (n == 24) return __byte_perm(x, x, 0x1230);
+	return(__funnelshift_r((x), (x), (n)));
+}
+#endif
+
+
+
 
 
 __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
@@ -861,7 +885,7 @@ __device__ __forceinline__ ushort2 vectorize16(uint32_t x)
 	return result;
 }
 
-#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+
 
 
 static __device__ __forceinline__ uint4 mul4(uint4 a)

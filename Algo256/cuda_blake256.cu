@@ -72,7 +72,6 @@ static const uint32_t  c_u256[16] = {
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
 }
 
-//#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
 #define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 #define hostGS(a,b,c,d,x) { \
 	const uint8_t idx1 = c_sigma[r][x]; \

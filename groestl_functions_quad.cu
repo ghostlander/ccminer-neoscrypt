@@ -162,9 +162,9 @@ __device__ __forceinline__ void G256_ShiftBytesP_quad(uint32_t &x7, uint32_t &x6
 {
     uint32_t t0,t1;
 
-	uint32_t tpos = threadIdx.x & 0x03;
-	uint32_t shift1 = tpos << 1;
-	uint32_t shift2 = shift1 + 1 + ((tpos == 3) << 2);
+	const uint32_t tpos = threadIdx.x & 0x03;
+	const uint32_t shift1 = tpos << 1;
+	const uint32_t shift2 = shift1 + 1 + ((tpos == 3) << 2);
 
     t0 = __byte_perm(x0, 0, 0x1010)>>shift1;
     t1 = __byte_perm(x0, 0, 0x3232)>>shift2;
@@ -203,9 +203,9 @@ __device__ __forceinline__ void G256_ShiftBytesQ_quad(uint32_t &x7, uint32_t &x6
 {
     uint32_t t0,t1;
 
-	uint32_t tpos = threadIdx.x & 0x03;
-	uint32_t shift1 = (1 - (tpos >> 1)) + ((tpos & 0x01) << 2);
-	uint32_t shift2 = shift1 + 2 + ((tpos == 1) << 2);
+	const uint32_t tpos = threadIdx.x & 0x03;
+	const uint32_t shift1 = (1 - (tpos >> 1)) + ((tpos & 0x01) << 2);
+	const uint32_t shift2 = shift1 + 2 + ((tpos == 1) << 2);
 
     t0 = __byte_perm(x0, 0, 0x1010)>>shift1;
     t1 = __byte_perm(x0, 0, 0x3232)>>shift2;
