@@ -84,26 +84,26 @@ const uint32_t *const __restrict__ sharedMemory,
 const uint32_t x0, const uint32_t x1, const uint32_t x2, const uint32_t x3, const uint32_t k0,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3 )
 {
-	const uint32_t a0 = (uint32_t)&sharedMemory[0];
-	y0 = *(uint32_t *)(bfi(x0, a0, 2, 8));
-	y1 = *(uint32_t *)(bfi(x1, a0, 2, 8));
-	y2 = *(uint32_t *)(bfi(x2, a0, 2, 8));
-	y3 = *(uint32_t *)(bfi(x3, a0, 2, 8));
+	const uint32_t a0 = (uint32_t) &sharedMemory[0];
+	y0 = *(uint32_t *)(bfi(x0, a0, 2, 8))
+		^ sharedMemory[bfe(x1, 8, 8) + 256]
+		^ sharedMemory[bfe(x2, 16, 8) + 512]
+		^ sharedMemory[(x3>>24) + 768]^k0;
 
-	y0 = y0 ^ sharedMemory[bfe(x1, 8, 8) + 256];
-	y1 = y1^sharedMemory[bfe(x2, 8, 8) + 256];
-	y2 = y2 ^sharedMemory[bfe(x0, 16, 8) + 512];
-	y3 = y3 ^ sharedMemory[bfe(x0, 8, 8) + 256];
+	y1 = *(uint32_t *)(bfi(x1, a0, 2, 8))
+		^sharedMemory[bfe(x2, 8, 8) + 256]
+		^sharedMemory[bfe(x3, 16, 8) + 512]
+	    ^sharedMemory[(x0>>24) + 768];
 
-	y0 = y0 ^ sharedMemory[bfe(x2, 16, 8) + 512];
-	y1 = y1^sharedMemory[(x0 >> 24) + 768];
-	y2 = y2 ^sharedMemory[(x1 >> 24) + 768];
-	y3 = y3 ^ sharedMemory[bfe(x1, 16, 8) + 512];
+	y2 = *(uint32_t *)(bfi(x2, a0, 2, 8))
+	   ^sharedMemory[bfe(x3, 8, 8) + 256]
+	   ^sharedMemory[bfe(x0, 16, 8) + 512]
+	   ^sharedMemory[(x1>>24) + 768];
 
-	y0 = y0 ^ sharedMemory[(x3 >> 24) + 768]^k0;
-	y1 = y1^sharedMemory[bfe(x3, 16, 8) + 512];
-	y2 = y2 ^sharedMemory[bfe(x3, 8, 8) + 256];
-	y3 = y3 ^ sharedMemory[(x2 >> 24) + 768];
+	y3 = *(uint32_t *)(bfi(x3, a0, 2, 8))
+	   ^ sharedMemory[bfe(x0, 8, 8) + 256]
+	   ^ sharedMemory[bfe(x1, 16, 8) + 512]
+	   ^ sharedMemory[(x2>>24) + 768];
 }
 
 __device__ __forceinline__
@@ -114,24 +114,24 @@ const uint32_t x0, const uint32_t x1, const uint32_t x2, const uint32_t x3,
 {
 
 	const uint32_t a0 = (uint32_t)&sharedMemory[0];
-	y0 = *(uint32_t *)(bfi(x0, a0, 2, 8));
-	y1 = *(uint32_t *)(bfi(x1, a0, 2, 8));
-	y2 = *(uint32_t *)(bfi(x2, a0, 2, 8));
-	y3 = *(uint32_t *)(bfi(x3, a0, 2, 8));
+	y0 = *(uint32_t *)(bfi(x0, a0, 2, 8))
+		^ sharedMemory[bfe(x1, 8, 8) + 256]
+		^ sharedMemory[bfe(x2, 16, 8) + 512]
+		^ sharedMemory[(x3 >> 24) + 768];
 
-	y0 = y0 ^ sharedMemory[bfe(x1, 8, 8) + 256];
-	y1 = y1^sharedMemory[bfe(x2, 8, 8) + 256];
-	y2 = y2 ^sharedMemory[bfe(x0, 16, 8) + 512];
-	y3 = y3 ^ sharedMemory[bfe(x0, 8, 8) + 256];
+	y1 = *(uint32_t *)(bfi(x1, a0, 2, 8))
+		^ sharedMemory[bfe(x2, 8, 8) + 256]
+		^ sharedMemory[bfe(x3, 16, 8) + 512]
+		^ sharedMemory[(x0 >> 24) + 768];
 
-	y0 = y0 ^ sharedMemory[bfe(x2, 16, 8) + 512];
-	y1 = y1^sharedMemory[(x0 >> 24) + 768];
-	y2 = y2 ^sharedMemory[(x1 >> 24) + 768];
-	y3 = y3 ^ sharedMemory[bfe(x1, 16, 8) + 512];
+	y2 = *(uint32_t *)(bfi(x2, a0, 2, 8))
+		^ sharedMemory[bfe(x3, 8, 8) + 256]
+		^ sharedMemory[bfe(x0, 16, 8) + 512]
+		^ sharedMemory[(x1 >> 24) + 768];
 
-	y0 = y0 ^ sharedMemory[(x3 >> 24) + 768];
-	y1 = y1^sharedMemory[bfe(x3, 16, 8) + 512];
-	y2 = y2 ^sharedMemory[bfe(x3, 8, 8) + 256];
-	y3 = y3 ^ sharedMemory[(x2 >> 24) + 768];
+	y3 = *(uint32_t *)(bfi(x3, a0, 2, 8))
+		^ sharedMemory[bfe(x0, 8, 8) + 256]
+		^ sharedMemory[bfe(x1, 16, 8) + 512]
+		^ sharedMemory[(x2 >> 24) + 768];
 }
 
