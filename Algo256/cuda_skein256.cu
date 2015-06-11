@@ -5,14 +5,14 @@
 __forceinline__ __device__
 void Round512v35(uint2 &p0, uint2 &p1, uint2 &p2, uint2 &p3, uint2 &p4, uint2 &p5, uint2 &p6, uint2 &p7, const int ROT1, const int ROT2, const int ROT3, const int ROT4)
 {
-	p0 += p1; p1 = ROL2(p1, ROT1);  p1 ^= p0;
-	p2 += p3; p3 = ROL2(p3, ROT2);  p3 ^= p2;
-	p4 += p5; p5 = ROL2(p5, ROT3);  p5 ^= p4;
-	p6 += p7; p7 = ROL2(p7, ROT4);  p7 ^= p6;
+	p0 += p1; p1 = ROL2(p1, ROT1) ^ p0;
+	p2 += p3; p3 = ROL2(p3, ROT2) ^ p2;
+	p4 += p5; p5 = ROL2(p5, ROT3) ^ p4;
+	p6 += p7; p7 = ROL2(p7, ROT4) ^ p6;
 }
 
 __forceinline__ __device__
-void Round_8_512v35(uint2 *ks, uint2 *ts,
+void Round_8_512v35(const uint2 *const __restrict__ ks, const uint2 *const __restrict__ ts,
                     uint2 &p0, uint2 &p1, uint2 &p2, uint2 &p3,
                     uint2 &p4, uint2 &p5, uint2 &p6, uint2 &p7, int R)
 {
@@ -20,33 +20,75 @@ void Round_8_512v35(uint2 *ks, uint2 *ts,
 	Round512v35(p2, p1, p4, p7, p6, p5, p0, p3, 33, 27, 14, 42);
 	Round512v35(p4, p1, p6, p3, p0, p5, p2, p7, 17, 49, 36, 39);
 	Round512v35(p6, p1, p0, p7, p2, p5, p4, p3, 44, 9, 54, 56);
-	p0 += ks[((R)+0) % 9];   /* inject the key schedule value */
-	p1 += ks[((R)+1) % 9];
-	p2 += ks[((R)+2) % 9];
-	p3 += ks[((R)+3) % 9];
-	p4 += ks[((R)+4) % 9];
-	p5 += ks[((R)+5) % 9] + ts[((R)+0) % 3];
-	p6 += ks[((R)+6) % 9] + ts[((R)+1) % 3];
-	p7 += ks[((R)+7) % 9] + make_uint2((R),0);
+	p0 += ks[(R+0) % 9];   /* inject the key schedule value */
+	p1 += ks[(R+1) % 9];
+	p2 += ks[(R+2) % 9];
+	p3 += ks[(R+3) % 9];
+	p4 += ks[(R+4) % 9];
+	p5 += ks[(R+5) % 9] + ts[(R+0) % 3];
+	p6 += ks[(R+6) % 9] + ts[(R+1) % 3];
+	p7 += ks[(R+7) % 9] + make_uint2(R,0);
 	Round512v35(p0, p1, p2, p3, p4, p5, p6, p7, 39, 30, 34, 24);
 	Round512v35(p2, p1, p4, p7, p6, p5, p0, p3, 13, 50, 10, 17);
 	Round512v35(p4, p1, p6, p3, p0, p5, p2, p7, 25, 29, 39, 43);
 	Round512v35(p6, p1, p0, p7, p2, p5, p4, p3, 8, 35, 56, 22);
-	p0 += ks[((R)+1) % 9];   /* inject the key schedule value */
-	p1 += ks[((R)+2) % 9];
-	p2 += ks[((R)+3) % 9];
-	p3 += ks[((R)+4) % 9];
-	p4 += ks[((R)+5) % 9];
-	p5 += ks[((R)+6) % 9] + ts[((R)+1) % 3];
-	p6 += ks[((R)+7) % 9] + ts[((R)+2) % 3];
-	p7 += ks[((R)+8) % 9] + make_uint2((R)+1, 0);
+	p0 += ks[(R+1) % 9];   /* inject the key schedule value */
+	p1 += ks[(R+2) % 9];
+	p2 += ks[(R+3) % 9];
+	p3 += ks[(R+4) % 9];
+	p4 += ks[(R+5) % 9];
+	p5 += ks[(R+6) % 9] + ts[(R+1) % 3];
+	p6 += ks[(R+7) % 9] + ts[(R+2) % 3];
+	p7 += ks[(R+8) % 9] + make_uint2(R+1, 0);
 }
 
+__forceinline__ __device__
+void Round_8_512v35_final(const uint2 *const __restrict__ ks, const uint2 *const __restrict__ ts,
+uint2 &p0, uint2 &p1, uint2 &p2, uint2 &p3,
+uint2 &p4, uint2 &p5, uint2 &p6, uint2 &p7)
+{
+	Round512v35(p0, p1, p2, p3, p4, p5, p6, p7, 46, 36, 19, 37);
+	Round512v35(p2, p1, p4, p7, p6, p5, p0, p3, 33, 27, 14, 42);
+	Round512v35(p4, p1, p6, p3, p0, p5, p2, p7, 17, 49, 36, 39);
+	Round512v35(p6, p1, p0, p7, p2, p5, p4, p3, 44, 9, 54, 56);
+	p0 += ks[8];   /* inject the key schedule value */
+	p1 += ks[0];
+	p2 += ks[1];
+	p3 += ks[2];
+	p4 += ks[3];
+	p5 += ks[4] + ts[2];
+	p6 += ks[5] + ts[0];
+	p7 += ks[6] + make_uint2(17, 0);
+	Round512v35(p0, p1, p2, p3, p4, p5, p6, p7, 39, 30, 34, 24);
+	Round512v35(p2, p1, p4, p7, p6, p5, p0, p3, 13, 50, 10, 17);
+	Round512v35(p4, p1, p6, p3, p0, p5, p2, p7, 25, 29, 39, 43);
+	Round512v35(p6, p1, p0, p7, p2, p5, p4, p3, 8, 35, 56, 22);
+	p0 += ks[0];   /* inject the key schedule value */
+	p1 += ks[1];
+	p2 += ks[2];
+	p3 += ks[3];
+}
 
 __global__ __launch_bounds__(256,3)
 void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	const	uint2 vSKEIN_IV512_256[8] = {
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+
+	if (thread < threads)
+	{
+		const uint2 skein_ks_parity = { 0xA9FC1A22, 0x1BD11BDA };
+		const uint2 t12[6] =
+		{
+			{ 0x20, 0 },
+			{ 0, 0xf0000000 },
+			{ 0x20, 0xf0000000 },
+			{ 0x08, 0 },
+			{ 0, 0xff000000 },
+			{ 0x08, 0xff000000 }
+		};
+
+		uint2 h[9] =
+		{
 			{ 0x2FDB3E13, 0xCCD044A1 },
 			{ 0x1A79A9EB, 0xE8359030 },
 			{ 0x4F816E6F, 0x55AEA061 },
@@ -54,36 +96,11 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 			{ 0x74DD7683, 0xEC06025E },
 			{ 0xC4746251, 0xE7A436CD },
 			{ 0x393AD185, 0xC36FBAF9 },
-			{ 0x33EDFC13, 0x3EEDBA18 }
-	};
-	const uint2 skein_ks_parity = { 0xA9FC1A22, 0x1BD11BDA };
-	const uint2 t12[6] = {
-			{ 0x20, 0 },
-			{ 0, 0xf0000000 },
-			{ 0x20, 0xf0000000 },
-			{ 0x08, 0 },
-			{ 0, 0xff000000 },
-			{ 0x08, 0xff000000 }
-	};
-
-
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint2 h[9];
-		uint2 t[3];
+			{ 0x33EDFC13, 0x3EEDBA18 },
+			{ 0xC73A4E2A, 0xB69D3CFC }
+		};
 		uint2 dt0,dt1,dt2,dt3;
 		uint2 p0, p1, p2, p3, p4, p5, p6, p7;
-
-		h[8] = skein_ks_parity;
-		for (int i = 0; i<8; i++) {
-			h[i] = vSKEIN_IV512_256[i];
-			h[8] ^= h[i];
-		}
-
-		t[0]=t12[0];
-		t[1]=t12[1];
-		t[2]=t12[2];
 
 		LOHI(dt0.x,dt0.y,outputHash[thread]);
 		LOHI(dt1.x,dt1.y,outputHash[threads+thread]);
@@ -95,13 +112,14 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 		p2 = h[2] + dt2;
 		p3 = h[3] + dt3;
 		p4 = h[4];
-		p5 = h[5] + t[0];
-		p6 = h[6] + t[1];
+		p5 = h[5] + t12[0];
+		p6 = h[6] + t12[1];
 		p7 = h[7];
 
 		#pragma unroll
-		for (int i = 1; i<19; i+=2) {
-			Round_8_512v35(h,t,p0,p1,p2,p3,p4,p5,p6,p7,i);
+		for (int i = 1; i<19; i+=2)
+		{
+			Round_8_512v35(h,t12,p0,p1,p2,p3,p4,p5,p6,p7,i);
 		}
 
 		p0 ^= dt0;
@@ -117,24 +135,18 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 		h[5] = p5;
 		h[6] = p6;
 		h[7] = p7;
-		h[8] = skein_ks_parity;
+		h[8] = skein_ks_parity ^ h[0] ^ h[1] ^ h[2] ^ h[3] ^ h[4] ^ h[5] ^ h[6] ^ h[7];
 
-		#pragma unroll 8
-		for (int i = 0; i<8; i++) {
-			h[8] ^= h[i];
-		}
-
-		t[0] = t12[3];
-		t[1] = t12[4];
-		t[2] = t12[5];
-		p5 += t[0];  //p5 already equal h[5]
-		p6 += t[1];
+		const uint2 *t = t12+3;
+		p5 += t12[3];  //p5 already equal h[5]
+		p6 += t12[4];
 
 		#pragma unroll
-		for (int i = 1; i<19; i+=2) {
+		for (int i = 1; i<17; i+=2)
+		{
 			Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, i);
 		}
-
+		Round_8_512v35_final(h, t, p0, p1, p2, p3, p4, p5, p6, p7);
 		outputHash[thread]           = devectorize(p0);
 		outputHash[threads+thread]   = devectorize(p1);
 		outputHash[2*threads+thread] = devectorize(p2);
@@ -156,7 +168,7 @@ void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, ui
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	skein256_gpu_hash_32<<<grid, block>>>(threads, startNounce, d_outputHash);
+	skein256_gpu_hash_32<<<grid, block, 0, gpustream[thr_id]>>>(threads, startNounce, d_outputHash);
 
 }
 

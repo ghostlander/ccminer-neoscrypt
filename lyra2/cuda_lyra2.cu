@@ -28,10 +28,13 @@ static __device__ __forceinline__ void round_lyra_v35(uint2 *s)
 
 __device__ __forceinline__ void reduceDuplexRowSetup(const int rowIn, const int rowInOut, const int rowOut, uint2 state[16], uint2 Matrix[96][8])
 { 
-
-	for (int i = 0; i < 8*12; i+=12)
+#if __CUDA_ARCH__ > 500
+	#pragma unroll
+	for (int i = 0; i < 8 * 12; i += 12)
+#else
+	for (int i = 0; i < 8 * 12; i += 12)
+#endif	
 	{
-		#pragma unroll
 		for (int j = 0; j < 12; j++)
 			state[j] ^= Matrix[i + j][rowIn] + Matrix[i + j][rowInOut];
 		round_lyra_v35(state);
