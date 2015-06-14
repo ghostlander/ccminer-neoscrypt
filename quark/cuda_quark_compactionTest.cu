@@ -14,12 +14,12 @@ static uint32_t *d_partSum[2][MAX_GPUS]; // fuer bis zu vier partielle Summen
 // True/False tester
 typedef uint32_t(*cuda_compactTestFunction_t)(uint32_t *inpHash);
 
-__device__ uint32_t QuarkTrueTest(uint32_t *inpHash)
+__device__ __forceinline__ uint32_t QuarkTrueTest(uint32_t *inpHash)
 {
 	return ((inpHash[0] & 0x08) == 0x08);
 }
 
-__device__ uint32_t QuarkFalseTest(uint32_t *inpHash)
+__device__ __forceinline__ uint32_t QuarkFalseTest(uint32_t *inpHash)
 {
 	return ((inpHash[0] & 0x08) == 0);
 }
@@ -240,7 +240,7 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t thread
 	int orgThreads = threads;
 	threads = (int)quark_compactTest_roundUpExp((uint32_t)threads);
 	// threadsPerBlock ausrechnen
-	int blockSize = 256;
+	int blockSize = 1024;
 	int nSummen = threads / blockSize;
 
 	int thr1 = (threads+blockSize-1) / blockSize;
