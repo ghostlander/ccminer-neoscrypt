@@ -240,7 +240,7 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t thread
 	int orgThreads = threads;
 	threads = (int)quark_compactTest_roundUpExp((uint32_t)threads);
 	// threadsPerBlock ausrechnen
-	int blockSize = 1024;
+	int blockSize = 512;
 	int nSummen = threads / blockSize;
 
 	int thr1 = (threads+blockSize-1) / blockSize;
