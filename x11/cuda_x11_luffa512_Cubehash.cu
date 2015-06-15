@@ -574,185 +574,224 @@ void finalization512(uint32_t *statebuffer, uint32_t *statechainv, uint32_t *b)
     }
 }
 
-__device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
-{
-	int r;
-	int j;
-	int k;
-	int l;
-	int m;
 
-	#pragma unroll 1
-	for (r = 0; r < CUBEHASH_ROUNDS; ++r) {
+__constant__ uint32_t CUBEHASH_IV512[] = {
+	SPH_C32(0x2AEA2A61), SPH_C32(0x50F494D4), SPH_C32(0x2D538B8B),
+	SPH_C32(0x4167D83E), SPH_C32(0x3FEE2313), SPH_C32(0xC701CF8C),
+	SPH_C32(0xCC39968E), SPH_C32(0x50AC5695), SPH_C32(0x4D42C787),
+	SPH_C32(0xA647A8B3), SPH_C32(0x97CF0BEF), SPH_C32(0x825B4537),
+	SPH_C32(0xEEF864D2), SPH_C32(0xF22090C4), SPH_C32(0xD0E5CD33),
+	SPH_C32(0xA23911AE), SPH_C32(0xFCD398D9), SPH_C32(0x148FE485),
+	SPH_C32(0x1B017BEF), SPH_C32(0xB6444532), SPH_C32(0x6A536159),
+	SPH_C32(0x2FF5781C), SPH_C32(0x91FA7934), SPH_C32(0x0DBADEA9),
+	SPH_C32(0xD65C8A2B), SPH_C32(0xA5A70E75), SPH_C32(0xB1C62456),
+	SPH_C32(0xBC796576), SPH_C32(0x1921C8F7), SPH_C32(0xE7989AF1),
+	SPH_C32(0x7795D246), SPH_C32(0xD43E3B44)
+};
 
-		/* "add x_0jklm into x_1jklmn modulo 2^32" */
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (l = 0; l < 2; ++l)
-#pragma unroll 2
-					for (m = 0; m < 2; ++m)
-						x[1][j][k][l][m] += x[0][j][k][l][m];
+#define ROUND_EVEN   \
+		xg = (x0 + xg); \
+		x0 = ROTL32(x0, 7); \
+		xh = (x1 + xh); \
+		x1 = ROTL32(x1, 7); \
+		xi = (x2 + xi); \
+		x2 = ROTL32(x2, 7); \
+		xj = (x3 + xj); \
+		x3 = ROTL32(x3, 7); \
+		xk = (x4 + xk); \
+		x4 = ROTL32(x4, 7); \
+		xl = (x5 + xl); \
+		x5 = ROTL32(x5, 7); \
+		xm = (x6 + xm); \
+		x6 = ROTL32(x6, 7); \
+		xn = (x7 + xn); \
+		x7 = ROTL32(x7, 7); \
+		xo = (x8 + xo); \
+		x8 = ROTL32(x8, 7); \
+		xp = (x9 + xp); \
+		x9 = ROTL32(x9, 7); \
+		xq = (xa + xq); \
+		xa = ROTL32(xa, 7); \
+		xr = (xb + xr); \
+		xb = ROTL32(xb, 7); \
+		xs = (xc + xs); \
+		xc = ROTL32(xc, 7); \
+		xt = (xd + xt); \
+		xd = ROTL32(xd, 7); \
+		xu = (xe + xu); \
+		xe = ROTL32(xe, 7); \
+		xv = (xf + xv); \
+		xf = ROTL32(xf, 7); \
+		x8 ^= xg; \
+		x9 ^= xh; \
+		xa ^= xi; \
+		xb ^= xj; \
+		xc ^= xk; \
+		xd ^= xl; \
+		xe ^= xm; \
+		xf ^= xn; \
+		x0 ^= xo; \
+		x1 ^= xp; \
+		x2 ^= xq; \
+		x3 ^= xr; \
+		x4 ^= xs; \
+		x5 ^= xt; \
+		x6 ^= xu; \
+		x7 ^= xv; \
+		xi = (x8 + xi); \
+		x8 = ROTL32(x8, 11); \
+		xj = (x9 + xj); \
+		x9 = ROTL32(x9, 11); \
+		xg = (xa + xg); \
+		xa = ROTL32(xa, 11); \
+		xh = (xb + xh); \
+		xb = ROTL32(xb, 11); \
+		xm = (xc + xm); \
+		xc = ROTL32(xc, 11); \
+		xn = (xd + xn); \
+		xd = ROTL32(xd, 11); \
+		xk = (xe + xk); \
+		xe = ROTL32(xe, 11); \
+		xl = (xf + xl); \
+		xf = ROTL32(xf, 11); \
+		xq = (x0 + xq); \
+		x0 = ROTL32(x0, 11); \
+		xr = (x1 + xr); \
+		x1 = ROTL32(x1, 11); \
+		xo = (x2 + xo); \
+		x2 = ROTL32(x2, 11); \
+		xp = (x3 + xp); \
+		x3 = ROTL32(x3, 11); \
+		xu = (x4 + xu); \
+		x4 = ROTL32(x4, 11); \
+		xv = (x5 + xv); \
+		x5 = ROTL32(x5, 11); \
+		xs = (x6 + xs); \
+		x6 = ROTL32(x6, 11); \
+		xt = (x7 + xt); \
+		x7 = ROTL32(x7, 11); \
+		xc ^= xi; \
+		xd ^= xj; \
+		xe ^= xg; \
+		xf ^= xh; \
+		x8 ^= xm; \
+		x9 ^= xn; \
+		xa ^= xk; \
+		xb ^= xl; \
+		x4 ^= xq; \
+		x5 ^= xr; \
+		x6 ^= xo; \
+		x7 ^= xp; \
+		x0 ^= xu; \
+		x1 ^= xv; \
+		x2 ^= xs; \
+		x3 ^= xt; 
 
-		/* "rotate x_0jklm upwards by 7 bits" */
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (l = 0; l < 2; ++l)
-#pragma unroll 2
-					for (m = 0; m < 2; ++m)
-						x[0][j][k][l][m] = ROTATEUPWARDS7(x[0][j][k][l][m]);
+#define ROUND_ODD    \
+		xj = (xc + xj); \
+		xc = ROTL32(xc, 7); \
+		xi = (xd + xi); \
+		xd = ROTL32(xd, 7); \
+		xh = (xe + xh); \
+		xe = ROTL32(xe, 7); \
+		xg = (xf + xg); \
+		xf = ROTL32(xf, 7); \
+		xn = (x8 + xn); \
+		x8 = ROTL32(x8, 7); \
+		xm = (x9 + xm); \
+		x9 = ROTL32(x9, 7); \
+		xl = (xa + xl); \
+		xa = ROTL32(xa, 7); \
+		xk = (xb + xk); \
+		xb = ROTL32(xb, 7); \
+		xr = (x4 + xr); \
+		x4 = ROTL32(x4, 7); \
+		xq = (x5 + xq); \
+		x5 = ROTL32(x5, 7); \
+		xp = (x6 + xp); \
+		x6 = ROTL32(x6, 7); \
+		xo = (x7 + xo); \
+		x7 = ROTL32(x7, 7); \
+		xv = (x0 + xv); \
+		x0 = ROTL32(x0, 7); \
+		xu = (x1 + xu); \
+		x1 = ROTL32(x1, 7); \
+		xt = (x2 + xt); \
+		x2 = ROTL32(x2, 7); \
+		xs = (x3 + xs); \
+		x3 = ROTL32(x3, 7); \
+		x4 ^= xj; \
+		x5 ^= xi; \
+		x6 ^= xh; \
+		x7 ^= xg; \
+		x0 ^= xn; \
+		x1 ^= xm; \
+		x2 ^= xl; \
+		x3 ^= xk; \
+		xc ^= xr; \
+		xd ^= xq; \
+		xe ^= xp; \
+		xf ^= xo; \
+		x8 ^= xv; \
+		x9 ^= xu; \
+		xa ^= xt; \
+		xb ^= xs; \
+		xh = (x4 + xh); \
+		x4 = ROTL32(x4, 11); \
+		xg = (x5 + xg); \
+		x5 = ROTL32(x5, 11); \
+		xj = (x6 + xj); \
+		x6 = ROTL32(x6, 11); \
+		xi = (x7 + xi); \
+		x7 = ROTL32(x7, 11); \
+		xl = (x0 + xl); \
+		x0 = ROTL32(x0, 11); \
+		xk = (x1 + xk); \
+		x1 = ROTL32(x1, 11); \
+		xn = (x2 + xn); \
+		x2 = ROTL32(x2, 11); \
+		xm = (x3 + xm); \
+		x3 = ROTL32(x3, 11); \
+		xp = (xc + xp); \
+		xc = ROTL32(xc, 11); \
+		xo = (xd + xo); \
+		xd = ROTL32(xd, 11); \
+		xr = (xe + xr); \
+		xe = ROTL32(xe, 11); \
+		xq = (xf + xq); \
+		xf = ROTL32(xf, 11); \
+		xt = (x8 + xt); \
+		x8 = ROTL32(x8, 11); \
+		xs = (x9 + xs); \
+		x9 = ROTL32(x9, 11); \
+		xv = (xa + xv); \
+		xa = ROTL32(xa, 11); \
+		xu = (xb + xu); \
+		xb = ROTL32(xb, 11); \
+		x0 ^= xh; \
+		x1 ^= xg; \
+		x2 ^= xj; \
+		x3 ^= xi; \
+		x4 ^= xl; \
+		x5 ^= xk; \
+		x6 ^= xn; \
+		x7 ^= xm; \
+		x8 ^= xp; \
+		x9 ^= xo; \
+		xa ^= xr; \
+		xb ^= xq; \
+		xc ^= xt; \
+		xd ^= xs; \
+		xe ^= xv; \
+		xf ^= xu; 
 
-		/* "swap x_00klm with x_01klm" */
-#pragma unroll 2
-		for (k = 0; k < 2; ++k)
-#pragma unroll 2
-			for (l = 0; l < 2; ++l)
-#pragma unroll 2
-				for (m = 0; m < 2; ++m)
-					SWAP(x[0][0][k][l][m], x[0][1][k][l][m])
-
-					/* "xor x_1jklm into x_0jklm" */
-#pragma unroll 2
-					for (j = 0; j < 2; ++j)
-#pragma unroll 2
-						for (k = 0; k < 2; ++k)
-#pragma unroll 2
-							for (l = 0; l < 2; ++l)
-#pragma unroll 2
-								for (m = 0; m < 2; ++m)
-									x[0][j][k][l][m] ^= x[1][j][k][l][m];
-
-		/* "swap x_1jk0m with x_1jk1m" */
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (m = 0; m < 2; ++m)
-					SWAP(x[1][j][k][0][m], x[1][j][k][1][m])
-
-					/* "add x_0jklm into x_1jklm modulo 2^32" */
-#pragma unroll 2
-					for (j = 0; j < 2; ++j)
-#pragma unroll 2
-						for (k = 0; k < 2; ++k)
-#pragma unroll 2
-							for (l = 0; l < 2; ++l)
-#pragma unroll 2
-								for (m = 0; m < 2; ++m)
-									x[1][j][k][l][m] += x[0][j][k][l][m];
-
-		/* "rotate x_0jklm upwards by 11 bits" */
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (l = 0; l < 2; ++l)
-#pragma unroll 2
-					for (m = 0; m < 2; ++m)
-						x[0][j][k][l][m] = ROTATEUPWARDS11(x[0][j][k][l][m]);
-
-		/* "swap x_0j0lm with x_0j1lm" */
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (l = 0; l < 2; ++l)
-#pragma unroll 2
-				for (m = 0; m < 2; ++m)
-					SWAP(x[0][j][0][l][m], x[0][j][1][l][m])
-
-					/* "xor x_1jklm into x_0jklm" */
-#pragma unroll 2
-					for (j = 0; j < 2; ++j)
-#pragma unroll 2
-						for (k = 0; k < 2; ++k)
-#pragma unroll 2
-							for (l = 0; l < 2; ++l)
-#pragma unroll 2
-								for (m = 0; m < 2; ++m)
-									x[0][j][k][l][m] ^= x[1][j][k][l][m];
-
-		/* "swap x_1jkl0 with x_1jkl1" */
-#pragma unroll 2
-		for (j = 0; j < 2; ++j)
-#pragma unroll 2
-			for (k = 0; k < 2; ++k)
-#pragma unroll 2
-				for (l = 0; l < 2; ++l)
-					SWAP(x[1][j][k][l][0], x[1][j][k][l][1])
-
-	}
-}
-
-
-__device__ __forceinline__ void block_tox(uint32_t *in, uint32_t x[2][2][2][2][2])
-{
-	x[0][0][0][0][0] ^= in[0];
-	x[0][0][0][0][1] ^= in[1];
-	x[0][0][0][1][0] ^= in[2];
-	x[0][0][0][1][1] ^= in[3];
-	x[0][0][1][0][0] ^= in[4];
-	x[0][0][1][0][1] ^= in[5];
-	x[0][0][1][1][0] ^= in[6];
-	x[0][0][1][1][1] ^= in[7];
-}
-
-__device__ __forceinline__ void hash_fromx(uint32_t *out, uint32_t x[2][2][2][2][2])
-{
-	int j;
-	int k;
-	int l;
-	int m;
-//	uint32_t *out = hash;
-
-#pragma unroll 2
-	for (j = 0; j < 2; ++j)
-#pragma unroll 2
-		for (k = 0; k < 2; ++k)
-#pragma unroll 2
-			for (l = 0; l < 2; ++l)
-#pragma unroll 2
-				for (m = 0; m < 2; ++m)
-					*out++ = x[0][j][k][l][m];
-}
-
-void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const uint32_t *data)
-{
-	/* "xor the block into the first b bytes of the state" */
-	/* "and then transform the state invertibly through r identical rounds" */
-	block_tox((uint32_t*)data, x);
-	rrounds(x);
-}
-void __device__ __forceinline__ Update32_const(uint32_t x[2][2][2][2][2])
-{
-	x[0][0][0][0][0] ^= 0x80;
-	rrounds(x);
-}
-
-void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
-{
-	int i;
-
-	/* "the integer 1 is xored into the last state word x_11111" */
-	x[1][1][1][1][1] ^= 1;
-
-	/* "the state is then transformed invertibly through 10r identical rounds" */
-//	#pragma unroll 10
-	for (i = 0; i < 10; ++i) rrounds(x);
-
-	/* "output the first h/8 bytes of the state" */
-	hash_fromx(hashval, x);
-}
+#define SIXTEEN_ROUNDS \
+		for (int j = 0; j < 8; j ++) { \
+			ROUND_EVEN; \
+			ROUND_ODD;}
 
 
 /***************************************************/
-// Die Hash-Funktion
 __global__ __launch_bounds__(256, 3)
 void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
@@ -783,35 +822,72 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		finalization512(statebuffer, statechainv, Hash);
 		//Cubehash
 
-		uint32_t x[2][2][2][2][2] =
-		{
-			0x2AEA2A61, 0x50F494D4, 0x2D538B8B,
-			0x4167D83E, 0x3FEE2313, 0xC701CF8C,
-			0xCC39968E, 0x50AC5695, 0x4D42C787,
-			0xA647A8B3, 0x97CF0BEF, 0x825B4537,
-			0xEEF864D2, 0xF22090C4, 0xD0E5CD33,
-			0xA23911AE, 0xFCD398D9, 0x148FE485,
-			0x1B017BEF, 0xB6444532, 0x6A536159,
-			0x2FF5781C, 0x91FA7934, 0x0DBADEA9,
-			0xD65C8A2B, 0xA5A70E75, 0xB1C62456,
-			0xBC796576, 0x1921C8F7, 0xE7989AF1,
-			0x7795D246, 0xD43E3B44
-		};
-		x[0][0][0][0][0] ^= Hash[0];
-		x[0][0][0][0][1] ^= Hash[1];
-		x[0][0][0][1][0] ^= Hash[2];
-		x[0][0][0][1][1] ^= Hash[3];
-		x[0][0][1][0][0] ^= Hash[4];
-		x[0][0][1][0][1] ^= Hash[5];
-		x[0][0][1][1][0] ^= Hash[6];
-		x[0][0][1][1][1] ^= Hash[7];
+//		uint32_t nounce = (startNounce + thread);
+//		int hashPosition = nounce - startNounce;
+//		uint32_t *Hash = &g_hash[16 * hashPosition];
 
-		rrounds(x);
-		Update32(x, &Hash[8]);
-		Update32_const(x);
-		Final(x, Hash);
+		uint32_t x0 = (0x2AEA2A61), x1 = (0x50F494D4), x2 = (0x2D538B8B), x3 = (0x4167D83E);
+		uint32_t x4 = (0x3FEE2313), x5 = (0xC701CF8C), x6 = (0xCC39968E), x7 = (0x50AC5695);
+		uint32_t x8 = (0x4D42C787), x9 = (0xA647A8B3), xa = (0x97CF0BEF), xb = (0x825B4537);
+		uint32_t xc = (0xEEF864D2), xd = (0xF22090C4), xe = (0xD0E5CD33), xf = (0xA23911AE);
+		uint32_t xg = (0xFCD398D9), xh = (0x148FE485), xi = (0x1B017BEF), xj = (0xB6444532);
+		uint32_t xk = (0x6A536159), xl = (0x2FF5781C), xm = (0x91FA7934), xn = (0x0DBADEA9);
+		uint32_t xo = (0xD65C8A2B), xp = (0xA5A70E75), xq = (0xB1C62456), xr = (0xBC796576);
+		uint32_t xs = (0x1921C8F7), xt = (0xE7989AF1), xu = (0x7795D246), xv = (0xD43E3B44);
+
+		x0 ^= Hash[0];
+		x1 ^= Hash[1];
+		x2 ^= Hash[2];
+		x3 ^= Hash[3];
+		x4 ^= Hash[4];
+		x5 ^= Hash[5];
+		x6 ^= Hash[6];
+		x7 ^= Hash[7];
+
+		SIXTEEN_ROUNDS;
+
+		x0 ^= (Hash[8]);
+		x1 ^= (Hash[9]);
+		x2 ^= (Hash[10]);
+		x3 ^= (Hash[11]);
+		x4 ^= (Hash[12]);
+		x5 ^= (Hash[13]);
+		x6 ^= (Hash[14]);
+		x7 ^= (Hash[15]);
+
+		SIXTEEN_ROUNDS;
+		x0 ^= 0x80;
+
+		SIXTEEN_ROUNDS;
+		xv ^= 1;
+
+		for (int i = 3; i < 13; i++)
+		{
+			SIXTEEN_ROUNDS;
+		}
+
+		Hash[0] = x0;
+		Hash[1] = x1;
+		Hash[2] = x2;
+		Hash[3] = x3;
+		Hash[4] = x4;
+		Hash[5] = x5;
+		Hash[6] = x6;
+		Hash[7] = x7;
+		Hash[8] = x8;
+		Hash[9] = x9;
+		Hash[10] = xa;
+		Hash[11] = xb;
+		Hash[12] = xc;
+		Hash[13] = xd;
+		Hash[14] = xe;
+		Hash[15] = xf;
 	}
 }
+
+
+
+
 
 __host__ void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
