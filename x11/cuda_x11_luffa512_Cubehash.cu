@@ -574,21 +574,6 @@ void finalization512(uint32_t *statebuffer, uint32_t *statechainv, uint32_t *b)
     }
 }
 
-
-__constant__ uint32_t CUBEHASH_IV512[] = {
-	SPH_C32(0x2AEA2A61), SPH_C32(0x50F494D4), SPH_C32(0x2D538B8B),
-	SPH_C32(0x4167D83E), SPH_C32(0x3FEE2313), SPH_C32(0xC701CF8C),
-	SPH_C32(0xCC39968E), SPH_C32(0x50AC5695), SPH_C32(0x4D42C787),
-	SPH_C32(0xA647A8B3), SPH_C32(0x97CF0BEF), SPH_C32(0x825B4537),
-	SPH_C32(0xEEF864D2), SPH_C32(0xF22090C4), SPH_C32(0xD0E5CD33),
-	SPH_C32(0xA23911AE), SPH_C32(0xFCD398D9), SPH_C32(0x148FE485),
-	SPH_C32(0x1B017BEF), SPH_C32(0xB6444532), SPH_C32(0x6A536159),
-	SPH_C32(0x2FF5781C), SPH_C32(0x91FA7934), SPH_C32(0x0DBADEA9),
-	SPH_C32(0xD65C8A2B), SPH_C32(0xA5A70E75), SPH_C32(0xB1C62456),
-	SPH_C32(0xBC796576), SPH_C32(0x1921C8F7), SPH_C32(0xE7989AF1),
-	SPH_C32(0x7795D246), SPH_C32(0xD43E3B44)
-};
-
 #define ROUND_EVEN   \
 		xg = (x0 + xg); \
 		x0 = ROTL32(x0, 7); \
@@ -790,9 +775,12 @@ __constant__ uint32_t CUBEHASH_IV512[] = {
 			ROUND_EVEN; \
 			ROUND_ODD;}
 
-
-/***************************************************/
-__global__ __launch_bounds__(256, 3)
+__global__
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(256, 4)
+#else
+__launch_bounds__(256, 3)
+#endif
 void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -821,10 +809,6 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		Update512(statebuffer, statechainv, Hash);
 		finalization512(statebuffer, statechainv, Hash);
 		//Cubehash
-
-//		uint32_t nounce = (startNounce + thread);
-//		int hashPosition = nounce - startNounce;
-//		uint32_t *Hash = &g_hash[16 * hashPosition];
 
 		uint32_t x0 = (0x2AEA2A61), x1 = (0x50F494D4), x2 = (0x2D538B8B), x3 = (0x4167D83E);
 		uint32_t x4 = (0x3FEE2313), x5 = (0xC701CF8C), x6 = (0xCC39968E), x7 = (0x50AC5695);
@@ -884,10 +868,6 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		Hash[15] = xf;
 	}
 }
-
-
-
-
 
 __host__ void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
