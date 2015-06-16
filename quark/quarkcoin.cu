@@ -143,7 +143,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	uint32_t intensity = (device_sm[device_map[thr_id]] > 500) ? 1 << 24 : 1 << 23;;
+	uint32_t intensity = (device_sm[device_map[thr_id]] > 500) ? 1 << 24 : 1 << 23;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 256*4096
 	throughput = min(throughput, max_nonce - first_nonce);
 
@@ -260,8 +260,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][0]);
 			}
 		}
-
 		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces2[thr_id][0]);
+
 		if (foundnonces2[thr_id][0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];

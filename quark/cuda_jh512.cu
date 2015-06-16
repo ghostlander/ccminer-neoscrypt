@@ -297,7 +297,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 }
 
 // Die Hash-Funktion
-#define TPB2 512
+#define TPB2 256
 __global__ __launch_bounds__(TPB2, 2)
 void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_found, uint32_t target)
 {
