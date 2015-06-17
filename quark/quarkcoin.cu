@@ -143,7 +143,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	uint32_t intensity = (device_sm[device_map[thr_id]] > 500) ? 1 << 24 : 1 << 23;
+	uint32_t intensity = 1 << 22;
+	intensity = intensity + ((1 << 22)*9/10);
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 256*4096
 	throughput = min(throughput, max_nonce - first_nonce);
 
@@ -154,6 +155,10 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+//		if (opt_n_gputhreads == 1)
+//		{
+//			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+//		}
 
 		// Konstanten kopieren, Speicher belegen
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
