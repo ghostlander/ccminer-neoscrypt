@@ -2513,11 +2513,6 @@ int main(int argc, char *argv[])
 	// number of gpus
 	active_gpus = cuda_num_devices();
 
-	for (int i = 0; i < active_gpus;i++)
-	{
-		cudaSetDevice(i);
-		cuda_devicereset();
-	}
 
 	if (active_gpus > 1)
 	{
