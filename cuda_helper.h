@@ -626,6 +626,19 @@ __device__ __inline__ uint2 ROR2(const uint2 v, const int n)
 
 
 
+__device__ __inline__ uint32_t ROL8(const uint32_t x)
+{
+	return __byte_perm(x, x, 0x2103);
+}
+__device__ __inline__ uint32_t ROL16(const uint32_t x)
+{
+	return __byte_perm(x, x, 0x1032);
+}
+__device__ __inline__ uint32_t ROL24(const uint32_t x)
+{
+	return __byte_perm(x, x, 0x0321);
+}
+
 __device__ __inline__ uint2 ROR8(const uint2 a)
 {
 	uint2 result;

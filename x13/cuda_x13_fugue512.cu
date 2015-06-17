@@ -477,24 +477,24 @@ __constant__ uint32_t mixTab3Tex[] = {
 		uint32_t tmp2 = __byte_perm((c0 ^ r0),(c1 ^ r1), 0x3636);\
 		tmp= __byte_perm((c2 ^ r2),(c3 ^ r3), 0x1414); \
 		x0 = __byte_perm(tmp2,tmp, 0x3254);\
-		r0 = ROTL32(r0, 8); \
-		r1 = ROTL32(r1, 8); \
-		r2 = ROTL32(r2, 8); \
-		r3 = ROTL32(r3, 8); \
+		r0 = ROL8(r0); \
+		r1 = ROL8(r1); \
+		r2 = ROL8(r2); \
+		r3 = ROL8(r3); \
 		tmp2 = __byte_perm((c1 ^ r0),(c2 ^ r1), 0x3636);\
 		tmp= __byte_perm((c3 ^ r2),(c0 ^ r3), 0x1414); \
 		x1 = __byte_perm(tmp2,tmp, 0x3254);\
-		r0 = ROTL32(r0, 8); \
-		r1 = ROTL32(r1, 8); \
-		r2 = ROTL32(r2, 8); \
-		r3 = ROTL32(r3, 8); \
+		r0 = ROL8(r0); \
+		r1 = ROL8(r1); \
+		r2 = ROL8(r2); \
+		r3 = ROL8(r3); \
 		tmp2 = __byte_perm((c2 ^ r0),(c3 ^ r1), 0x3636);\
 		tmp= __byte_perm((c0 ^ r2),(c1 ^ r3), 0x1414); \
 		x2 = __byte_perm(tmp2,tmp, 0x3254);\
-		r0 = ROTL32(r0, 8); \
-		r1 = ROTL32(r1, 8); \
-		r2 = ROTL32(r2, 8); \
-		r3 = ROTL32(r3, 8); \
+		r0 = ROL8(r0); \
+		r1 = ROL8(r1); \
+		r2 = ROL8(r2); \
+		r3 = ROL8(r3); \
 		tmp2 = __byte_perm((c3 ^ r0),(c0 ^ r1), 0x3636);\
 		tmp= __byte_perm((c1 ^ r2),(c2 ^ r3), 0x1414); \
 		x3 = __byte_perm(tmp2,tmp, 0x3254);\
@@ -659,18 +659,18 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *
 		tmp2 = __byte_perm(c0 ^ r0, c1 ^ r1, 13878);
 		tmp = __byte_perm(c2 ^ r2, c3 ^ 0x59947f59UL, 5140);
 		S33 = __byte_perm(tmp2, tmp, 12884);
-		r0 = ROTL32(r0, 8); r1 = ROTL32(r1, 8);
-		r2 = ROTL32(r2, 8);
+		r0 = ROL8(r0); r1 = ROL8(r1);
+		r2 = ROL8(r2);
 		tmp2 = __byte_perm(c1 ^ r0, c2 ^ r1, 13878);
 		tmp = __byte_perm(c3 ^ r2, c0 ^ 0x947f5959UL, 5140);
 		S34 = __byte_perm(tmp2, tmp, 12884);
-		r0 = ROTL32(r0, 8); r1 = ROTL32(r1, 8);
-		r2 = ROTL32(r2, 8);
+		r0 = ROL8(r0); r1 = ROL8(r1);
+		r2 = ROL8(r2);
 		tmp2 = __byte_perm(c2 ^ r0, c3 ^ r1, 13878);
 		tmp = __byte_perm(c0 ^ r2, c1 ^ 0x7f595994UL, 5140);
 		S35 = __byte_perm(tmp2, tmp, 12884);
-		r0 = ROTL32(r0, 8); r1 = ROTL32(r1, 8);
-		r2 = ROTL32(r2, 8);
+		r0 = ROL8(r0); r1 = ROL8(r1);
+		r2 = ROL8(r2);
 		tmp2 = __byte_perm(c3 ^ r0, c0 ^ r1, 13878);
 		tmp = __byte_perm(c1 ^ r2, c2 ^ 0x5959947fUL, 5140);
 		S00 = __byte_perm(tmp2, tmp, 12884);
@@ -865,18 +865,18 @@ void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t start
 		tmp2 = __byte_perm(c0 ^ r0, c1 ^ r1, 13878);
 		tmp = __byte_perm(c2 ^ r2, c3 ^ 0x59947f59UL, 5140);
 		S33 = __byte_perm(tmp2, tmp, 12884);
-		r0 = ROTL32(r0,8); r1 = ROTL32(r1,8);
-		r2 = ROTL32(r2, 8);
+		r0 = ROL8(r0); r1 = ROL8(r1);
+		r2 = ROL8(r2);
 		tmp2 = __byte_perm(c1 ^ r0, c2 ^ r1, 13878);
 		tmp = __byte_perm(c3 ^ r2, c0 ^ 0x947f5959UL, 5140);
 		S34 = __byte_perm(tmp2, tmp, 12884);
-		r0 = ROTL32(r0, 8); r1 = ROTL32(r1, 8);
-		r2 = ROTL32(r2, 8);
+		r0 = ROL8(r0); r1 = ROL8(r1);
+		r2 = ROL8(r2);
 		tmp2 = __byte_perm(c2 ^ r0, c3 ^ r1, 13878);
 		tmp = __byte_perm(c0 ^ r2, c1 ^ 0x7f595994UL, 5140);
 		S35 = __byte_perm(tmp2, tmp, 12884);
-		r0 = ROTL32(r0, 8); r1 = ROTL32(r1, 8);
-		r2 = ROTL32(r2, 8);
+		r0 = ROL8(r0); r1 = ROL8(r1);
+		r2 = ROL8(r2);
 		tmp2 = __byte_perm(c3 ^ r0, c0 ^ r1, 13878);
 		tmp = __byte_perm(c1 ^ r2, c2 ^ 0x5959947fUL, 5140);
 		S00 = __byte_perm(tmp2, tmp, 12884);

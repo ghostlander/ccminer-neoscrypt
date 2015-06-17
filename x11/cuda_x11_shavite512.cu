@@ -1253,9 +1253,9 @@ void shavite_gpu_init(uint32_t *sharedMemory)
 	if (threadIdx.x < 256) {
 		/* each thread startup will fill a uint32 */
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = ROTL32(sharedMemory[threadIdx.x], 8);
-		sharedMemory[threadIdx.x + 512] = ROTL32(sharedMemory[threadIdx.x], 16);
-		sharedMemory[threadIdx.x + 768] = ROTL32(sharedMemory[threadIdx.x], 24);
+		sharedMemory[threadIdx.x + 256] = ROL8(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = ROL16(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 768] = ROL24(sharedMemory[threadIdx.x]);
 //		sharedMemory[threadIdx.x + 64 * 2 ] = d_AES0[threadIdx.x + 64 * 2];
 //		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
 //		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];

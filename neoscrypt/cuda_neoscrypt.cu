@@ -82,7 +82,7 @@ __constant__ uint32_t BLAKE2S_SIGMA[10][16] =
 #define BLAKE2S_KEY_SIZE      32U
 
 
-#if __CUDA_ARCH__ >= 500
+//#if __CUDA_ARCH__ >= 500
 #define BLAKE_G(idx0, idx1, a, b, c, d, key) { \
 idx = BLAKE2S_SIGMA[idx0][idx1]; a += key[idx]; \
     a += b; d = __byte_perm(d^a,0, 0x1032); \
@@ -91,6 +91,9 @@ idx = BLAKE2S_SIGMA[idx0][idx1+1]; a += key[idx]; \
     a += b; d = __byte_perm(d^a,0, 0x0321); \
 	c += d; b = rotateR(b^c, 7); \
 } 
+
+
+/*
 #else 
 #define BLAKE_G(idx0, idx1, a, b, c, d, key) { \
 idx = BLAKE2S_SIGMA[idx0][idx1]; a += key[idx]; \
@@ -101,7 +104,7 @@ idx = BLAKE2S_SIGMA[idx0][idx1+1]; a += key[idx]; \
 	c += d; b = rotateR(b^c, 7); \
 	} 
 #endif
-
+*/
 
 #if __CUDA_ARCH__ >= 500
 #define BLAKE_G_PRE(idx0,idx1, a, b, c, d, key) { \

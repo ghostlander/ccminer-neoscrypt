@@ -1409,9 +1409,9 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 	{
 #if USE_ALL_TABLES
 		sharedMemory[threadIdx.x] = vectorize(mixTob0Tox[threadIdx.x]);
-		sharedMemory[threadIdx.x + 256] = ROL2(sharedMemory[threadIdx.x], 8);
-		sharedMemory[threadIdx.x + 512] = ROL2(sharedMemory[threadIdx.x], 16);
-		sharedMemory[threadIdx.x + 768] = ROL2(sharedMemory[threadIdx.x + 256], 16);
+		sharedMemory[threadIdx.x + 256] = ROL8(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = ROL16(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 768] = ROL16(sharedMemory[threadIdx.x + 256]);
 //		sharedMemory[threadIdx.x + 1024] = SWAPDWORDS2(sharedMemory[threadIdx.x]);
 //		sharedMemory[threadIdx.x + 1280] = SWAPDWORDS2(sharedMemory[threadIdx.x + 256]);
 //		sharedMemory[threadIdx.x + 1536] = SWAPDWORDS2(sharedMemory[threadIdx.x + 512]);

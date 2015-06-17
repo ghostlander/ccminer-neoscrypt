@@ -334,9 +334,9 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 	if (threadIdx.x < 256) 
 	{
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = ROTL32(sharedMemory[threadIdx.x], 8);
-		sharedMemory[threadIdx.x + 512] = ROTL32(sharedMemory[threadIdx.x], 16);
-		sharedMemory[threadIdx.x + 768] = ROTL32(sharedMemory[threadIdx.x], 24);
+		sharedMemory[threadIdx.x + 256] = ROL8(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512] = ROL16(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 768] = ROL24(sharedMemory[threadIdx.x]);
 	}
 }
 
