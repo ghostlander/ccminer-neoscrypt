@@ -149,7 +149,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] =0x4f;
+		((uint32_t*)ptarget)[7] =0x2f;
 
 	if (!init[thr_id])
 	{
@@ -232,6 +232,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			d_branch2Nonces[thr_id], &nrm2);
 		
 		quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces[thr_id][0]);
+		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces2[thr_id][0]);
 
 		if (foundnonces[thr_id][0] != 0xffffffff)
 		{
@@ -245,12 +246,30 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 				int res = 1;
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				// check if there was some other ones...
-				if (foundnonces[thr_id][1] != 0xffffffff)
+				if (foundnonces2[thr_id][0] != 0xffffffff)
+				{
+					const uint32_t Htarg = ptarget[7];
+					uint32_t vhash64[8];
+					be32enc(&endiandata[thr_id][19], foundnonces2[thr_id][0]);
+					quarkhash(vhash64, endiandata[thr_id]);
+
+					if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+					{
+						pdata[21] = foundnonces2[thr_id][0];
+						res++;
+						if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces2[thr_id][0]);
+					}
+					else
+					{
+						if (vhash64[7] != Htarg) // don't show message if it is equal but fails fulltest
+							applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces2[thr_id][0]);
+					}
+				} else	if (foundnonces[thr_id][1] != 0xffffffff)
 				{
 					pdata[21] = foundnonces[thr_id][1];
 					res++;
 					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d: Found second nonce $%08X", thr_id, foundnonces[thr_id][1]);
-				}
+				}				
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nonce $%08X", thr_id, foundnonces[thr_id][0]);
 				pdata[19] = foundnonces[thr_id][0];
 				return res;
@@ -261,7 +280,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][0]);
 			}
 		}
-		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces2[thr_id][0]);
 
 		if (foundnonces2[thr_id][0] != 0xffffffff)
 		{
