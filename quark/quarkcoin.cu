@@ -145,6 +145,8 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	uint32_t intensity = 1 << 22;
 	intensity = intensity + ((1 << 22)*9/10);
+	if (device_sm[device_map[thr_id]] > 500) intensity= 1 << 24;
+
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 256*4096
 	throughput = min(throughput, max_nonce - first_nonce);
 
@@ -171,7 +173,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_blake512_cpu_init(thr_id);
 		quark_keccak512_cpu_init(thr_id);
 		quark_jh512_cpu_init(thr_id);
-
+		CUDA_SAFE_CALL(cudaGetLastError());
 		init[thr_id] = true;
 	}
 
