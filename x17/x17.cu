@@ -252,7 +252,6 @@ extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19],d_hash[thr_id]);
 		x17_sha512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x17_haval256_cpu_hash_64(thr_id, throughput, pdata[19],d_hash[thr_id]);
-	//	MyStreamSynchronize(NULL, 1, thr_id);
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)

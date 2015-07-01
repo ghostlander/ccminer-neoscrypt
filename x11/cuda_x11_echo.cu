@@ -372,7 +372,6 @@ __host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
     dim3 block(threadsperblock);
 
     x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
-	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__ void x11_echo512_cpu_free(int32_t thr_id)
@@ -699,6 +698,5 @@ __host__ void x11_echo512_cpu_hash_64_final(int thr_id, uint32_t threads, uint32
 	cudaMemset(d_found[thr_id], 0xffffffff, 2*sizeof(uint32_t));
 
 	x11_echo512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, (uint64_t*)d_hash, d_found[thr_id], target);
-	//MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(h_found, d_found[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

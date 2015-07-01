@@ -170,7 +170,6 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 				pdata[19] = h_found[thr_id][0];
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, h_found[thr_id][0], vhash64[7], Htarg);
-				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 				return res;
 			}
 			else
