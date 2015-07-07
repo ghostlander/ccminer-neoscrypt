@@ -174,7 +174,7 @@ bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_timeout = 270;
-static int opt_scantime = 10;
+static int opt_scantime = 60;
 static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
