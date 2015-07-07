@@ -70,7 +70,7 @@ __device__ __forceinline__ void reduceDuplex(vectype state[4], uint32_t thread)
 		uint32_t ps1 = (256 * thread);
 		uint32_t ps2 = (memshift * 7 + memshift * 8 + 256 * thread);
 
-#pragma unroll 4
+//#pragma unroll 4
 	for (int i = 0; i < 8; i++)
 	{
         uint32_t s1 = ps1 + i*memshift;
@@ -136,7 +136,7 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 		uint32_t ps3 = (memshift*7  + memshift * 8 * rowOut   + 256 * thread);
 
 
-#pragma unroll 1
+//#pragma unroll 1
 	for (int i = 0; i < 8; i++)
 	{
 		uint32_t s1 = ps1 + i*memshift;
@@ -235,7 +235,7 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 		uint32_t ps2 = (memshift * 8 * rowInOut + 256 * thread);
 		uint32_t ps3 = (memshift * 8 * rowOut + 256 * thread);
 
-#pragma unroll 1
+//#pragma unroll 1
 	for (int i = 0; i < 8; i++)
 	{
 		uint32_t s1 = ps1 + i*memshift;
@@ -357,7 +357,7 @@ __device__ __forceinline__ void reduceDuplexRowtV3(const int rowIn, const int ro
 #if __CUDA_ARCH__ < 500
 __global__	__launch_bounds__(48, 1)
 #elif __CUDA_ARCH__ == 500
-__global__	__launch_bounds__(16, 1)
+__global__	__launch_bounds__(16,1)
 #else
 __global__	__launch_bounds__(TPB, 1)
 #endif
@@ -589,7 +589,7 @@ uint32_t tpb;
 	if (device_sm[device_map[thr_id]]<500) 
       tpb = 48;
 	else if (device_sm[device_map[thr_id]]==500)
-      tpb = 16; 
+      tpb = 8; 
     else 
       tpb = TPB;
 	dim3 grid((threads + tpb - 1) / tpb);
