@@ -1,203 +1,606 @@
+
+
+#include <stdio.h>
 #include <memory.h>
-
-#include "cuda_helper.h"
-
-#define TPB 160
-
+#include "cuda_vector.h"
+#define TPB 8
+//
 
 
-static __device__ __forceinline__
-void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
+
+#if __CUDA_ARCH__ < 500 
+#define vectype ulonglong4
+#define u64type uint64_t
+#define memshift 4
+#elif __CUDA_ARCH__ == 500
+#define u64type uint2
+#define vectype uint28
+#define memshift 3
+#else 
+#define u64type uint2
+#define vectype uint28
+#define memshift 4   
+#endif 
+__device__ vectype  *DMatrix;
+
+ 
+static __device__ __forceinline__ void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
 {
-	a += b; d = SWAPDWORDS2(d ^ a);
-	c += d; b = ROR24(b ^ c);
-	a += b; d = ROR16(d ^ a);
-	c += d; b = ROR2(b ^ c, 63);
-}
-static __device__ __forceinline__ void round_lyra_v35(uint2 *s)
-{
-	Gfunc_v35(s[0], s[4], s[8],  s[12]);
-	Gfunc_v35(s[1], s[5], s[9],  s[13]);
-	Gfunc_v35(s[2], s[6], s[10], s[14]);
-	Gfunc_v35(s[3], s[7], s[11], s[15]);
-	Gfunc_v35(s[0], s[5], s[10], s[15]);
-	Gfunc_v35(s[1], s[6], s[11], s[12]);
-	Gfunc_v35(s[2], s[7], s[8],  s[13]);
-	Gfunc_v35(s[3], s[4], s[9],  s[14]);
+
+	a += b; d ^= a; d = SWAPDWORDS2(d);
+	c += d; b ^= c; b = ROR24(b);
+	a += b; d ^= a; d = ROR16(d);
+	c += d; b ^= c; b = ROR2(b, 63);
+
 }
 
-__device__ __forceinline__ void reduceDuplexRowSetup(const int rowIn, const int rowInOut, const int rowOut, uint2 state[16], uint2 Matrix[96][8])
-{ 
-#if __CUDA_ARCH__ > 500
-	#pragma unroll
-	for (int i = 0; i < 8 * 12; i += 12)
+static __device__ __forceinline__ void Gfunc_v35(unsigned long long & a, unsigned long long &b, unsigned long long &c, unsigned long long &d)
+{
+
+	a += b; d ^= a; d = ROTR64(d, 32);
+	c += d; b ^= c; b = ROTR64(b, 24);
+	a += b; d ^= a; d = ROTR64(d, 16);
+	c += d; b ^= c; b = ROTR64(b, 63);
+
+}
+
+
+static __device__ __forceinline__ void round_lyra_v35(vectype* s)
+{
+
+	Gfunc_v35(s[0].x, s[1].x, s[2].x, s[3].x);
+	Gfunc_v35(s[0].y, s[1].y, s[2].y, s[3].y);
+	Gfunc_v35(s[0].z, s[1].z, s[2].z, s[3].z);
+	Gfunc_v35(s[0].w, s[1].w, s[2].w, s[3].w);
+
+	Gfunc_v35(s[0].x, s[1].y, s[2].z, s[3].w);
+	Gfunc_v35(s[0].y, s[1].z, s[2].w, s[3].x);
+	Gfunc_v35(s[0].z, s[1].w, s[2].x, s[3].y);
+	Gfunc_v35(s[0].w, s[1].x, s[2].y, s[3].z);
+
+}
+
+
+
+__device__ __forceinline__ void reduceDuplex(vectype state[4], uint32_t thread)
+{
+
+
+	    vectype state1[3]; 
+		uint32_t ps1 = (256 * thread);
+		uint32_t ps2 = (memshift * 7 + memshift * 8 + 256 * thread);
+
+#pragma unroll 4
+	for (int i = 0; i < 8; i++)
+	{
+        uint32_t s1 = ps1 + i*memshift;
+        uint32_t s2 = ps2 - i*memshift;  
+		
+		for (int j = 0; j < 3; j++)
+			state1[j] = __ldg4(&(DMatrix+s1)[j]); 
+ 
+		for (int j = 0; j < 3; j++)
+			state[j] ^= state1[j];
+		round_lyra_v35(state); 
+		for (int j = 0; j < 3; j++)
+			state1[j] ^= state[j];
+
+		for (int j = 0; j < 3; j++)
+			(DMatrix + s2)[j] = state1[j];
+
+	}
+
+}
+
+__device__ __forceinline__ void reduceDuplexV3(vectype state[4], uint32_t thread)
+{
+
+
+	vectype state1[3];
+	uint32_t ps1 = (256 * thread);
+//                     colomn             row
+	uint32_t ps2 = (memshift * 7 * 8 + memshift * 1 + 64 * memshift * thread);
+
+#pragma unroll 4
+	for (int i = 0; i < 8; i++)
+	{
+		uint32_t s1 = ps1 + 8 * i *memshift;
+		uint32_t s2 = ps2 - 8 * i *memshift;
+
+		for (int j = 0; j < 3; j++)
+			state1[j] = __ldg4(&(DMatrix + s1)[j]);
+
+		for (int j = 0; j < 3; j++)
+			state[j] ^= state1[j];
+		round_lyra_v35(state);
+
+		for (int j = 0; j < 3; j++)
+			state1[j] ^= state[j];
+
+
+		for (int j = 0; j < 3; j++)
+			(DMatrix + s2)[j] = state1[j];
+
+	}
+
+}
+
+__device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOut, vectype state[4], uint32_t thread)
+{
+
+
+		vectype state2[3],state1[3];
+
+		uint32_t ps1 = (              memshift * 8 * rowIn    + 256 * thread);
+		uint32_t ps2 = (              memshift * 8 * rowInOut + 256 * thread);
+		uint32_t ps3 = (memshift*7  + memshift * 8 * rowOut   + 256 * thread);
+
+
+#pragma unroll 1
+	for (int i = 0; i < 8; i++)
+	{
+		uint32_t s1 = ps1 + i*memshift;
+		uint32_t s2 = ps2 + i*memshift;
+		uint32_t s3 = ps3 - i*memshift;
+
+		for (int j = 0; j < 3; j++) 
+			state1[j]= __ldg4(&(DMatrix + s1)[j]);
+		for (int j = 0; j < 3; j++)
+			state2[j]= __ldg4(&(DMatrix + s2)[j]);
+		for (int j = 0; j < 3; j++) {
+			vectype tmp = state1[j] + state2[j];
+			state[j] ^= tmp;
+		}
+		
+
+		round_lyra_v35(state);
+
+		for (int j = 0; j < 3; j++) {
+			state1[j] ^= state[j];
+			(DMatrix + s3)[j] = state1[j];
+		}
+ 
+		   ((uint2*)state2)[0] ^= ((uint2*)state)[11];
+		for (int j = 0; j < 11; j++) 
+			((uint2*)state2)[j+1] ^= ((uint2*)state)[j];
+
+
+
+		for (int j = 0; j < 3; j++)
+		    (DMatrix + s2)[j] = state2[j];
+		
+	}
+
+
+}
+
+__device__ __forceinline__ void reduceDuplexRowSetupV3(const int rowIn, const int rowInOut, const int rowOut, vectype state[4], uint32_t thread)
+{
+
+
+	vectype state2[3], state1[3];
+	
+	uint32_t ps1 = (                  memshift *  rowIn    + 64 * memshift * thread);
+	uint32_t ps2 = (memshift * rowInOut +                    64 * memshift* thread);
+	uint32_t ps3 = (8 * memshift * 7 + memshift *  rowOut +  64 * memshift * thread);
+	/*
+	uint32_t ps1 = (256 * thread);
+	uint32_t ps2 = (256 * thread);
+	uint32_t ps3 = (256 * thread);
+    */
+#pragma nounroll 
+	for (int i = 0; i < 8; i++)
+	{
+		uint32_t s1 = ps1 + 8*i*memshift;
+		uint32_t s2 = ps2 + 8*i*memshift;
+		uint32_t s3 = ps3 - 8*i*memshift;
+
+		for (int j = 0; j < 3; j++)
+			state1[j] = __ldg4(&(DMatrix + s1 )[j]);
+		for (int j = 0; j < 3; j++)
+			state2[j] = __ldg4(&(DMatrix + s2 )[j]);
+		for (int j = 0; j < 3; j++) {
+			vectype tmp = state1[j] + state2[j];
+			state[j] ^= tmp;
+		}
+
+
+		round_lyra_v35(state);
+
+		for (int j = 0; j < 3; j++) {
+			state1[j] ^= state[j];
+			(DMatrix + s3)[j] = state1[j];
+		}
+
+		((uint2*)state2)[0] ^= ((uint2*)state)[11];
+		for (int j = 0; j < 11; j++)
+			((uint2*)state2)[j + 1] ^= ((uint2*)state)[j];
+
+
+
+		for (int j = 0; j < 3; j++)
+			(DMatrix + s2)[j] = state2[j];
+
+	}
+
+
+}
+
+
+__device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int rowInOut, const int rowOut, vectype* state, uint32_t thread)
+{
+
+		vectype state1[3],state2[3];
+		uint32_t ps1 = (memshift * 8 * rowIn + 256 * thread);
+		uint32_t ps2 = (memshift * 8 * rowInOut + 256 * thread);
+		uint32_t ps3 = (memshift * 8 * rowOut + 256 * thread);
+
+#pragma unroll 1
+	for (int i = 0; i < 8; i++)
+	{
+		uint32_t s1 = ps1 + i*memshift;
+		uint32_t s2 = ps2 + i*memshift;
+		uint32_t s3 = ps3 + i*memshift;
+
+
+		for (int j = 0; j < 3; j++)  
+			state1[j] = __ldg4(&(DMatrix + s1)[j]);
+
+
+		for (int j = 0; j < 3; j++)
+			state2[j] = __ldg4(&(DMatrix + s2)[j]);
+
+
+		for (int j = 0; j < 3; j++)
+			          state1[j] += state2[j];
+
+		for (int j = 0; j < 3; j++)
+			          state[j] ^= state1[j];
+
+
+		round_lyra_v35(state);
+
+		((uint2*)state2)[0] ^= ((uint2*)state)[11];
+		for (int j = 0; j < 11; j++)
+		((uint2*)state2)[j + 1] ^= ((uint2*)state)[j];
+
+if (rowInOut != rowOut) {
+
+	for (int j = 0; j < 3; j++)
+		(DMatrix + s2)[j] = state2[j];
+
+	for (int j = 0; j < 3; j++)
+		(DMatrix + s3)[j] ^= state[j];
+
+} else {
+
+	for (int j = 0; j < 3; j++)
+		state2[j] ^= state[j];
+
+	for (int j = 0; j < 3; j++)
+		(DMatrix + s2)[j]=state2[j];
+}
+
+
+
+
+
+
+	}
+}
+
+__device__ __forceinline__ void reduceDuplexRowtV3(const int rowIn, const int rowInOut, const int rowOut, vectype* state, uint32_t thread)
+{
+
+	vectype state1[3], state2[3];
+	uint32_t ps1 = (memshift * rowIn + 64 * memshift * thread);
+	uint32_t ps2 = (memshift * rowInOut + 64 * memshift * thread);
+	uint32_t ps3 = (memshift * rowOut + 64 *memshift * thread);
+
+#pragma nounroll 
+	for (int i = 0; i < 8; i++)
+	{
+		uint32_t s1 = ps1 + 8 * i*memshift;
+		uint32_t s2 = ps2 + 8 * i*memshift;
+		uint32_t s3 = ps3 + 8 * i*memshift;
+
+
+		for (int j = 0; j < 3; j++)
+			state1[j] = __ldg4(&(DMatrix + s1)[j]);
+
+
+		for (int j = 0; j < 3; j++)
+			state2[j] = __ldg4(&(DMatrix + s2)[j]);
+
+
+		for (int j = 0; j < 3; j++)
+			state1[j] += state2[j];
+
+		for (int j = 0; j < 3; j++)
+			state[j] ^= state1[j];
+
+
+		round_lyra_v35(state);
+
+		((uint2*)state2)[0] ^= ((uint2*)state)[11];
+		for (int j = 0; j < 11; j++)
+			((uint2*)state2)[j + 1] ^= ((uint2*)state)[j];
+
+		if (rowInOut != rowOut) {
+
+			for (int j = 0; j < 3; j++)
+				(DMatrix + s2)[j] = state2[j];
+
+			for (int j = 0; j < 3; j++)
+				(DMatrix + s3)[j] ^= state[j];
+
+		}
+		else {
+
+			for (int j = 0; j < 3; j++)
+				state2[j] ^= state[j];
+
+			for (int j = 0; j < 3; j++)
+				(DMatrix + s2)[j] = state2[j];
+		}
+
+
+
+
+
+
+	}
+}
+
+
+
+#if __CUDA_ARCH__ < 500
+__global__	__launch_bounds__(48, 1)
+#elif __CUDA_ARCH__ == 500
+__global__	__launch_bounds__(16, 1)
 #else
-	for (int i = 0; i < 8 * 12; i += 12)
-#endif	
-	{
-		for (int j = 0; j < 12; j++)
-			state[j] ^= Matrix[i + j][rowIn] + Matrix[i + j][rowInOut];
-		round_lyra_v35(state);
-		#pragma unroll
-		for (int j = 0; j < 12; j++)
-			Matrix[j + 84 - i][rowOut] = Matrix[i + j][rowIn] ^ state[j];
-		Matrix[0 + i][rowInOut] ^= state[11];
-		Matrix[1 + i][rowInOut] ^= state[0];
-		Matrix[2 + i][rowInOut] ^= state[1];
-		Matrix[3 + i][rowInOut] ^= state[2];
-		Matrix[4 + i][rowInOut] ^= state[3];
-		Matrix[5 + i][rowInOut] ^= state[4];
-		Matrix[6 + i][rowInOut] ^= state[5];
-		Matrix[7 + i][rowInOut] ^= state[6];
-		Matrix[8 + i][rowInOut] ^= state[7];
-		Matrix[9 + i][rowInOut] ^= state[8];
-		Matrix[10 + i][rowInOut] ^= state[9];
-		Matrix[11 + i][rowInOut] ^= state[10];
-	}
-
-
-}
-
-
-__device__ __forceinline__ void reduceDuplexRowt(const int rowIn,  const int rowOut, uint2 state[16], uint2 Matrix[96][8])
-{
-	uint32_t rowInOut = state[0].x & 7;
-	for (int i = 0; i < 8; i++) 
-	{
-		#pragma unroll
-		for (int j = 0; j < 12; j++)
-			state[j] ^= Matrix[12 * i + j][rowIn] + Matrix[12 * i + j][rowInOut];
-		round_lyra_v35(state);
-		#pragma unroll
-		for (int j = 0; j < 12; j++)
-			Matrix[j + 12 * i][rowOut] ^= state[j];
-		Matrix[0 + 12 * i][rowInOut] ^= state[11];
-		Matrix[1 + 12 * i][rowInOut] ^= state[0];
-		Matrix[2 + 12 * i][rowInOut] ^= state[1];
-		Matrix[3 + 12 * i][rowInOut] ^= state[2];
-		Matrix[4 + 12 * i][rowInOut] ^= state[3];
-		Matrix[5 + 12 * i][rowInOut] ^= state[4];
-		Matrix[6 + 12 * i][rowInOut] ^= state[5];
-		Matrix[7 + 12 * i][rowInOut] ^= state[6];
-		Matrix[8 + 12 * i][rowInOut] ^= state[7];
-		Matrix[9 + 12 * i][rowInOut] ^= state[8];
-		Matrix[10+ 12 * i][rowInOut] ^= state[9];
-		Matrix[11+ 12 * i][rowInOut] ^= state[10]; 
-	}
-}
-
 __global__	__launch_bounds__(TPB, 1)
-void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
+#endif
+void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+
+	   vectype state[4];
+#if __CUDA_ARCH__ > 350
+	const uint28 blake2b_IV[2] = {
+		{{ 0xf3bcc908, 0x6a09e667 },
+		{ 0x84caa73b, 0xbb67ae85 },
+		{ 0xfe94f82b, 0x3c6ef372 },
+		{ 0x5f1d36f1, 0xa54ff53a }},
+		{{ 0xade682d1, 0x510e527f },
+		{ 0x2b3e6c1f, 0x9b05688c },
+		{ 0xfb41bd6b, 0x1f83d9ab },
+		{ 0x137e2179, 0x5be0cd19 }}};
+#else 
+		const ulonglong4 blake2b_IV[2] = {
+			{ 0x6a09e667f3bcc908,  
+			  0xbb67ae8584caa73b,  
+			  0x3c6ef372fe94f82b,  
+			  0xa54ff53a5f1d36f1   },
+			{ 0x510e527fade682d1,  
+			  0x9b05688c2b3e6c1f,  
+			  0x1f83d9abfb41bd6b,  
+			  0x5be0cd19137e2179  } };
+#endif
+	
+#if __CUDA_ARCH__ == 350
 	if (thread < threads)
+#endif
 	{
+ 
+		 ((uint2*)state)[0] = __ldg(&outputHash[thread]);
+		 ((uint2*)state)[1] = __ldg(&outputHash[thread + threads]);
+		 ((uint2*)state)[2] = __ldg(&outputHash[thread + 2 * threads]);
+		 ((uint2*)state)[3] = __ldg(&outputHash[thread + 3 * threads]);
+//		 state[0] = __ldg4(&((vectype*)outputHash)[thread]);
+		 state[1] = state[0];
+		 state[2] = ((vectype*)blake2b_IV)[0];
+		 state[3] = ((vectype*)blake2b_IV)[1];
 
-		const uint2 blake2b_IV[8] = {
-			{ 0xf3bcc908, 0x6a09e667 },
-			{ 0x84caa73b, 0xbb67ae85 },
-			{ 0xfe94f82b, 0x3c6ef372 },
-			{ 0x5f1d36f1, 0xa54ff53a },
-			{ 0xade682d1, 0x510e527f },
-			{ 0x2b3e6c1f, 0x9b05688c },
-			{ 0xfb41bd6b, 0x1f83d9ab },
-			{ 0x137e2179, 0x5be0cd19 }
-		};
-
-
-		register uint2 state[16];
-		#pragma unroll
-		for (int i = 0; i<4; i++) 
-		{ 
-			LOHI(state[i].x, state[i].y, outputHash[threads*i + thread]); 
-		} //password
-		#pragma unroll
-		for (int i = 0; i<4; i++) { state[i + 4] = state[i]; } //salt
-		#pragma unroll
-		for (int i = 0; i<8; i++) { state[i + 8] = blake2b_IV[i]; }
-
-		// blake2blyra x2
-		//#pragma unroll 24
+ 
 		for (int i = 0; i<24; i++) { round_lyra_v35(state); } //because 12 is not enough
 
-		uint2 __align__(16) Matrix[96][8]; // not cool
+             uint32_t ps1 = (memshift * 7  + 256 * thread);
 
-		// reducedSqueezeRow0
-		#pragma unroll
-		for (int i = 0; i < 8*12; i+=12)
+		for (int i = 0; i < 8; i++)
 		{
-			#pragma unroll 12
-			for (int j = 0; j<12; j++) { Matrix[j + 84 - i][0] = state[j]; }
+			uint32_t s1 = ps1 - memshift * i;
+			for (int j = 0; j < 3; j++)
+			    (DMatrix + s1)[j] = (state)[j];
+
 			round_lyra_v35(state);
 		}
 
-		// reducedSqueezeRow1
-//		#pragma unroll 	
-		for (int i = 0; i < 8*12; i+=12)
-		{
-			#pragma unroll 12
-			for (int j = 0; j<12; j++) { state[j] ^= Matrix[j + i][0]; }
-			round_lyra_v35(state);
-			#pragma unroll 12
-			for (int j = 0; j<12; j++) { Matrix[j + 84 - i][1] = Matrix[j + i][0] ^ state[j]; }
-		}
 
-		reduceDuplexRowSetup(1, 0, 2,state, Matrix);
-		reduceDuplexRowSetup(2, 1, 3, state, Matrix);
-		reduceDuplexRowSetup(3, 0, 4, state, Matrix);
-		reduceDuplexRowSetup(4, 3, 5, state, Matrix);
-		reduceDuplexRowSetup(5, 2, 6, state, Matrix);
-		reduceDuplexRowSetup(6, 1, 7, state, Matrix);
+		reduceDuplex(state, thread);
 
-		reduceDuplexRowt(7, 0,state, Matrix);
-		reduceDuplexRowt(0, 3, state, Matrix);
-		reduceDuplexRowt(3, 6, state, Matrix);
-		reduceDuplexRowt(6, 1, state, Matrix);
-		reduceDuplexRowt(1, 4, state, Matrix);
-		reduceDuplexRowt(4, 7, state, Matrix);
-		reduceDuplexRowt(7, 2, state, Matrix);
-		uint32_t rowa = state[0].x & 7;
-		reduceDuplexRowt(2, 5, state, Matrix);
+		reduceDuplexRowSetupV2(1, 0, 2, state,  thread);
+		reduceDuplexRowSetupV2(2, 1, 3, state,  thread);
+		reduceDuplexRowSetupV2(3, 0, 4, state,  thread);
+		reduceDuplexRowSetupV2(4, 3, 5, state,  thread);
+		reduceDuplexRowSetupV2(5, 2, 6, state,  thread);
+		reduceDuplexRowSetupV2(6, 1, 7, state,  thread);
+		uint32_t rowa = ((uint2*)state)[0].x & 7;
 
-		state[0] ^= Matrix[0][rowa];
-		state[1] ^= Matrix[1][rowa];
-		state[2] ^= Matrix[2][rowa];
-		state[3] ^= Matrix[3][rowa];
-		state[4] ^= Matrix[4][rowa];
-		state[5] ^= Matrix[5][rowa];
-		state[6] ^= Matrix[6][rowa];
-		state[7] ^= Matrix[7][rowa];
-		state[8] ^= Matrix[8][rowa];
-		state[9] ^= Matrix[9][rowa];
-		state[10] ^= Matrix[10][rowa];
-		state[11] ^= Matrix[11][rowa];
+		reduceDuplexRowtV2(7, rowa, 0, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(0, rowa, 3, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(3, rowa, 6, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(6, rowa, 1, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(1, rowa, 4, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(4, rowa, 7, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(7, rowa, 2, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV2(2, rowa, 5, state, thread);
 
-		#pragma unroll
+		uint32_t shift = (memshift * 8 * rowa + 256 * thread);
+
+		for (int j = 0; j < 3; j++)
+			state[j] ^= __ldg4(&(DMatrix + shift)[j]);
+
 		for (int i = 0; i < 12; i++)
-		{
-			round_lyra_v35(state);
-		}
+        			round_lyra_v35(state);
+		
 
-		#pragma unroll
-		for (int i = 0; i<4; i++) {
-			outputHash[threads*i + thread] = devectorize(state[i]);
-		} //password
+		outputHash[thread]=            ((uint2*)state)[0];
+		outputHash[thread + threads] = ((uint2*)state)[1];
+		outputHash[thread + 2 * threads] = ((uint2*)state)[2]; 
+		outputHash[thread + 3 * threads] = ((uint2*)state)[3];
+//		((vectype*)outputHash)[thread] = state[0];
 
 	} //thread
 }
 
-__host__
-void lyra2_cpu_init(int thr_id, uint32_t threads)
+#if __CUDA_ARCH__ < 500
+__global__	__launch_bounds__(48, 1)
+#elif __CUDA_ARCH__ == 500
+__global__	__launch_bounds__(16, 1)
+#else
+__global__	__launch_bounds__(TPB, 1)
+#endif
+void lyra2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
-	//not used
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+
+	vectype state[4];
+
+#if __CUDA_ARCH__ > 350
+	const uint28 blake2b_IV[2] = {
+		{ { 0xf3bcc908, 0x6a09e667 },
+		{ 0x84caa73b, 0xbb67ae85 },
+		{ 0xfe94f82b, 0x3c6ef372 },
+		{ 0x5f1d36f1, 0xa54ff53a } },
+		{ { 0xade682d1, 0x510e527f },
+		{ 0x2b3e6c1f, 0x9b05688c },
+		{ 0xfb41bd6b, 0x1f83d9ab },
+		{ 0x137e2179, 0x5be0cd19 } } };
+#else 
+	const ulonglong4 blake2b_IV[2] = {
+		{ 0x6a09e667f3bcc908,
+		0xbb67ae8584caa73b,
+		0x3c6ef372fe94f82b,
+		0xa54ff53a5f1d36f1 },
+		{ 0x510e527fade682d1,
+		0x9b05688c2b3e6c1f,
+		0x1f83d9abfb41bd6b,
+		0x5be0cd19137e2179 } };
+#endif
+
+
+#if __CUDA_ARCH__ == 350
+	if (thread < threads)
+#endif
+	{
+
+		((uint2*)state)[0] = __ldg(&outputHash[thread]);
+		((uint2*)state)[1] = __ldg(&outputHash[thread + threads]);
+		((uint2*)state)[2] = __ldg(&outputHash[thread + 2 * threads]);
+		((uint2*)state)[3] = __ldg(&outputHash[thread + 3 * threads]);
+		
+		state[1] = state[0];
+
+		state[2] = ((vectype*)blake2b_IV)[0];
+		state[3] = ((vectype*)blake2b_IV)[1];
+
+		for (int i = 0; i<24; i++) 
+                round_lyra_v35(state);  //because 12 is not enough
+
+		uint32_t ps1 = (8 * memshift * 7 + 64 * memshift * thread);
+
+
+		for (int i = 0; i < 8; i++)
+		{
+			uint32_t s1 = ps1 - 8 * memshift * i;
+			for (int j = 0; j < 3; j++)
+				(DMatrix + s1)[j] = (state)[j];
+
+			round_lyra_v35(state);
+		}
+
+
+		reduceDuplexV3(state, thread);
+
+		reduceDuplexRowSetupV3(1, 0, 2, state, thread);
+		reduceDuplexRowSetupV3(2, 1, 3, state, thread);
+		reduceDuplexRowSetupV3(3, 0, 4, state, thread);
+		reduceDuplexRowSetupV3(4, 3, 5, state, thread);
+		reduceDuplexRowSetupV3(5, 2, 6, state, thread);
+		reduceDuplexRowSetupV3(6, 1, 7, state, thread);
+		uint32_t rowa = ((uint2*)state)[0].x & 7;
+
+		reduceDuplexRowtV3(7, rowa, 0, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(0, rowa, 3, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(3, rowa, 6, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(6, rowa, 1, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(1, rowa, 4, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(4, rowa, 7, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(7, rowa, 2, state, thread);
+		rowa = ((uint2*)state)[0].x & 7;
+		reduceDuplexRowtV3(2, rowa, 5, state, thread);
+
+		uint32_t shift = (memshift * rowa + 64 * memshift * thread);
+
+		for (int j = 0; j < 3; j++)
+			state[j] ^= __ldg4(&(DMatrix + shift)[j]);
+
+		for (int i = 0; i < 12; i++)
+			round_lyra_v35(state);
+
+
+		outputHash[thread] = ((uint2*)state)[0];
+		outputHash[thread + threads] = ((uint2*)state)[1];
+		outputHash[thread + 2 * threads] = ((uint2*)state)[2];
+		outputHash[thread + 3 * threads] = ((uint2*)state)[3];
+		
+	} //thread
 }
 
+
+
+
 __host__
+void lyra2_cpu_init(int thr_id, uint32_t threads,uint64_t *hash)
+{
+	cudaMemcpyToSymbol(DMatrix, &hash, sizeof(hash), 0, cudaMemcpyHostToDevice);
+}
+
+
+
+__host__ 
 void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
 {
-	dim3 grid((threads + TPB - 1) / TPB);
-	dim3 block(TPB);
+uint32_t tpb;
+	if (device_sm[device_map[thr_id]]<500) 
+      tpb = 48;
+	else if (device_sm[device_map[thr_id]]==500)
+      tpb = 16; 
+    else 
+      tpb = TPB;
+	dim3 grid((threads + tpb - 1) / tpb);
+	dim3 block(tpb);
 
-	lyra2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_outputHash);
+	if (device_sm[device_map[thr_id]] == 500)
+		lyra2_gpu_hash_32 << <grid, block >> > (threads, startNounce, (uint2*)d_outputHash);
+    else 
+    	lyra2_gpu_hash_32_v3 <<<grid, block>>> (threads, startNounce,(uint2*) d_outputHash);
+
+
 }
 
+  

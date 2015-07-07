@@ -19,6 +19,12 @@ typedef struct __align__(32) uint8
 	unsigned int s0, s1, s2, s3, s4, s5, s6, s7;
 } uint8;
 
+typedef struct __align__(64) uint2_8
+{
+	uint2 s0, s1, s2, s3, s4, s5, s6, s7;
+} uint2_8;
+
+
 typedef struct __align__(64) ulonglong2to8
 {
 ulonglong2 l0,l1,l2,l3;
@@ -41,9 +47,9 @@ typedef struct __align__(512) ulonglong32to64
 
 
 
-typedef struct __align__(1024) ulonglonglong
+typedef struct __align__(128) ulonglonglong
 {
-	ulonglong8to16 s0,s1,s2,s3,s4,s5,s6,s7;
+	ulonglong2 s0,s1,s2,s3,s4,s5,s6,s7;
 } ulonglonglong;
 
 
@@ -61,6 +67,21 @@ typedef struct __align__(64) uint16
 	};
 } uint16;
 
+typedef struct __align__(128) uint2_16
+{
+	union {
+		struct { uint2  s0, s1, s2, s3, s4, s5, s6, s7; };
+		uint2_8 lo;
+	};
+	union {
+		struct { uint2 s8, s9, sa, sb, sc, sd, se, sf; };
+		uint2_8 hi;
+	};
+} uint2_16;
+
+
+
+
 typedef struct __align__(128) uint32
 {
 
@@ -75,16 +96,49 @@ struct __align__(128) ulong8
 };
 typedef __device_builtin__ struct ulong8 ulong8;
 
-
+/*
 typedef struct  __align__(256) ulonglong16
 {
 	ulonglong2 s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, sa, sb, sc, sd, se, sf;
 } ulonglong16;
-
-typedef struct  __align__(32) uint48
+*/
+typedef struct  __align__(256) ulonglong16
 {
-	uint4 s0, s1;
+	ulonglong4 s0, s1, s2, s3, s4, s5, s6, s7;
+} ulonglong16;
 
+
+
+//typedef struct  __align__(32) uint48
+//{
+//	uint4 s0, s1;
+//
+//} uint48;
+
+typedef struct   __align__(16) uint28
+{
+	uint2 x, y, z, w;
+
+} uint28;
+
+/*
+typedef struct  __builtin_align__(32) uint48
+{
+	union {
+		uint4 s0;
+		struct { uint2  x, y;};
+	};
+	union {
+		uint4 s1;
+		struct { uint2 z, w; };
+
+	};
+} uint48;
+*/
+
+typedef struct  __builtin_align__(32) uint48
+{	
+		uint4 s0,s1;
 } uint48;
 
 typedef struct  __align__(64) uint816
@@ -104,6 +158,14 @@ typedef struct  __align__(256) uintx64
 	uint1632 s0, s1;
 
 } uintx64;
+
+typedef struct  __builtin_align__(256) uintx64bis
+{
+	uint28 s0, s1, s2, s3, s4, s5, s6, s7;
+
+} uintx64bis;
+
+
 
 typedef struct  __align__(512) uintx128
 {
@@ -150,10 +212,10 @@ static __inline__ __device__ ulonglong32to64 make_ulonglong32to64(const ulonglon
 
 
 static __inline__ __host__ __device__ ulonglonglong make_ulonglonglong(
-	const ulonglong8to16 &s0, const ulonglong8to16 &s1, const ulonglong8to16 &s2, const ulonglong8to16 &s3,
-	const ulonglong8to16 &s4, const ulonglong8to16 &s5, const ulonglong8to16 &s6, const ulonglong8to16 &s7)
+	const ulonglong2 &s0, const ulonglong2 &s1, const ulonglong2 &s2, const ulonglong2 &s3,
+	const ulonglong2 &s4, const ulonglong2 &s5)
 {
-	ulonglonglong t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5; t.s6 = s6; t.s7 = s7;
+	ulonglonglong t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5;
 	return t;
 }
 
@@ -163,12 +225,35 @@ static __inline__ __device__ uint48 make_uint48(uint4 s0, uint4 s1)
 	uint48 t; t.s0 = s0; t.s1 = s1;
 	return t;
 }
+/*
+static __inline__ __device__ uint48 make_uint48(uint2 s0, uint2 s1, uint2 s2, uint2 s3)
+{
+	uint48 t; t.x = s0; t.y = s1; t.z = s2; t.w = s3;
+	return t;
+}
+
+static __inline__ __device__ uint48 make_uint48(const uint28 &s0)
+{
+	uint48 t; t.x = s0.x; t.y = s0.y; t.z = s0.z; t.w = s0.w;
+	return t;
+}
+*/
+static __inline__ __device__ uint28 make_uint28(uint2 s0, uint2 s1, uint2 s2, uint2 s3)
+{
+	uint28 t; t.x = s0; t.y = s1; t.z = s2; t.w = s3;
+	return t;
+}
+
 
 static __inline__ __device__ uint816 make_uint816(const uint48 &s0, const uint48 &s1)
 {
 	uint816 t; t.s0 = s0; t.s1 = s1;
 	return t;
 }
+
+
+
+
 
 static __inline__ __device__ uint1632 make_uint1632(const uint816 &s0, const uint816 &s1)
 {
@@ -181,6 +266,16 @@ static __inline__ __device__ uintx64 make_uintx64(const uint1632 &s0, const uint
 	uintx64 t; t.s0 = s0; t.s1 = s1;
 	return t;
 }
+
+static __inline__ __device__ uintx64bis make_uintx64bis(
+	const uint28 &s0, const uint28 &s1, const uint28 &s2, const uint28 &s3,
+	const uint28 &s4, const uint28 &s5, const uint28 &s6, const uint28 &s7
+)
+{
+	uintx64bis t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5; t.s6 = s6; t.s7 = s7;
+	return t;
+}
+
 
 static __inline__ __device__ uintx128 make_uintx128(const uintx64 &s0, const uintx64 &s1)
 {
@@ -212,6 +307,14 @@ static __inline__ __host__ __device__ uint4x16 make_uint4x16(
 }
 
 
+static __inline__  __device__ uint2_16 make_uint2_16(
+	uint2 s0, uint2 s1, uint2 s2, uint2 s3, uint2 s4, uint2 s5, uint2 s6, uint2 s7,
+	uint2 s8, uint2 s9, uint2 sa, uint2 sb, uint2 sc, uint2 sd, uint2 se, uint2 sf)
+{
+	uint2_16 t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5; t.s6 = s6; t.s7 = s7;
+	t.s8 = s8; t.s9 = s9; t.sa = sa; t.sb = sb; t.sc = sc; t.sd = sd; t.se = se; t.sf = sf;
+	return t;
+}
 
 
 static __inline__ __host__ __device__ uint16 make_uint16(
@@ -241,16 +344,21 @@ static __inline__ __host__ __device__ uint8 make_uint8(
 	return t;
 }
 
-
-static __inline__ __host__ __device__ ulonglong16 make_ulonglong16(const ulonglong2 &s0, const ulonglong2 &s1,
-	const ulonglong2 &s2, const ulonglong2 &s3, const ulonglong2 &s4, const ulonglong2 &s5, const ulonglong2 &s6, const ulonglong2 &s7,
-	const ulonglong2 &s8, const ulonglong2 &s9,
-	const ulonglong2 &sa, const ulonglong2 &sb, const ulonglong2 &sc, const ulonglong2 &sd, const ulonglong2 &se, const ulonglong2 &sf
-) {
-	ulonglong16 t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5; t.s6 = s6; t.s7 = s7;
-	t.s8 = s8; t.s9 = s9; t.sa = sa; t.sb = sb; t.sc = sc; t.sd = sd; t.se = se; t.sf = sf;
+static __inline__ __host__ __device__ uint2_8 make_uint2_8(
+	uint2 s0, uint2 s1, uint2 s2, uint2 s3, uint2 s4, uint2 s5, uint2 s6, uint2 s7)
+{
+	uint2_8 t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5; t.s6 = s6; t.s7 = s7;
 	return t;
 }
+
+
+static __inline__ __host__ __device__ ulonglong16 make_ulonglong16(const ulonglong4 &s0, const ulonglong4 &s1,
+	const ulonglong4 &s2, const ulonglong4 &s3, const ulonglong4 &s4, const ulonglong4 &s5, const ulonglong4 &s6, const ulonglong4 &s7)
+{
+	ulonglong16 t; t.s0 = s0; t.s1 = s1; t.s2 = s2; t.s3 = s3; t.s4 = s4; t.s5 = s5; t.s6 = s6; t.s7 = s7;
+	return t;
+}
+
 
 
 
@@ -291,15 +399,42 @@ static __forceinline__ __device__  __host__ uint8 operator^ (const uint8 &a, con
 
 static __forceinline__ __device__  __host__ uint8 operator+ (const uint8 &a, const uint8 &b) { return make_uint8(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7); }
 
+static __forceinline__ __device__   uint2_8 operator^ (const uint2_8 &a, const uint2_8 &b) { return make_uint2_8(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5, a.s6 ^ b.s6, a.s7 ^ b.s7); }
+
+static __forceinline__ __device__   uint2_8 operator+ (const uint2_8 &a, const uint2_8 &b) { return make_uint2_8(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7); }
+
+
 ////////////// mess++ //////
 
 static __forceinline__ __device__  uint48 operator^ (const uint48 &a, const uint48 &b) {
 	return make_uint48(a.s0 ^ b.s0, a.s1 ^ b.s1);
 }
 
+static __forceinline__ __device__  uint28 operator^ (const uint28 &a, const uint28 &b) {
+	return make_uint28(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w);
+}
+
+static __forceinline__ __device__  uint28 operator+ (const uint28 &a, const uint28 &b) {
+	return make_uint28(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+}
+
+static __forceinline__ __device__  uint48 operator+ (const uint48 &a, const uint48 &b) {
+	return make_uint48(a.s0 + b.s0, a.s1 + b.s1);
+}
+/*
+static __forceinline__ __device__  uint48 operator+ (const uint48 &a, const uint48 &b) {
+	return make_uint48(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+}
+*/
+
 static __forceinline__ __device__  uint816 operator^ (const uint816 &a, const uint816 &b) {
 	return make_uint816(a.s0 ^ b.s0, a.s1 ^ b.s1);
 }
+
+static __forceinline__ __device__  uint816 operator+ (const uint816 &a, const uint816 &b) {
+	return make_uint816(a.s0 + b.s0, a.s1 + b.s1);
+}
+
 
 static __forceinline__ __device__ uint1632 operator^ (const uint1632 &a, const uint1632 &b) {
 	return make_uint1632(a.s0 ^ b.s0, a.s1 ^ b.s1);
@@ -330,6 +465,25 @@ static __forceinline__ __device__  __host__ uint16 operator+ (const uint16 &a, c
 		a.s8 + b.s8, a.s9 + b.s9, a.sa + b.sa, a.sb + b.sb, a.sc + b.sc, a.sd + b.sd, a.se + b.se, a.sf + b.sf);
 }
 
+static __forceinline__ __device__  uint2_16 operator^ (const uint2_16 &a, const uint2_16 &b) {
+	return make_uint2_16(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5, a.s6 ^ b.s6, a.s7 ^ b.s7,
+		a.s8 ^ b.s8, a.s9 ^ b.s9, a.sa ^ b.sa, a.sb ^ b.sb, a.sc ^ b.sc, a.sd ^ b.sd, a.se ^ b.se, a.sf ^ b.sf);
+}
+
+static __forceinline__ __device__  uint2_16 operator+ (const uint2_16 &a, const uint2_16 &b) {
+	return make_uint2_16(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7,
+		a.s8 + b.s8, a.s9 + b.s9, a.sa + b.sa, a.sb + b.sb, a.sc + b.sc, a.sd + b.sd, a.se + b.se, a.sf + b.sf);
+}
+
+static __forceinline__ __device__  uintx64bis operator^ (const uintx64bis &a, const uintx64bis &b) {
+	return make_uintx64bis(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5, a.s6 ^ b.s6, a.s7 ^ b.s7);
+}
+
+static __forceinline__ __device__  uintx64bis operator+ (const uintx64bis &a, const uintx64bis &b) {
+	return make_uintx64bis(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7);
+}
+
+
 static __forceinline__ __device__  uint32 operator^ (const uint32 &a, const uint32 &b) {
 	return make_uint32(a.lo ^ b.lo, a.hi ^ b.hi);
 }
@@ -338,20 +492,20 @@ static __forceinline__ __device__  uint32 operator+ (const uint32 &a, const uint
 	return make_uint32(a.lo + b.lo, a.hi + b.hi);
 }
 
+
 static __forceinline__ __device__ ulonglong16 operator^ (const ulonglong16 &a, const ulonglong16 &b) {
-	return make_ulonglong16(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5, a.s6 ^ b.s6, a.s7 ^ b.s7,
-		a.s8 ^ b.s8, a.s9 ^ b.s9, a.sa ^ b.sa, a.sb ^ b.sb, a.sc ^ b.sc, a.sd ^ b.sd, a.se ^ b.se, a.sf ^ b.sf
-);
+	return make_ulonglong16(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5, a.s6 ^ b.s6, a.s7 ^ b.s7);
 }
 
 static __forceinline__ __device__ ulonglong16 operator+ (const ulonglong16 &a, const ulonglong16 &b) {
-	return make_ulonglong16(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7,
-		a.s8 + b.s8, a.s9 + b.s9, a.sa + b.sa, a.sb + b.sb, a.sc + b.sc, a.sd + b.sd, a.se + b.se, a.sf + b.sf
-);
+	return make_ulonglong16(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7);
 }
 
 static __forceinline__ __device__ void operator^= (ulong8 &a, const ulong8 &b) { a = a ^ b; }
 static __forceinline__ __device__ void operator^= (uintx64 &a, const uintx64 &b) { a = a ^ b; }
+
+static __forceinline__ __device__ void operator^= (uintx64bis &a, const uintx64bis &b) { a = a ^ b; }
+
 
 static __forceinline__ __device__ void operator^= (uintx128 &a, const uintx128 &b) { a = a ^ b; }
 static __forceinline__ __device__ void operator^= (uintx256 &a, const uintx256 &b) { a = a ^ b; }
@@ -359,7 +513,23 @@ static __forceinline__ __device__ void operator^= (uintx256 &a, const uintx256 &
 
 static __forceinline__ __device__ void operator^= (uint816 &a, const uint816 &b) { a = a ^ b; }
 
+static __forceinline__ __device__ void operator+= (uint816 &a, const uint816 &b) { a = a + b; }
+
+
 static __forceinline__ __device__ void operator^= (uint48 &a, const uint48 &b) { a = a ^ b; }
+
+//static __forceinline__ __device__ void operator+= (uint48 &a, const uint48 &b) { a = a + b; }
+
+
+static __forceinline__ __device__ void operator^= (uint28 &a, const uint28 &b) { a = a ^ b; }
+
+static __forceinline__ __device__ void operator+= (uint28 &a, const uint28 &b) { a = a + b; }
+
+static __forceinline__ __device__ void operator^= (uint2_8 &a, const uint2_8 &b) { a = a ^ b; }
+
+static __forceinline__ __device__ void operator+= (uint2_8 &a, const uint2_8 &b) { a = a + b; }
+
+
 
 static __forceinline__ __device__ void operator^= (uint32 &a, const uint32 &b) { a = a ^ b; }
 
@@ -373,6 +543,8 @@ static __forceinline__ __device__  __host__ void operator^= (uint16 &a, const ui
 
 static __forceinline__ __device__ void operator^= (ulonglong16 &a, const ulonglong16 &b) { a = a ^ b; }
 static __forceinline__ __device__ void operator^= (ulonglong4 &a, const ulonglong4 &b) { a = a ^ b; }
+static __forceinline__ __device__ void operator+= (ulonglong4 &a, const ulonglong4 &b) { a = a + b; }
+
 static __forceinline__ __device__ void operator^= (ulonglong2 &a, const ulonglong2 &b) { a = a ^ b; }
 static __forceinline__ __device__ void operator+= (ulonglong2 &a, const ulonglong2 &b) { a = a + b; }
 
@@ -426,11 +598,11 @@ ulonglong32to64 operator+ (const ulonglong32to64 &a, const ulonglong32to64 &b)
 
 
 static __forceinline__ __device__ ulonglonglong operator^ (const ulonglonglong &a, const ulonglonglong &b) {
-	return make_ulonglonglong(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5, a.s6 ^ b.s6, a.s7 ^ b.s7);
+	return make_ulonglonglong(a.s0 ^ b.s0, a.s1 ^ b.s1, a.s2 ^ b.s2, a.s3 ^ b.s3, a.s4 ^ b.s4, a.s5 ^ b.s5);
 }
 
 static __forceinline__ __device__ ulonglonglong operator+ (const ulonglonglong &a, const ulonglonglong &b) {
-	return make_ulonglonglong(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5, a.s6 + b.s6, a.s7 + b.s7);
+	return make_ulonglonglong(a.s0 + b.s0, a.s1 + b.s1, a.s2 + b.s2, a.s3 + b.s3, a.s4 + b.s4, a.s5 + b.s5);
 }
 
 
@@ -441,6 +613,9 @@ static __forceinline__ __device__ void operator+= (uint4 &a, uint4 b) { a = a + 
 static __forceinline__ __device__ void operator+= (uchar4 &a, uchar4 b) { a = a + b; }
 static __forceinline__ __device__  __host__ void operator+= (uint8 &a, const uint8 &b) { a = a + b; }
 static __forceinline__ __device__  __host__ void operator+= (uint16 &a, const uint16 &b) { a = a + b; }
+static __forceinline__ __device__   void operator+= (uint2_16 &a, const uint2_16 &b) { a = a + b; }
+static __forceinline__ __device__   void operator^= (uint2_16 &a, const uint2_16 &b) { a = a + b; }
+
 static __forceinline__ __device__ void operator+= (ulong8 &a, const ulong8 &b) { a = a + b; }
 static __forceinline__ __device__ void operator+= (ulonglong16 &a, const ulonglong16 &b) { a = a + b; }
 static __forceinline__ __device__ void operator+= (ulonglong8to16 &a, const ulonglong8to16 &b) { a = a + b; }
@@ -660,7 +835,6 @@ truc3 = cuda_swab32(vec4.s0); \
  \
 }
 
-
 static __device__ __inline__ uint32 __ldg32b(const uint32 *ptr)
 {
 	uint32 ret;
@@ -770,77 +944,6 @@ static __device__ __inline__ uintx128 __ldg128(const uintx128 *ptr)
 	return ret;
 }
 
-static __device__ __inline__ uintx256 __ldg256(const uintx256 *ptr)
-{
-	uintx256 ret;
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"     : "=r"(ret.s0.s0.s0.s0.s0.s0.x), "=r"(ret.s0.s0.s0.s0.s0.s0.y), "=r"(ret.s0.s0.s0.s0.s0.s0.z), "=r"(ret.s0.s0.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.s0.s0.s0.s0.s0.s1.x), "=r"(ret.s0.s0.s0.s0.s0.s1.y), "=r"(ret.s0.s0.s0.s0.s0.s1.z), "=r"(ret.s0.s0.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.s0.s0.s0.s0.s1.s0.x), "=r"(ret.s0.s0.s0.s0.s1.s0.y), "=r"(ret.s0.s0.s0.s0.s1.s0.z), "=r"(ret.s0.s0.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.s0.s0.s0.s0.s1.s1.x), "=r"(ret.s0.s0.s0.s0.s1.s1.y), "=r"(ret.s0.s0.s0.s0.s1.s1.z), "=r"(ret.s0.s0.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret.s0.s0.s0.s1.s0.s0.x), "=r"(ret.s0.s0.s0.s1.s0.s0.y), "=r"(ret.s0.s0.s0.s1.s0.s0.z), "=r"(ret.s0.s0.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];"  : "=r"(ret.s0.s0.s0.s1.s0.s1.x), "=r"(ret.s0.s0.s0.s1.s0.s1.y), "=r"(ret.s0.s0.s0.s1.s0.s1.z), "=r"(ret.s0.s0.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+96];"  : "=r"(ret.s0.s0.s0.s1.s1.s0.x), "=r"(ret.s0.s0.s0.s1.s1.s0.y), "=r"(ret.s0.s0.s0.s1.s1.s0.z), "=r"(ret.s0.s0.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+112];" : "=r"(ret.s0.s0.s0.s1.s1.s1.x), "=r"(ret.s0.s0.s0.s1.s1.s1.y), "=r"(ret.s0.s0.s0.s1.s1.s1.z), "=r"(ret.s0.s0.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+128];" : "=r"(ret.s0.s0.s1.s0.s0.s0.x), "=r"(ret.s0.s0.s1.s0.s0.s0.y), "=r"(ret.s0.s0.s1.s0.s0.s0.z), "=r"(ret.s0.s0.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+144];" : "=r"(ret.s0.s0.s1.s0.s0.s1.x), "=r"(ret.s0.s0.s1.s0.s0.s1.y), "=r"(ret.s0.s0.s1.s0.s0.s1.z), "=r"(ret.s0.s0.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+160];" : "=r"(ret.s0.s0.s1.s0.s1.s0.x), "=r"(ret.s0.s0.s1.s0.s1.s0.y), "=r"(ret.s0.s0.s1.s0.s1.s0.z), "=r"(ret.s0.s0.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+176];" : "=r"(ret.s0.s0.s1.s0.s1.s1.x), "=r"(ret.s0.s0.s1.s0.s1.s1.y), "=r"(ret.s0.s0.s1.s0.s1.s1.z), "=r"(ret.s0.s0.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+192];" : "=r"(ret.s0.s0.s1.s1.s0.s0.x), "=r"(ret.s0.s0.s1.s1.s0.s0.y), "=r"(ret.s0.s0.s1.s1.s0.s0.z), "=r"(ret.s0.s0.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+208];" : "=r"(ret.s0.s0.s1.s1.s0.s1.x), "=r"(ret.s0.s0.s1.s1.s0.s1.y), "=r"(ret.s0.s0.s1.s1.s0.s1.z), "=r"(ret.s0.s0.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+224];" : "=r"(ret.s0.s0.s1.s1.s1.s0.x), "=r"(ret.s0.s0.s1.s1.s1.s0.y), "=r"(ret.s0.s0.s1.s1.s1.s0.z), "=r"(ret.s0.s0.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+240];" : "=r"(ret.s0.s0.s1.s1.s1.s1.x), "=r"(ret.s0.s0.s1.s1.s1.s1.y), "=r"(ret.s0.s0.s1.s1.s1.s1.z), "=r"(ret.s0.s0.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+256];" : "=r"(ret.s0.s1.s0.s0.s0.s0.x), "=r"(ret.s0.s1.s0.s0.s0.s0.y), "=r"(ret.s0.s1.s0.s0.s0.s0.z), "=r"(ret.s0.s1.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+272];" : "=r"(ret.s0.s1.s0.s0.s0.s1.x), "=r"(ret.s0.s1.s0.s0.s0.s1.y), "=r"(ret.s0.s1.s0.s0.s0.s1.z), "=r"(ret.s0.s1.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+288];" : "=r"(ret.s0.s1.s0.s0.s1.s0.x), "=r"(ret.s0.s1.s0.s0.s1.s0.y), "=r"(ret.s0.s1.s0.s0.s1.s0.z), "=r"(ret.s0.s1.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+304];" : "=r"(ret.s0.s1.s0.s0.s1.s1.x), "=r"(ret.s0.s1.s0.s0.s1.s1.y), "=r"(ret.s0.s1.s0.s0.s1.s1.z), "=r"(ret.s0.s1.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+320];" : "=r"(ret.s0.s1.s0.s1.s0.s0.x), "=r"(ret.s0.s1.s0.s1.s0.s0.y), "=r"(ret.s0.s1.s0.s1.s0.s0.z), "=r"(ret.s0.s1.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+336];" : "=r"(ret.s0.s1.s0.s1.s0.s1.x), "=r"(ret.s0.s1.s0.s1.s0.s1.y), "=r"(ret.s0.s1.s0.s1.s0.s1.z), "=r"(ret.s0.s1.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+352];" : "=r"(ret.s0.s1.s0.s1.s1.s0.x), "=r"(ret.s0.s1.s0.s1.s1.s0.y), "=r"(ret.s0.s1.s0.s1.s1.s0.z), "=r"(ret.s0.s1.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+368];" : "=r"(ret.s0.s1.s0.s1.s1.s1.x), "=r"(ret.s0.s1.s0.s1.s1.s1.y), "=r"(ret.s0.s1.s0.s1.s1.s1.z), "=r"(ret.s0.s1.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+384];" : "=r"(ret.s0.s1.s1.s0.s0.s0.x), "=r"(ret.s0.s1.s1.s0.s0.s0.y), "=r"(ret.s0.s1.s1.s0.s0.s0.z), "=r"(ret.s0.s1.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+400];" : "=r"(ret.s0.s1.s1.s0.s0.s1.x), "=r"(ret.s0.s1.s1.s0.s0.s1.y), "=r"(ret.s0.s1.s1.s0.s0.s1.z), "=r"(ret.s0.s1.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+416];" : "=r"(ret.s0.s1.s1.s0.s1.s0.x), "=r"(ret.s0.s1.s1.s0.s1.s0.y), "=r"(ret.s0.s1.s1.s0.s1.s0.z), "=r"(ret.s0.s1.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+432];" : "=r"(ret.s0.s1.s1.s0.s1.s1.x), "=r"(ret.s0.s1.s1.s0.s1.s1.y), "=r"(ret.s0.s1.s1.s0.s1.s1.z), "=r"(ret.s0.s1.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+448];" : "=r"(ret.s0.s1.s1.s1.s0.s0.x), "=r"(ret.s0.s1.s1.s1.s0.s0.y), "=r"(ret.s0.s1.s1.s1.s0.s0.z), "=r"(ret.s0.s1.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+464];" : "=r"(ret.s0.s1.s1.s1.s0.s1.x), "=r"(ret.s0.s1.s1.s1.s0.s1.y), "=r"(ret.s0.s1.s1.s1.s0.s1.z), "=r"(ret.s0.s1.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+480];" : "=r"(ret.s0.s1.s1.s1.s1.s0.x), "=r"(ret.s0.s1.s1.s1.s1.s0.y), "=r"(ret.s0.s1.s1.s1.s1.s0.z), "=r"(ret.s0.s1.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+496];" : "=r"(ret.s0.s1.s1.s1.s1.s1.x), "=r"(ret.s0.s1.s1.s1.s1.s1.y), "=r"(ret.s0.s1.s1.s1.s1.s1.z), "=r"(ret.s0.s1.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+512];" : "=r"(ret.s1.s0.s0.s0.s0.s0.x), "=r"(ret.s1.s0.s0.s0.s0.s0.y), "=r"(ret.s1.s0.s0.s0.s0.s0.z), "=r"(ret.s1.s0.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+528];" : "=r"(ret.s1.s0.s0.s0.s0.s1.x), "=r"(ret.s1.s0.s0.s0.s0.s1.y), "=r"(ret.s1.s0.s0.s0.s0.s1.z), "=r"(ret.s1.s0.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+544];" : "=r"(ret.s1.s0.s0.s0.s1.s0.x), "=r"(ret.s1.s0.s0.s0.s1.s0.y), "=r"(ret.s1.s0.s0.s0.s1.s0.z), "=r"(ret.s1.s0.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+560];" : "=r"(ret.s1.s0.s0.s0.s1.s1.x), "=r"(ret.s1.s0.s0.s0.s1.s1.y), "=r"(ret.s1.s0.s0.s0.s1.s1.z), "=r"(ret.s1.s0.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+576];" : "=r"(ret.s1.s0.s0.s1.s0.s0.x), "=r"(ret.s1.s0.s0.s1.s0.s0.y), "=r"(ret.s1.s0.s0.s1.s0.s0.z), "=r"(ret.s1.s0.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+592];" : "=r"(ret.s1.s0.s0.s1.s0.s1.x), "=r"(ret.s1.s0.s0.s1.s0.s1.y), "=r"(ret.s1.s0.s0.s1.s0.s1.z), "=r"(ret.s1.s0.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+608];" : "=r"(ret.s1.s0.s0.s1.s1.s0.x), "=r"(ret.s1.s0.s0.s1.s1.s0.y), "=r"(ret.s1.s0.s0.s1.s1.s0.z), "=r"(ret.s1.s0.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+624];" : "=r"(ret.s1.s0.s0.s1.s1.s1.x), "=r"(ret.s1.s0.s0.s1.s1.s1.y), "=r"(ret.s1.s0.s0.s1.s1.s1.z), "=r"(ret.s1.s0.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+640];" : "=r"(ret.s1.s0.s1.s0.s0.s0.x), "=r"(ret.s1.s0.s1.s0.s0.s0.y), "=r"(ret.s1.s0.s1.s0.s0.s0.z), "=r"(ret.s1.s0.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+656];" : "=r"(ret.s1.s0.s1.s0.s0.s1.x), "=r"(ret.s1.s0.s1.s0.s0.s1.y), "=r"(ret.s1.s0.s1.s0.s0.s1.z), "=r"(ret.s1.s0.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+672];" : "=r"(ret.s1.s0.s1.s0.s1.s0.x), "=r"(ret.s1.s0.s1.s0.s1.s0.y), "=r"(ret.s1.s0.s1.s0.s1.s0.z), "=r"(ret.s1.s0.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+688];" : "=r"(ret.s1.s0.s1.s0.s1.s1.x), "=r"(ret.s1.s0.s1.s0.s1.s1.y), "=r"(ret.s1.s0.s1.s0.s1.s1.z), "=r"(ret.s1.s0.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+704];" : "=r"(ret.s1.s0.s1.s1.s0.s0.x), "=r"(ret.s1.s0.s1.s1.s0.s0.y), "=r"(ret.s1.s0.s1.s1.s0.s0.z), "=r"(ret.s1.s0.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+720];" : "=r"(ret.s1.s0.s1.s1.s0.s1.x), "=r"(ret.s1.s0.s1.s1.s0.s1.y), "=r"(ret.s1.s0.s1.s1.s0.s1.z), "=r"(ret.s1.s0.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+736];" : "=r"(ret.s1.s0.s1.s1.s1.s0.x), "=r"(ret.s1.s0.s1.s1.s1.s0.y), "=r"(ret.s1.s0.s1.s1.s1.s0.z), "=r"(ret.s1.s0.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+752];" : "=r"(ret.s1.s0.s1.s1.s1.s1.x), "=r"(ret.s1.s0.s1.s1.s1.s1.y), "=r"(ret.s1.s0.s1.s1.s1.s1.z), "=r"(ret.s1.s0.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+768];" : "=r"(ret.s1.s1.s0.s0.s0.s0.x), "=r"(ret.s1.s1.s0.s0.s0.s0.y), "=r"(ret.s1.s1.s0.s0.s0.s0.z), "=r"(ret.s1.s1.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+784];" : "=r"(ret.s1.s1.s0.s0.s0.s1.x), "=r"(ret.s1.s1.s0.s0.s0.s1.y), "=r"(ret.s1.s1.s0.s0.s0.s1.z), "=r"(ret.s1.s1.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+800];" : "=r"(ret.s1.s1.s0.s0.s1.s0.x), "=r"(ret.s1.s1.s0.s0.s1.s0.y), "=r"(ret.s1.s1.s0.s0.s1.s0.z), "=r"(ret.s1.s1.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+816];" : "=r"(ret.s1.s1.s0.s0.s1.s1.x), "=r"(ret.s1.s1.s0.s0.s1.s1.y), "=r"(ret.s1.s1.s0.s0.s1.s1.z), "=r"(ret.s1.s1.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+832];" : "=r"(ret.s1.s1.s0.s1.s0.s0.x), "=r"(ret.s1.s1.s0.s1.s0.s0.y), "=r"(ret.s1.s1.s0.s1.s0.s0.z), "=r"(ret.s1.s1.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+848];" : "=r"(ret.s1.s1.s0.s1.s0.s1.x), "=r"(ret.s1.s1.s0.s1.s0.s1.y), "=r"(ret.s1.s1.s0.s1.s0.s1.z), "=r"(ret.s1.s1.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+864];" : "=r"(ret.s1.s1.s0.s1.s1.s0.x), "=r"(ret.s1.s1.s0.s1.s1.s0.y), "=r"(ret.s1.s1.s0.s1.s1.s0.z), "=r"(ret.s1.s1.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+880];" : "=r"(ret.s1.s1.s0.s1.s1.s1.x), "=r"(ret.s1.s1.s0.s1.s1.s1.y), "=r"(ret.s1.s1.s0.s1.s1.s1.z), "=r"(ret.s1.s1.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+896];" : "=r"(ret.s1.s1.s1.s0.s0.s0.x), "=r"(ret.s1.s1.s1.s0.s0.s0.y), "=r"(ret.s1.s1.s1.s0.s0.s0.z), "=r"(ret.s1.s1.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+912];" : "=r"(ret.s1.s1.s1.s0.s0.s1.x), "=r"(ret.s1.s1.s1.s0.s0.s1.y), "=r"(ret.s1.s1.s1.s0.s0.s1.z), "=r"(ret.s1.s1.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+928];" : "=r"(ret.s1.s1.s1.s0.s1.s0.x), "=r"(ret.s1.s1.s1.s0.s1.s0.y), "=r"(ret.s1.s1.s1.s0.s1.s0.z), "=r"(ret.s1.s1.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+944];" : "=r"(ret.s1.s1.s1.s0.s1.s1.x), "=r"(ret.s1.s1.s1.s0.s1.s1.y), "=r"(ret.s1.s1.s1.s0.s1.s1.z), "=r"(ret.s1.s1.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+960];" : "=r"(ret.s1.s1.s1.s1.s0.s0.x), "=r"(ret.s1.s1.s1.s1.s0.s0.y), "=r"(ret.s1.s1.s1.s1.s0.s0.z), "=r"(ret.s1.s1.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+976];" : "=r"(ret.s1.s1.s1.s1.s0.s1.x), "=r"(ret.s1.s1.s1.s1.s0.s1.y), "=r"(ret.s1.s1.s1.s1.s0.s1.z), "=r"(ret.s1.s1.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+992];" : "=r"(ret.s1.s1.s1.s1.s1.s0.x), "=r"(ret.s1.s1.s1.s1.s1.s0.y), "=r"(ret.s1.s1.s1.s1.s1.s0.z), "=r"(ret.s1.s1.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+1008];" : "=r"(ret.s1.s1.s1.s1.s1.s1.x), "=r"(ret.s1.s1.s1.s1.s1.s1.y), "=r"(ret.s1.s1.s1.s1.s1.s1.z), "=r"(ret.s1.s1.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-
-	return ret;
-}
 
 static __device__ __inline__ ulonglong2 __ldg2(const ulonglong2 *ptr)
 {
@@ -855,6 +958,74 @@ static __device__ __inline__ ulonglong4 __ldg4(const ulonglong4 *ptr)
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"  : "=l"(ret.x), "=l"(ret.y) : __LDG_PTR(ptr));
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.z), "=l"(ret.w) : __LDG_PTR(ptr));
 	return ret;
+}
+static __device__ __inline__ void ldg4(const ulonglong4 *ptr,ulonglong4 *ret)
+{
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret[0].x), "=l"(ret[0].y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret[0].z), "=l"(ret[0].w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret[1].x), "=l"(ret[1].y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret[1].z), "=l"(ret[1].w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret[2].x), "=l"(ret[2].y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret[2].z), "=l"(ret[2].w) : __LDG_PTR(ptr));
+}
+static __device__ __inline__ void ldg4xor(const ulonglong4 *ptr, ulonglong4 *ret, ulonglong4 *state)
+{
+
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret[0].x), "=l"(ret[0].y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret[0].z), "=l"(ret[0].w) : __LDG_PTR(ptr));
+	state[0] ^= ret[0];
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret[1].x), "=l"(ret[1].y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret[1].z), "=l"(ret[1].w) : __LDG_PTR(ptr));
+	state[1] ^= ret[1];
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret[2].x), "=l"(ret[2].y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret[2].z), "=l"(ret[2].w) : __LDG_PTR(ptr));
+	state[2] ^= ret[2];
+}
+
+
+static __device__ __inline__ uint28 __ldg4(const uint28 *ptr)
+{
+	uint28 ret;
+asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret.x.x), "=r"(ret.x.y), "=r"(ret.y.x), "=r"(ret.y.y) : __LDG_PTR(ptr));
+asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];" : "=r"(ret.z.x), "=r"(ret.z.y), "=r"(ret.w.x), "=r"(ret.w.y) : __LDG_PTR(ptr));
+
+	return ret;
+}
+
+static __device__ __inline__ uint48 __ldg4(const uint48 *ptr)
+{
+	uint48 ret;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret.s0.x), "=r"(ret.s0.y), "=r"(ret.s0.z), "=r"(ret.s0.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];" : "=r"(ret.s1.x), "=r"(ret.s1.y), "=r"(ret.s1.z), "=r"(ret.s1.w) : __LDG_PTR(ptr));
+	return ret;
+}
+
+
+static __device__ __inline__ void ldg4(const uint28 *ptr, uint28 *ret)
+{
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret[0].x.x), "=r"(ret[0].x.y), "=r"(ret[0].y.x), "=r"(ret[0].y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];" : "=r"(ret[0].z.x), "=r"(ret[0].z.y), "=r"(ret[0].w.x), "=r"(ret[0].w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret[1].x.x), "=r"(ret[1].x.y), "=r"(ret[1].y.x), "=r"(ret[1].y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];" : "=r"(ret[1].z.x), "=r"(ret[1].z.y), "=r"(ret[1].w.x), "=r"(ret[1].w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret[2].x.x), "=r"(ret[2].x.y), "=r"(ret[2].y.x), "=r"(ret[2].y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];" : "=r"(ret[2].z.x), "=r"(ret[2].z.y), "=r"(ret[2].w.x), "=r"(ret[2].w.y) : __LDG_PTR(ptr));
+}
+static __device__ __inline__ void ldg4xor(const uint28 *ptr, uint28 *ret,uint28* state)
+{
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret[0].x.x), "=r"(ret[0].x.y), "=r"(ret[0].y.x), "=r"(ret[0].y.y) : __LDG_PTR(ptr));
+	state[0].x ^= ret[0].x;	state[0].y ^= ret[0].y;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];" : "=r"(ret[0].z.x), "=r"(ret[0].z.y), "=r"(ret[0].w.x), "=r"(ret[0].w.y) : __LDG_PTR(ptr));
+	state[0].z ^= ret[0].z;	state[0].w ^= ret[0].w;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret[1].x.x), "=r"(ret[1].x.y), "=r"(ret[1].y.x), "=r"(ret[1].y.y) : __LDG_PTR(ptr));
+	state[1].x ^= ret[1].x;	state[1].y ^= ret[1].y;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];" : "=r"(ret[1].z.x), "=r"(ret[1].z.y), "=r"(ret[1].w.x), "=r"(ret[1].w.y) : __LDG_PTR(ptr));
+	state[1].z ^= ret[1].z;	state[1].w ^= ret[1].w;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret[2].x.x), "=r"(ret[2].x.y), "=r"(ret[2].y.x), "=r"(ret[2].y.y) : __LDG_PTR(ptr));
+	state[2].x ^= ret[2].x;	state[2].y ^= ret[2].y;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];" : "=r"(ret[2].z.x), "=r"(ret[2].z.y), "=r"(ret[2].w.x), "=r"(ret[2].w.y) : __LDG_PTR(ptr));
+	state[2].z ^= ret[2].z;	state[2].w ^= ret[2].w;
+
+
 }
 
 
@@ -884,153 +1055,66 @@ static __device__ __inline__ ulonglong8to16 __ldg8to16(const ulonglong8to16 *ptr
 static __device__ __inline__ ulonglonglong __ldgxtralong(const ulonglonglong *ptr)
 {
 	ulonglonglong ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.lo.l0.x), "=l"(ret.s0.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s0.lo.l1.x), "=l"(ret.s0.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s0.lo.l2.x), "=l"(ret.s0.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s0.lo.l3.x), "=l"(ret.s0.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s0.hi.l0.x), "=l"(ret.s0.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s0.hi.l1.x), "=l"(ret.s0.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s0.hi.l2.x), "=l"(ret.s0.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.s0.hi.l3.x), "=l"(ret.s0.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];"  : "=l"(ret.s1.lo.l0.x), "=l"(ret.s1.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];"  : "=l"(ret.s1.lo.l1.x), "=l"(ret.s1.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];"  : "=l"(ret.s1.lo.l2.x), "=l"(ret.s1.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];"  : "=l"(ret.s1.lo.l3.x), "=l"(ret.s1.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];"  : "=l"(ret.s1.hi.l0.x), "=l"(ret.s1.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];"  : "=l"(ret.s1.hi.l1.x), "=l"(ret.s1.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];"  : "=l"(ret.s1.hi.l2.x), "=l"(ret.s1.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];"  : "=l"(ret.s1.hi.l3.x), "=l"(ret.s1.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+256];"  : "=l"(ret.s2.lo.l0.x), "=l"(ret.s2.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+272];"  : "=l"(ret.s2.lo.l1.x), "=l"(ret.s2.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+288];"  : "=l"(ret.s2.lo.l2.x), "=l"(ret.s2.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+304];"  : "=l"(ret.s2.lo.l3.x), "=l"(ret.s2.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+320];"  : "=l"(ret.s2.hi.l0.x), "=l"(ret.s2.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+336];"  : "=l"(ret.s2.hi.l1.x), "=l"(ret.s2.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+352];"  : "=l"(ret.s2.hi.l2.x), "=l"(ret.s2.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+368];"  : "=l"(ret.s2.hi.l3.x), "=l"(ret.s2.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+384];"     : "=l"(ret.s3.lo.l0.x), "=l"(ret.s3.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+400];"  : "=l"(ret.s3.lo.l1.x), "=l"(ret.s3.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+416];"  : "=l"(ret.s3.lo.l2.x), "=l"(ret.s3.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+432];"  : "=l"(ret.s3.lo.l3.x), "=l"(ret.s3.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+448];"  : "=l"(ret.s3.hi.l0.x), "=l"(ret.s3.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+464];"  : "=l"(ret.s3.hi.l1.x), "=l"(ret.s3.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+480];"  : "=l"(ret.s3.hi.l2.x), "=l"(ret.s3.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+496];" : "=l"(ret.s3.hi.l3.x), "=l"(ret.s3.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+512];"     : "=l"(ret.s4.lo.l0.x), "=l"(ret.s4.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+528];"  : "=l"(ret.s4.lo.l1.x), "=l"(ret.s4.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+544];"  : "=l"(ret.s4.lo.l2.x), "=l"(ret.s4.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+560];"  : "=l"(ret.s4.lo.l3.x), "=l"(ret.s4.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+576];"  : "=l"(ret.s4.hi.l0.x), "=l"(ret.s4.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+592];"  : "=l"(ret.s4.hi.l1.x), "=l"(ret.s4.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+608];"  : "=l"(ret.s4.hi.l2.x), "=l"(ret.s4.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+624];" : "=l"(ret.s4.hi.l3.x), "=l"(ret.s4.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+640];"     : "=l"(ret.s5.lo.l0.x), "=l"(ret.s5.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+656];"  : "=l"(ret.s5.lo.l1.x), "=l"(ret.s5.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+672];"  : "=l"(ret.s5.lo.l2.x), "=l"(ret.s5.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+688];"  : "=l"(ret.s5.lo.l3.x), "=l"(ret.s5.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+704];"  : "=l"(ret.s5.hi.l0.x), "=l"(ret.s5.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+720];"  : "=l"(ret.s5.hi.l1.x), "=l"(ret.s5.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+736];"  : "=l"(ret.s5.hi.l2.x), "=l"(ret.s5.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+752];" : "=l"(ret.s5.hi.l3.x), "=l"(ret.s5.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+768];"     : "=l"(ret.s6.lo.l0.x), "=l"(ret.s6.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+784];"  : "=l"(ret.s6.lo.l1.x), "=l"(ret.s6.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+800];"  : "=l"(ret.s6.lo.l2.x), "=l"(ret.s6.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+816];"  : "=l"(ret.s6.lo.l3.x), "=l"(ret.s6.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+832];"  : "=l"(ret.s6.hi.l0.x), "=l"(ret.s6.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+848];"  : "=l"(ret.s6.hi.l1.x), "=l"(ret.s6.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+864];"  : "=l"(ret.s6.hi.l2.x), "=l"(ret.s6.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+880];" : "=l"(ret.s6.hi.l3.x), "=l"(ret.s6.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+896];"     : "=l"(ret.s7.lo.l0.x), "=l"(ret.s7.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+912];"  : "=l"(ret.s7.lo.l1.x), "=l"(ret.s7.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+928];"  : "=l"(ret.s7.lo.l2.x), "=l"(ret.s7.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+944];"  : "=l"(ret.s7.lo.l3.x), "=l"(ret.s7.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+960];"  : "=l"(ret.s7.hi.l0.x), "=l"(ret.s7.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+976];"  : "=l"(ret.s7.hi.l1.x), "=l"(ret.s7.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+992];"  : "=l"(ret.s7.hi.l2.x), "=l"(ret.s7.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+1008];" : "=l"(ret.s7.hi.l3.x), "=l"(ret.s7.hi.l3.y) : __LDG_PTR(ptr));
-
-
-
-	return ret;
-}
-
-
-static __device__ __inline__ ulonglong16 __ldg64(const ulonglong2 *ptr)
-{
-	ulonglong16 ret;
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.x), "=l"(ret.s0.y) : __LDG_PTR(ptr));
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];"  : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];"  : "=l"(ret.s8.x), "=l"(ret.s8.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];"  : "=l"(ret.s9.x), "=l"(ret.s9.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];"  : "=l"(ret.sa.x), "=l"(ret.sa.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];"  : "=l"(ret.sb.x), "=l"(ret.sb.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];"  : "=l"(ret.sc.x), "=l"(ret.sc.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];"  : "=l"(ret.sd.x), "=l"(ret.sd.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];"  : "=l"(ret.se.x), "=l"(ret.se.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];"  : "=l"(ret.sf.x), "=l"(ret.sf.y) : __LDG_PTR(ptr));
 	return ret;
+}
+static __device__ __inline__ uint8 ldg8bis(const uint8 *ptr)
+{
+	uint8 test;
+	asm volatile ("ld.global.nc.v4.u32 {%0,%1,%2,%3},[%4];" : "=r"(test.s0), "=r"(test.s1), "=r"(test.s2), "=r"(test.s3) : __LDG_PTR(ptr));
+	asm volatile ("ld.global.nc.v4.u32 {%0,%1,%2,%3},[%4+16];" : "=r"(test.s4), "=r"(test.s5), "=r"(test.s6), "=r"(test.s7) : __LDG_PTR(ptr));
+	return (test);
 }
 
 
-static __device__ __inline__ ulonglong16 __ldg64b(const ulonglong16 *ptr)
+static __device__ __inline__ ulonglong16 __ldg32(const ulonglong4 *ptr)
 {
 	ulonglong16 ret;
 	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.x), "=l"(ret.s0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];" : "=l"(ret.s8.x), "=l"(ret.s8.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];" : "=l"(ret.s9.x), "=l"(ret.s9.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];" : "=l"(ret.sa.x), "=l"(ret.sa.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];" : "=l"(ret.sb.x), "=l"(ret.sb.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];" : "=l"(ret.sc.x), "=l"(ret.sc.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];" : "=l"(ret.sd.x), "=l"(ret.sd.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];" : "=l"(ret.se.x), "=l"(ret.se.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];" : "=l"(ret.sf.x), "=l"(ret.sf.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s0.z), "=l"(ret.s0.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s1.z), "=l"(ret.s1.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s2.z), "=l"(ret.s2.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];"  : "=l"(ret.s3.z), "=l"(ret.s3.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];"  : "=l"(ret.s4.z), "=l"(ret.s4.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];"  : "=l"(ret.s5.z), "=l"(ret.s5.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];"  : "=l"(ret.s6.z), "=l"(ret.s6.w) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];"  : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];"  : "=l"(ret.s7.z), "=l"(ret.s7.w) : __LDG_PTR(ptr));
 	return ret;
 }
 
-
-
-static __device__ __inline__ ulonglong16 __ldg64b(const uint32 *ptr)
+static __device__ __inline__ uintx64bis __ldg32(const uint28 *ptr)
 {
-	ulonglong16 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.x), "=l"(ret.s0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];" : "=l"(ret.s8.x), "=l"(ret.s8.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];" : "=l"(ret.s9.x), "=l"(ret.s9.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];" : "=l"(ret.sa.x), "=l"(ret.sa.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];" : "=l"(ret.sb.x), "=l"(ret.sb.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];" : "=l"(ret.sc.x), "=l"(ret.sc.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];" : "=l"(ret.sd.x), "=l"(ret.sd.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];" : "=l"(ret.se.x), "=l"(ret.se.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];" : "=l"(ret.sf.x), "=l"(ret.sf.y) : __LDG_PTR(ptr));
+	uintx64bis ret;
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"     : "=r"(ret.s0.x.x), "=r"(ret.s0.x.y), "=r"(ret.s0.y.x), "=r"(ret.s0.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.s0.z.x), "=r"(ret.s0.z.y), "=r"(ret.s0.w.x), "=r"(ret.s0.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.s1.x.x), "=r"(ret.s1.x.y), "=r"(ret.s1.y.x), "=r"(ret.s1.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.s1.z.x), "=r"(ret.s1.z.y), "=r"(ret.s1.w.x), "=r"(ret.s1.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret.s2.x.x), "=r"(ret.s2.x.y), "=r"(ret.s2.y.x), "=r"(ret.s2.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];"  : "=r"(ret.s2.z.x), "=r"(ret.s2.z.y), "=r"(ret.s2.w.x), "=r"(ret.s2.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+96];"  : "=r"(ret.s3.x.x), "=r"(ret.s3.x.y), "=r"(ret.s3.y.x), "=r"(ret.s3.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+112];" : "=r"(ret.s3.z.x), "=r"(ret.s3.z.y), "=r"(ret.s3.w.x), "=r"(ret.s3.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+128];" : "=r"(ret.s4.x.x), "=r"(ret.s4.x.y), "=r"(ret.s4.y.x), "=r"(ret.s4.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+144];" : "=r"(ret.s4.z.x), "=r"(ret.s4.z.y), "=r"(ret.s4.w.x), "=r"(ret.s4.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+160];" : "=r"(ret.s5.x.x), "=r"(ret.s5.x.y), "=r"(ret.s5.y.x), "=r"(ret.s5.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+176];" : "=r"(ret.s5.z.x), "=r"(ret.s5.z.y), "=r"(ret.s5.w.x), "=r"(ret.s5.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+192];" : "=r"(ret.s6.x.x), "=r"(ret.s6.x.y), "=r"(ret.s6.y.x), "=r"(ret.s6.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+208];" : "=r"(ret.s6.z.x), "=r"(ret.s6.z.y), "=r"(ret.s6.w.x), "=r"(ret.s6.w.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+224];" : "=r"(ret.s7.x.x), "=r"(ret.s7.x.y), "=r"(ret.s7.y.x), "=r"(ret.s7.y.y) : __LDG_PTR(ptr));
+	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+240];" : "=r"(ret.s7.z.x), "=r"(ret.s7.z.y), "=r"(ret.s7.w.x), "=r"(ret.s7.w.y) : __LDG_PTR(ptr));
 	return ret;
 }
-
 
 
 static __forceinline__ __device__ uint8 swapvec(const uint8 &buf)
@@ -1105,5 +1189,44 @@ static __forceinline__ __device__ uint16 swapvec(const uint16 &buf)
 	vec.sf = cuda_swab32(buf.sf);
 	return vec;
 }
+
+static __device__ __forceinline__ uint28 shuffle4(const uint28 &var, int lane)
+{
+uint28 res;
+res.x.x = __shfl(var.x.x, lane);
+res.x.y = __shfl(var.x.y, lane);
+res.y.x = __shfl(var.y.x, lane);
+res.y.y = __shfl(var.y.y, lane);
+res.z.x = __shfl(var.z.x, lane);
+res.z.y = __shfl(var.z.y, lane);
+res.w.x = __shfl(var.w.x, lane);
+res.w.y = __shfl(var.w.y, lane);
+return res;
+}
+
+
+static __device__ __forceinline__ ulonglong4 shuffle4(ulonglong4 var, int lane)
+{
+	ulonglong4 res;
+    uint2 temp;
+	temp = vectorize(var.x);
+	temp.x = __shfl(temp.x, lane);
+	temp.y = __shfl(temp.y, lane);
+	res.x = devectorize(temp);
+	temp = vectorize(var.y);
+	temp.x = __shfl(temp.x, lane);
+	temp.y = __shfl(temp.y, lane);
+	res.y = devectorize(temp);
+	temp = vectorize(var.z);
+	temp.x = __shfl(temp.x, lane);
+	temp.y = __shfl(temp.y, lane);
+	res.z = devectorize(temp);
+	temp = vectorize(var.w);
+	temp.x = __shfl(temp.x, lane);
+	temp.y = __shfl(temp.y, lane);
+	res.w = devectorize(temp);
+	return res;
+}
+
 
 #endif // #ifndef CUDA_VECTOR_H
