@@ -8,11 +8,7 @@
 
 
 
-#if __CUDA_ARCH__ < 500 
-#define vectype ulonglong4
-#define u64type uint64_t
-#define memshift 4
-#elif __CUDA_ARCH__ == 500
+#if __CUDA_ARCH__ == 500
 #define u64type uint2
 #define vectype uint28
 #define memshift 3
@@ -31,16 +27,6 @@ static __device__ __forceinline__ void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, 
 	c += d; b ^= c; b = ROR24(b);
 	a += b; d ^= a; d = ROR16(d);
 	c += d; b ^= c; b = ROR2(b, 63);
-
-}
-
-static __device__ __forceinline__ void Gfunc_v35(unsigned long long & a, unsigned long long &b, unsigned long long &c, unsigned long long &d)
-{
-
-	a += b; d ^= a; d = ROTR64(d, 32);
-	c += d; b ^= c; b = ROTR64(b, 24);
-	a += b; d ^= a; d = ROTR64(d, 16);
-	c += d; b ^= c; b = ROTR64(b, 63);
 
 }
 
@@ -136,7 +122,7 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 		uint32_t ps3 = (memshift*7  + memshift * 8 * rowOut   + 256 * thread);
 
 
-//#pragma unroll 1
+	#pragma unroll 1
 	for (int i = 0; i < 8; i++)
 	{
 		uint32_t s1 = ps1 + i*memshift;
@@ -343,12 +329,6 @@ __device__ __forceinline__ void reduceDuplexRowtV3(const int rowIn, const int ro
 			for (int j = 0; j < 3; j++)
 				(DMatrix + s2)[j] = state2[j];
 		}
-
-
-
-
-
-
 	}
 }
 
@@ -419,29 +399,34 @@ void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash
 
 		reduceDuplex(state, thread);
 
-		reduceDuplexRowSetupV2(1, 0, 2, state,  thread);
-		reduceDuplexRowSetupV2(2, 1, 3, state,  thread);
-		reduceDuplexRowSetupV2(3, 0, 4, state,  thread);
-		reduceDuplexRowSetupV2(4, 3, 5, state,  thread);
-		reduceDuplexRowSetupV2(5, 2, 6, state,  thread);
-		reduceDuplexRowSetupV2(6, 1, 7, state,  thread);
-		uint32_t rowa = ((uint2*)state)[0].x & 7;
+		const int r[18] = 
+		  { 1, 0, 2,
+			2, 1, 3,
+			3, 0, 4,
+			4, 3, 5,
+			5, 2, 6,
+			6, 1, 7 };
+		
+		for(int i = 0; i < 6*3; i+=3)
+		{
+			reduceDuplexRowSetupV2(r[i], r[i + 1], r[i+2], state, thread);
+		}
 
-		reduceDuplexRowtV2(7, rowa, 0, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(0, rowa, 3, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(3, rowa, 6, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(6, rowa, 1, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(1, rowa, 4, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(4, rowa, 7, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(7, rowa, 2, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV2(2, rowa, 5, state, thread);
+		const uint32_t t[16] = {
+			7, 0,
+			0, 3,
+			3, 6,
+			6, 1,
+			1, 4,
+			4, 7,
+			7, 2,
+			2, 5};
+		uint32_t rowa;
+		for (int i = 0; i < 8 * 2; i += 2)
+		{
+			rowa = ((uint2*)state)[0].x & 7;
+			reduceDuplexRowtV2(t[i], rowa, t[i + 1], state, thread);
+		}
 
 		uint32_t shift = (memshift * 8 * rowa + 256 * thread);
 
@@ -530,29 +515,34 @@ void lyra2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputH
 
 		reduceDuplexV3(state, thread);
 
-		reduceDuplexRowSetupV3(1, 0, 2, state, thread);
-		reduceDuplexRowSetupV3(2, 1, 3, state, thread);
-		reduceDuplexRowSetupV3(3, 0, 4, state, thread);
-		reduceDuplexRowSetupV3(4, 3, 5, state, thread);
-		reduceDuplexRowSetupV3(5, 2, 6, state, thread);
-		reduceDuplexRowSetupV3(6, 1, 7, state, thread);
-		uint32_t rowa = ((uint2*)state)[0].x & 7;
+		const int r[18] =
+		{ 1, 0, 2,
+		2, 1, 3,
+		3, 0, 4,
+		4, 3, 5,
+		5, 2, 6,
+		6, 1, 7 };
 
-		reduceDuplexRowtV3(7, rowa, 0, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(0, rowa, 3, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(3, rowa, 6, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(6, rowa, 1, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(1, rowa, 4, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(4, rowa, 7, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(7, rowa, 2, state, thread);
-		rowa = ((uint2*)state)[0].x & 7;
-		reduceDuplexRowtV3(2, rowa, 5, state, thread);
+		for (int i = 0; i < 6 * 3; i += 3)
+		{
+			reduceDuplexRowSetupV3(r[i], r[i + 1], r[i + 2], state, thread);
+		}
+
+		const uint32_t t[16] = {
+			7, 0,
+			0, 3,
+			3, 6,
+			6, 1,
+			1, 4,
+			4, 7,
+			7, 2,
+			2, 5 };
+		uint32_t rowa;
+		for (int i = 0; i < 8 * 2; i += 2)
+		{
+			rowa = ((uint2*)state)[0].x & 7;
+			reduceDuplexRowtV3(t[i], rowa, t[i + 1], state, thread);
+		}
 
 		uint32_t shift = (memshift * rowa + 64 * memshift * thread);
 
