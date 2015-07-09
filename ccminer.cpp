@@ -1140,8 +1140,6 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
-			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
-			break;
 		case ALGO_KECCAK:
 			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
@@ -2548,6 +2546,7 @@ int main(int argc, char *argv[])
 			return 1;
 		sprintf(rpc_userpass, "%s:%s", rpc_user, rpc_pass);
 	}
+	cuda_devicereset();
 
 	/* init stratum data.. */
 	memset(&stratum.url, 0, sizeof(stratum));
