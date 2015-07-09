@@ -425,7 +425,7 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		uint32_t nounce = (startNounce + thread);
 
 		const int hashPosition = nounce - startNounce;
-		uint64_t *const inpHash = &g_hash[8 * hashPosition];
+		uint64_t *inpHash = &g_hash[8 * hashPosition];
 
 		uint2 msg[16];
 		uint2 h[16];
@@ -771,37 +771,36 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		XL64 = q[16] ^ q[17] ^ q[18] ^ q[19] ^ q[20] ^ q[21] ^ q[22] ^ q[23];
 		XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
+		msg[4] = (SHR(XH64, 3) ^ q[20] ^ h[4]) + (XL64    ^ q[28] ^ q[4]);
+		msg[8] = ROTL64(msg[4], 9) + (XH64     ^     q[24] ^ h[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
+
+		inpHash[0] = devectorize(msg[0 + 8]);
+
+		if (((msg[8].x)  & 0x8)) return;
+
 		msg[0] = (SHL(XH64, 5) ^ SHR(q[16], 5) ^ h[0]) + (XL64    ^ q[24] ^ q[0]);
+		msg[1] = (SHR(XH64, 7) ^ SHL(q[17], 8) ^ h[1]) + (XL64    ^ q[25] ^ q[1]);
+		msg[2] = (SHR(XH64, 5) ^ SHL(q[18], 5) ^ h[2]) + (XL64    ^ q[26] ^ q[2]);
+		msg[3] = (SHR(XH64, 1) ^ SHL(q[19], 5) ^ h[3]) + (XL64    ^ q[27] ^ q[3]);
+		msg[5] = (SHL(XH64, 6) ^ SHR(q[21], 6) ^ h[5]) + (XL64    ^ q[29] ^ q[5]);
+		msg[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ h[6]) + (XL64    ^ q[30] ^ q[6]);
+		msg[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ h[7]) + (XL64    ^ q[31] ^ q[7]);
 
-		if ((msg[0 + 8].x & 0x8))
-		{
+		msg[9] = ROTL64(msg[5], 10) + (XH64     ^     q[25] ^ h[9]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
+		msg[10] = ROTL64(msg[6], 11) + (XH64     ^     q[26] ^ h[10]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
+		msg[11] = ROTL64(msg[7], 12) + (XH64     ^     q[27] ^ h[11]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
+		msg[12] = ROTL64(msg[0], 13) + (XH64     ^     q[28] ^ h[12]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
+		msg[13] = ROTL64(msg[1], 14) + (XH64     ^     q[29] ^ h[13]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
+		msg[14] = ROTL64(msg[2], 15) + (XH64     ^     q[30] ^ h[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
+		msg[15] = ROL16(msg[3]) + (XH64     ^     q[31] ^ h[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
-			msg[1] = (SHR(XH64, 7) ^ SHL(q[17], 8) ^ h[1]) + (XL64    ^ q[25] ^ q[1]);
-			msg[2] = (SHR(XH64, 5) ^ SHL(q[18], 5) ^ h[2]) + (XL64    ^ q[26] ^ q[2]);
-			msg[3] = (SHR(XH64, 1) ^ SHL(q[19], 5) ^ h[3]) + (XL64    ^ q[27] ^ q[3]);
-			msg[4] = (SHR(XH64, 3) ^ q[20] ^ h[4]) + (XL64    ^ q[28] ^ q[4]);
-			msg[5] = (SHL(XH64, 6) ^ SHR(q[21], 6) ^ h[5]) + (XL64    ^ q[29] ^ q[5]);
-			msg[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ h[6]) + (XL64    ^ q[30] ^ q[6]);
-			msg[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ h[7]) + (XL64    ^ q[31] ^ q[7]);
-
-			msg[8] = ROTL64(msg[4], 9) + (XH64     ^     q[24] ^ h[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
-			msg[9] = ROTL64(msg[5], 10) + (XH64     ^     q[25] ^ h[9]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
-			msg[10] = ROTL64(msg[6], 11) + (XH64     ^     q[26] ^ h[10]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
-			msg[11] = ROTL64(msg[7], 12) + (XH64     ^     q[27] ^ h[11]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
-			msg[12] = ROTL64(msg[0], 13) + (XH64     ^     q[28] ^ h[12]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
-			msg[13] = ROTL64(msg[1], 14) + (XH64     ^     q[29] ^ h[13]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
-			msg[14] = ROTL64(msg[2], 15) + (XH64     ^     q[30] ^ h[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
-			msg[15] = ROL16(msg[3]) + (XH64     ^     q[31] ^ h[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
-
-			inpHash[0] = devectorize(msg[0 + 8]);
-			inpHash[1] = devectorize(msg[1 + 8]);
-			inpHash[2] = devectorize(msg[2 + 8]);
-			inpHash[3] = devectorize(msg[3 + 8]);
-			inpHash[4] = devectorize(msg[4 + 8]);
-			inpHash[5] = devectorize(msg[5 + 8]);
-			inpHash[6] = devectorize(msg[6 + 8]);
-			inpHash[7] = devectorize(msg[7 + 8]);
-		}
+		inpHash[1] = devectorize(msg[1 + 8]);
+		inpHash[2] = devectorize(msg[2 + 8]);
+		inpHash[3] = devectorize(msg[3 + 8]);
+		inpHash[4] = devectorize(msg[4 + 8]);
+		inpHash[5] = devectorize(msg[5 + 8]);
+		inpHash[6] = devectorize(msg[6 + 8]);
+		inpHash[7] = devectorize(msg[7 + 8]);
 	}
 }
 
