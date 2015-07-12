@@ -193,8 +193,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
     hash[14] = ROTL64(hash[2],15) + (    XH64     ^     q[30]    ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
 	hash[15] = ROL16(hash[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
-__global__
-__launch_bounds__(64, 8)
+__global__ __launch_bounds__(32, 16)
 void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
     const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -415,8 +414,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 	}
 }
 
-__global__
-__launch_bounds__(64, 8)
+__global__ __launch_bounds__(32, 16)
 void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -877,7 +875,7 @@ __host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
 
 __host__ void quark_bmw512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	const uint32_t threadsperblock = 64;
+	const uint32_t threadsperblock = 32;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -887,7 +885,7 @@ __host__ void quark_bmw512_cpu_hash_64(uint32_t threads, uint32_t startNounce, u
 }
 __host__ void quark_bmw512_cpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	const uint32_t threadsperblock = 64;
+	const uint32_t threadsperblock = 32;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
