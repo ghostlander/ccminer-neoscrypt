@@ -524,7 +524,7 @@ static bool jobj_binary(const json_t *obj, const char *key,
 
 static bool work_decode(const json_t *val, struct work *work)
 {
-	int data_size, midstate_size;
+	int data_size;
 	switch (opt_algo) {
 	case ALGO_NEO:
 		data_size = 84;
@@ -1350,6 +1350,8 @@ static void *miner_thread(void *userdata)
 			case ALGO_KECCAK:
 			case ALGO_BLAKECOIN:
 			case ALGO_BLAKE:
+			case ALGO_QUBIT:
+			case ALGO_QUARK:
 				minmax = 0x70000000U;
 				break;
 			case ALGO_SKEIN:
@@ -1362,12 +1364,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_JACKPOT:
 			case ALGO_LUFFA_DOOM:
 				minmax = 0x2000000;
-				break;
-			case ALGO_QUARK:
-				minmax = 0x1000000;
-				break;
-			case ALGO_QUBIT:
-				minmax = 0xe00000;
 				break;
 			case ALGO_X11:
 				minmax = 0x800000;

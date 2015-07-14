@@ -113,10 +113,9 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 		{
 			intensity = 256 * 256 * 23;
 		}
-		uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
+		throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 		throughput = min(throughput, (max_nonce - first_nonce));
-
 
 		cudaSetDevice(device_map[thr_id]);
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
