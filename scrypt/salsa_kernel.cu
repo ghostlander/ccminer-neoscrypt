@@ -41,7 +41,7 @@
 #endif
 
 // require CUDA 5.5 driver API
-#define DMAJ 5
+#define DMAJ 6
 #define DMIN 5
 
 // define some error checking macros

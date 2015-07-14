@@ -588,7 +588,7 @@ __host__ void whirlpoolx_setBlock_80(void *pdata, const void *ptarget)
 
 __host__ void whirlpoolx_precompute(int thr_id)
 {
-	dim3 grid(10);
+	dim3 grid(1);
 	dim3 block(256);
 
 	precomputeX <<<grid, block >>>(8, d_xtra[thr_id], d_tmp[thr_id]);

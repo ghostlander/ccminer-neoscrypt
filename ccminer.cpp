@@ -240,7 +240,7 @@ uint32_t opt_statsavg = 25;
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
 char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
-int opt_api_listen = 4068; /* 0 to disable */
+int opt_api_listen = 0; /* 0 to disable */
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>

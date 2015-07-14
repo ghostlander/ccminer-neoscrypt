@@ -67,37 +67,38 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	unsigned int intensity = 256 * 256 * 4;
-	cudaDeviceProp props;
-	cudaGetDeviceProperties(&props, device_map[thr_id]);
-	if (strstr(props.name, "970"))
-	{
-		intensity = 256 * 256 * 4;
-	}
-	else if (strstr(props.name, "980"))
-	{
-		intensity = 256 * 256 * 4;
-	}
-	else if (strstr(props.name, "750 Ti"))
-	{
-		intensity = 256 * 256 * 2;
-	}
-	else if (strstr(props.name, "750"))
-	{
-		intensity = 256 * 256 * 2;
-	}
-	else if (strstr(props.name, "960"))
-	{
-		intensity = 256 * 256 * 3;
-	}
-	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 18=256*256*4;
-
-
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00ff;
 
-	
+	static uint32_t throughput;
+
 	if (!init[thr_id])
 	{ 
+
+		cudaDeviceProp props;
+		cudaGetDeviceProperties(&props, device_map[thr_id]);
+		if (strstr(props.name, "970"))
+		{
+			intensity = 256 * 256 * 4;
+		}
+		else if (strstr(props.name, "980"))
+		{
+			intensity = 256 * 256 * 4;
+		}
+		else if (strstr(props.name, "750 Ti"))
+		{
+			intensity = 256 * 256 * 2;
+		}
+		else if (strstr(props.name, "750"))
+		{
+			intensity = 256 * 256 * 2;
+		}
+		else if (strstr(props.name, "960"))
+		{
+			intensity = 256 * 256 * 3;
+		}
+		throughput = device_intensity(device_map[thr_id], __func__, intensity); // 18=256*256*4;
+
 		cudaSetDevice(device_map[thr_id]);
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
