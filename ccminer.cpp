@@ -524,13 +524,19 @@ static bool jobj_binary(const json_t *obj, const char *key,
 
 static bool work_decode(const json_t *val, struct work *work)
 {
-	int data_size = sizeof(work->data), target_size = sizeof(work->target);
-	int adata_sz = ARRAY_SIZE(work->data), atarget_sz = ARRAY_SIZE(work->target);
+	int data_size, midstate_size;
+	switch (opt_algo) {
+	case ALGO_NEO:
+		data_size = 84;
+		break;
+	default:
+		data_size = 128; // original sizeof(work->data); however data is now 64*4bit
+	}
+	int adata_sz = data_size >> 2;
+	int target_size = sizeof(work->target);
+	int atarget_sz = target_size >> 2;
 	int i;
-
-	data_size = (opt_algo == ALGO_NEO) ? 84 : data_size; //silly and lazy
-	adata_sz = (opt_algo == ALGO_NEO) ? 21 : adata_sz;
-
+	//	printf("data size %d",data_size);
 	if (unlikely(!jobj_binary(val, "data", work->data, data_size))) {
 		applog(LOG_ERR, "JSON inval data");
 		return false;
@@ -539,12 +545,12 @@ static bool work_decode(const json_t *val, struct work *work)
 		applog(LOG_ERR, "JSON inval target");
 		return false;
 	}
-
 	if (opt_algo == ALGO_HEAVY) {
 		if (unlikely(!jobj_binary(val, "maxvote", &work->maxvote, sizeof(work->maxvote)))) {
 			work->maxvote = 2048;
 		}
-	} else work->maxvote = 0;
+	}
+	else work->maxvote = 0;
 
 	for (i = 0; i < adata_sz; i++)
 		work->data[i] = le32dec(work->data + i);
@@ -567,6 +573,7 @@ static bool work_decode(const json_t *val, struct work *work)
 
 	return true;
 }
+
 
 /**
  * Calculate the work difficulty as double
