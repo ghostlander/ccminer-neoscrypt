@@ -415,14 +415,6 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		h[14] = ROTL64(h[2], 15) + (XH64     ^     q[30]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
 		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
-		// Final
-#pragma unroll 16
-		for (int i = 0; i < 16; i++)
-		{
-			msg[i].y = 0xaaaaaaaa ^ h[i].y;
-			msg[i].x = (0xaaaaaaa0 + (uint32_t)i) ^ h[i].x;
-		}
-
 		const uint2 cmsg[16] =
 		{
 			0xaaaaaaa0, 0xaaaaaaaa,
@@ -442,6 +434,12 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 			0xaaaaaaae, 0xaaaaaaaa,
 			0xaaaaaaaf, 0xaaaaaaaa
 		};
+
+#pragma unroll 16
+		for (int i = 0; i < 16; i++)
+		{
+			msg[i] = cmsg[i] ^ h[i];
+		}
 
 
 		const uint2 precalc[16] =
@@ -841,14 +839,6 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		h[14] = ROTL64(h[2], 15) + (XH64     ^     q[30]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
 		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
-		// Final
-#pragma unroll 16
-		for (int i = 0; i < 16; i++)
-		{
-			msg[i].y = 0xaaaaaaaa ^ h[i].y;
-			msg[i].x = (0xaaaaaaa0 + (uint32_t)i) ^ h[i].x;
-		}
-
 		const uint2 cmsg[16] =
 		{
 			0xaaaaaaa0, 0xaaaaaaaa,
@@ -868,6 +858,14 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 			0xaaaaaaae, 0xaaaaaaaa,
 			0xaaaaaaaf, 0xaaaaaaaa
 		};
+
+		// Final
+#pragma unroll 16
+		for (int i = 0; i < 16; i++)
+		{
+			msg[i] = cmsg[i]^h[i];
+		}
+
 
 
 		const uint2 precalc[16] =
