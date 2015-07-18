@@ -828,8 +828,206 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		x6 ^= Hash[6];
 		x7 ^= Hash[7];
 
-		SIXTEEN_ROUNDS;
 
+		xg = (x0 + xg);
+			x0 = ROTL32(x0, 7);
+			xh = (x1 + xh);
+			x1 = ROTL32(x1, 7);
+			xi = (x2 + xi);
+			x2 = ROTL32(x2, 7);
+			xj = (x3 + xj); 
+			x3 = ROTL32(x3, 7); 
+			xk = (x4 + xk);
+			x4 = ROTL32(x4, 7);
+			xl = (x5 + xl);
+			x5 = ROTL32(x5, 7);
+			xm = (x6 + xm);
+			x6 = ROTL32(x6, 7);
+			xn = (x7 + xn);
+			x7 = ROTL32(x7, 7);
+			xo = (x8 + xo);
+			x8 = ROTL32c(x8, 7);
+			xp = (x9 + xp);
+			x9 = ROTL32c(x9, 7);
+			xq = (xa + xq);
+			xa = ROTL32c(xa, 7);
+			xr = (xb + xr);
+			xb = ROTL32c(xb, 7);
+			xs = (xc + xs);
+			xc = ROTL32c(xc, 7);
+			xt = (xd + xt);
+			xd = ROTL32c(xd, 7);
+			xu = (xe + xu);
+			xe = ROTL32c(xe, 7);
+			xv = (xf + xv);
+			xf = ROTL32c(xf, 7);
+			x8 ^= xg;
+			x9 ^= xh;
+			xa ^= xi;
+			xb ^= xj;
+			xc ^= xk;
+			xd ^= xl;
+			xe ^= xm;
+			xf ^= xn;
+			x0 ^= xo;
+			x1 ^= xp;
+			x2 ^= xq;
+			x3 ^= xr;
+			x4 ^= xs;
+			x5 ^= xt;
+			x6 ^= xu;
+			x7 ^= xv;
+			xi = (x8 + xi);
+			x8 = ROTL32(x8, 11);
+			xj = (x9 + xj);
+			x9 = ROTL32(x9, 11);
+			xg = (xa + xg);
+			xa = ROTL32(xa, 11);
+			xh = (xb + xh);
+			xb = ROTL32(xb, 11);
+			xm = (xc + xm);
+			xc = ROTL32(xc, 11);
+			xn = (xd + xn);
+			xd = ROTL32(xd, 11);
+			xk = (xe + xk);
+			xe = ROTL32(xe, 11);
+			xl = (xf + xl);
+			xf = ROTL32(xf, 11);
+			xq = (x0 + xq);
+			x0 = ROTL32(x0, 11);
+			xr = (x1 + xr);
+			x1 = ROTL32(x1, 11);
+			xo = (x2 + xo);
+			x2 = ROTL32(x2, 11);
+			xp = (x3 + xp);
+			x3 = ROTL32(x3, 11);
+			xu = (x4 + xu);
+			x4 = ROTL32(x4, 11);
+			xv = (x5 + xv);
+			x5 = ROTL32(x5, 11);
+			xs = (x6 + xs);
+			x6 = ROTL32(x6, 11);
+			xt = (x7 + xt);
+			x7 = ROTL32(x7, 11);
+			xc ^= xi;
+			xd ^= xj;
+			xe ^= xg;
+			xf ^= xh;
+			x8 ^= xm;
+			x9 ^= xn;
+			xa ^= xk;
+			xb ^= xl;
+			x4 ^= xq;
+			x5 ^= xr;
+			x6 ^= xo;
+			x7 ^= xp;
+			x0 ^= xu;
+			x1 ^= xv;
+			x2 ^= xs;
+			x3 ^= xt;
+
+		xj = (xc + xj);
+			xc = ROTL32(xc, 7);
+			xi = (xd + xi);
+			xd = ROTL32(xd, 7);
+			xh = (xe + xh);
+			xe = ROTL32(xe, 7);
+			xg = (xf + xg);
+			xf = ROTL32(xf, 7);
+			xn = (x8 + xn);
+			x8 = ROTL32(x8, 7);
+			xm = (x9 + xm);
+			x9 = ROTL32(x9, 7);
+			xl = (xa + xl);
+			xa = ROTL32(xa, 7);
+			xk = (xb + xk);
+			xb = ROTL32(xb, 7);
+			xr = (x4 + xr);
+			x4 = ROTL32(x4, 7);
+			xq = (x5 + xq);
+			x5 = ROTL32(x5, 7);
+			xp = (x6 + xp);
+			x6 = ROTL32(x6, 7);
+			xo = (x7 + xo);
+			x7 = ROTL32(x7, 7);
+			xv = (x0 + xv);
+			x0 = ROTL32(x0, 7);
+			xu = (x1 + xu);
+			x1 = ROTL32(x1, 7);
+			xt = (x2 + xt);
+			x2 = ROTL32(x2, 7);
+			xs = (x3 + xs);
+			x3 = ROTL32(x3, 7);
+			x4 ^= xj;
+			x5 ^= xi;
+			x6 ^= xh;
+			x7 ^= xg;
+			x0 ^= xn;
+			x1 ^= xm;
+			x2 ^= xl;
+			x3 ^= xk;
+			xc ^= xr;
+			xd ^= xq;
+			xe ^= xp;
+			xf ^= xo;
+			x8 ^= xv;
+			x9 ^= xu;
+			xa ^= xt;
+			xb ^= xs;
+			xh = (x4 + xh);
+			x4 = ROTL32(x4, 11);
+			xg = (x5 + xg);
+			x5 = ROTL32(x5, 11);
+			xj = (x6 + xj);
+			x6 = ROTL32(x6, 11);
+			xi = (x7 + xi);
+			x7 = ROTL32(x7, 11);
+			xl = (x0 + xl);
+			x0 = ROTL32(x0, 11);
+			xk = (x1 + xk);
+			x1 = ROTL32(x1, 11);
+			xn = (x2 + xn);
+			x2 = ROTL32(x2, 11);
+			xm = (x3 + xm);
+			x3 = ROTL32(x3, 11);
+			xp = (xc + xp);
+			xc = ROTL32(xc, 11);
+			xo = (xd + xo);
+			xd = ROTL32(xd, 11);
+			xr = (xe + xr);
+			xe = ROTL32(xe, 11);
+			xq = (xf + xq);
+			xf = ROTL32(xf, 11);
+			xt = (x8 + xt);
+			x8 = ROTL32(x8, 11);
+			xs = (x9 + xs);
+			x9 = ROTL32(x9, 11);
+			xv = (xa + xv);
+			xa = ROTL32(xa, 11);
+			xu = (xb + xu);
+			xb = ROTL32(xb, 11);
+			x0 ^= xh;
+			x1 ^= xg;
+			x2 ^= xj;
+			x3 ^= xi;
+			x4 ^= xl;
+			x5 ^= xk;
+			x6 ^= xn;
+			x7 ^= xm;
+			x8 ^= xp;
+			x9 ^= xo; 
+			xa ^= xr;
+			xb ^= xq;
+			xc ^= xt;
+			xd ^= xs;
+			xe ^= xv;
+			xf ^= xu;
+
+		for (int j = 1; j < 8; j++)
+		{
+			ROUND_EVEN;
+			ROUND_ODD;
+		}
 		x0 ^= (Hash[8]);
 		x1 ^= (Hash[9]);
 		x2 ^= (Hash[10]);
@@ -839,15 +1037,28 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		x6 ^= (Hash[14]);
 		x7 ^= (Hash[15]);
 
-		SIXTEEN_ROUNDS;
-		x0 ^= 0x80;
 
-		SIXTEEN_ROUNDS;
+		for (int j = 0; j < 8; j++)
+		{
+			ROUND_EVEN;
+			ROUND_ODD;
+		}
+		x0 ^= 0x80;
+	
+		for (int j = 0; j < 8; j++)
+		{
+			ROUND_EVEN;
+			ROUND_ODD;
+		}
 		xv ^= 1;
 
 		for (int i = 3; i < 13; i++)
 		{
-			SIXTEEN_ROUNDS;
+			for (int j = 0; j < 8; j++)
+			{
+				ROUND_EVEN;
+				ROUND_ODD;
+			}
 		}
 
 		Hash[0] = x0;
