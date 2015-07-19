@@ -2,37 +2,37 @@
 
 #define ROUND_EVEN   \
 		xg = (x0 + xg); \
-		x0 = ROTL32(x0, 7); \
+		x0 = ROTL32c(x0, 7); \
 		xh = (x1 + xh); \
-		x1 = ROTL32(x1, 7); \
+		x1 = ROTL32c(x1, 7); \
 		xi = (x2 + xi); \
-		x2 = ROTL32(x2, 7); \
+		x2 = ROTL32c(x2, 7); \
 		xj = (x3 + xj); \
-		x3 = ROTL32(x3, 7); \
+		x3 = ROTL32c(x3, 7); \
 		xk = (x4 + xk); \
-		x4 = ROTL32(x4, 7); \
+		x4 = ROTL32c(x4, 7); \
 		xl = (x5 + xl); \
-		x5 = ROTL32(x5, 7); \
+		x5 = ROTL32c(x5, 7); \
 		xm = (x6 + xm); \
-		x6 = ROTL32(x6, 7); \
+		x6 = ROTL32c(x6, 7); \
 		xn = (x7 + xn); \
-		x7 = ROTL32(x7, 7); \
+		x7 = ROTL32c(x7, 7); \
 		xo = (x8 + xo); \
-		x8 = ROTL32(x8, 7); \
+		x8 = ROTL32c(x8, 7); \
 		xp = (x9 + xp); \
-		x9 = ROTL32(x9, 7); \
+		x9 = ROTL32c(x9, 7); \
 		xq = (xa + xq); \
-		xa = ROTL32(xa, 7); \
+		xa = ROTL32c(xa, 7); \
 		xr = (xb + xr); \
-		xb = ROTL32(xb, 7); \
+		xb = ROTL32c(xb, 7); \
 		xs = (xc + xs); \
-		xc = ROTL32(xc, 7); \
+		xc = ROTL32c(xc, 7); \
 		xt = (xd + xt); \
-		xd = ROTL32(xd, 7); \
+		xd = ROTL32c(xd, 7); \
 		xu = (xe + xu); \
-		xe = ROTL32(xe, 7); \
+		xe = ROTL32c(xe, 7); \
 		xv = (xf + xv); \
-		xf = ROTL32(xf, 7); \
+		xf = ROTL32c(xf, 7); \
 		x8 ^= xg; \
 		x9 ^= xh; \
 		xa ^= xi; \
@@ -50,37 +50,37 @@
 		x6 ^= xu; \
 		x7 ^= xv; \
 		xi = (x8 + xi); \
-		x8 = ROTL32(x8, 11); \
+		x8 = ROTL32c(x8, 11); \
 		xj = (x9 + xj); \
-		x9 = ROTL32(x9, 11); \
+		x9 = ROTL32c(x9, 11); \
 		xg = (xa + xg); \
-		xa = ROTL32(xa, 11); \
+		xa = ROTL32c(xa, 11); \
 		xh = (xb + xh); \
-		xb = ROTL32(xb, 11); \
+		xb = ROTL32c(xb, 11); \
 		xm = (xc + xm); \
-		xc = ROTL32(xc, 11); \
+		xc = ROTL32c(xc, 11); \
 		xn = (xd + xn); \
-		xd = ROTL32(xd, 11); \
+		xd = ROTL32c(xd, 11); \
 		xk = (xe + xk); \
-		xe = ROTL32(xe, 11); \
+		xe = ROTL32c(xe, 11); \
 		xl = (xf + xl); \
-		xf = ROTL32(xf, 11); \
+		xf = ROTL32c(xf, 11); \
 		xq = (x0 + xq); \
-		x0 = ROTL32(x0, 11); \
+		x0 = ROTL32c(x0, 11); \
 		xr = (x1 + xr); \
-		x1 = ROTL32(x1, 11); \
+		x1 = ROTL32c(x1, 11); \
 		xo = (x2 + xo); \
-		x2 = ROTL32(x2, 11); \
+		x2 = ROTL32c(x2, 11); \
 		xp = (x3 + xp); \
-		x3 = ROTL32(x3, 11); \
+		x3 = ROTL32c(x3, 11); \
 		xu = (x4 + xu); \
-		x4 = ROTL32(x4, 11); \
+		x4 = ROTL32c(x4, 11); \
 		xv = (x5 + xv); \
-		x5 = ROTL32(x5, 11); \
+		x5 = ROTL32c(x5, 11); \
 		xs = (x6 + xs); \
-		x6 = ROTL32(x6, 11); \
+		x6 = ROTL32c(x6, 11); \
 		xt = (x7 + xt); \
-		x7 = ROTL32(x7, 11); \
+		x7 = ROTL32c(x7, 11); \
 		xc ^= xi; \
 		xd ^= xj; \
 		xe ^= xg; \
@@ -100,37 +100,37 @@
 
 #define ROUND_ODD    \
 		xj = (xc + xj); \
-		xc = ROTL32(xc, 7); \
+		xc = ROTL32c(xc, 7); \
 		xi = (xd + xi); \
-		xd = ROTL32(xd, 7); \
+		xd = ROTL32c(xd, 7); \
 		xh = (xe + xh); \
-		xe = ROTL32(xe, 7); \
+		xe = ROTL32c(xe, 7); \
 		xg = (xf + xg); \
-		xf = ROTL32(xf, 7); \
+		xf = ROTL32c(xf, 7); \
 		xn = (x8 + xn); \
-		x8 = ROTL32(x8, 7); \
+		x8 = ROTL32c(x8, 7); \
 		xm = (x9 + xm); \
-		x9 = ROTL32(x9, 7); \
+		x9 = ROTL32c(x9, 7); \
 		xl = (xa + xl); \
-		xa = ROTL32(xa, 7); \
+		xa = ROTL32c(xa, 7); \
 		xk = (xb + xk); \
-		xb = ROTL32(xb, 7); \
+		xb = ROTL32c(xb, 7); \
 		xr = (x4 + xr); \
-		x4 = ROTL32(x4, 7); \
+		x4 = ROTL32c(x4, 7); \
 		xq = (x5 + xq); \
-		x5 = ROTL32(x5, 7); \
+		x5 = ROTL32c(x5, 7); \
 		xp = (x6 + xp); \
-		x6 = ROTL32(x6, 7); \
+		x6 = ROTL32c(x6, 7); \
 		xo = (x7 + xo); \
-		x7 = ROTL32(x7, 7); \
+		x7 = ROTL32c(x7, 7); \
 		xv = (x0 + xv); \
-		x0 = ROTL32(x0, 7); \
+		x0 = ROTL32c(x0, 7); \
 		xu = (x1 + xu); \
-		x1 = ROTL32(x1, 7); \
+		x1 = ROTL32c(x1, 7); \
 		xt = (x2 + xt); \
-		x2 = ROTL32(x2, 7); \
+		x2 = ROTL32c(x2, 7); \
 		xs = (x3 + xs); \
-		x3 = ROTL32(x3, 7); \
+		x3 = ROTL32c(x3, 7); \
 		x4 ^= xj; \
 		x5 ^= xi; \
 		x6 ^= xh; \
@@ -148,37 +148,37 @@
 		xa ^= xt; \
 		xb ^= xs; \
 		xh = (x4 + xh); \
-		x4 = ROTL32(x4, 11); \
+		x4 = ROTL32c(x4, 11); \
 		xg = (x5 + xg); \
-		x5 = ROTL32(x5, 11); \
+		x5 = ROTL32c(x5, 11); \
 		xj = (x6 + xj); \
-		x6 = ROTL32(x6, 11); \
+		x6 = ROTL32c(x6, 11); \
 		xi = (x7 + xi); \
-		x7 = ROTL32(x7, 11); \
+		x7 = ROTL32c(x7, 11); \
 		xl = (x0 + xl); \
-		x0 = ROTL32(x0, 11); \
+		x0 = ROTL32c(x0, 11); \
 		xk = (x1 + xk); \
-		x1 = ROTL32(x1, 11); \
+		x1 = ROTL32c(x1, 11); \
 		xn = (x2 + xn); \
-		x2 = ROTL32(x2, 11); \
+		x2 = ROTL32c(x2, 11); \
 		xm = (x3 + xm); \
-		x3 = ROTL32(x3, 11); \
+		x3 = ROTL32c(x3, 11); \
 		xp = (xc + xp); \
-		xc = ROTL32(xc, 11); \
+		xc = ROTL32c(xc, 11); \
 		xo = (xd + xo); \
-		xd = ROTL32(xd, 11); \
+		xd = ROTL32c(xd, 11); \
 		xr = (xe + xr); \
-		xe = ROTL32(xe, 11); \
+		xe = ROTL32c(xe, 11); \
 		xq = (xf + xq); \
-		xf = ROTL32(xf, 11); \
+		xf = ROTL32c(xf, 11); \
 		xt = (x8 + xt); \
-		x8 = ROTL32(x8, 11); \
+		x8 = ROTL32c(x8, 11); \
 		xs = (x9 + xs); \
-		x9 = ROTL32(x9, 11); \
+		x9 = ROTL32c(x9, 11); \
 		xv = (xa + xv); \
-		xa = ROTL32(xa, 11); \
+		xa = ROTL32c(xa, 11); \
 		xu = (xb + xu); \
-		xb = ROTL32(xb, 11); \
+		xb = ROTL32c(xb, 11); \
 		x0 ^= xh; \
 		x1 ^= xg; \
 		x2 ^= xj; \
@@ -201,6 +201,11 @@
 			ROUND_EVEN; \
 			ROUND_ODD;}
 __global__	
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(512, 2)
+#else
+__launch_bounds__(256, 5)
+#endif
 void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -228,7 +233,17 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_
 		x6 ^= Hash[6];
 		x7 ^= Hash[7];
 
-		SIXTEEN_ROUNDS;
+#if __CUDA_ARCH__ > 500
+		#pragma unroll 
+		for (int j = 0; j < 8; j++)
+#else
+		#pragma unroll 1
+		for (int j = 0; j < 8; j++)
+#endif
+		{
+				ROUND_EVEN;
+				ROUND_ODD;
+		}
 
 		x0 ^= (Hash[8]);
 		x1 ^= (Hash[9]);
@@ -238,16 +253,32 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_
 		x5 ^= (Hash[13]);
 		x6 ^= (Hash[14]);
 		x7 ^= (Hash[15]);
-
-		SIXTEEN_ROUNDS;
+#if __CUDA_ARCH__ > 500
+		#pragma unroll
+		for (int j = 0; j < 8; j++)
+#else
+		for (int j = 0; j < 8; j++)
+#endif
+		{
+			ROUND_EVEN;
+			ROUND_ODD;
+		}
 		x0 ^= 0x80;
 
-		SIXTEEN_ROUNDS;
+		for (int j = 0; j < 8; j++)
+		{
+			ROUND_EVEN;
+			ROUND_ODD;
+		}
 		xv ^= 1;
 
 		for (int i = 3; i < 13; i++) 
 		{
-			SIXTEEN_ROUNDS;
+			for (int j = 0; j < 8; j++)
+			{
+				ROUND_EVEN;
+				ROUND_ODD;
+			}
 		}
 
 		Hash[0] = x0;
