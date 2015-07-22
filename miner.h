@@ -404,6 +404,10 @@ extern int scanhash_yescrypt(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_bitcredit(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, const uint32_t *midstate, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 /* api related */
 void *api_thread(void *userdata);
 void api_set_throughput(int thr_id, uint32_t throughput);
@@ -612,10 +616,10 @@ struct stratum_ctx {
 };
 
 struct work {
-	uint32_t data[32];
+	uint32_t data[64]; //42 needed for bitcredit
 	uint32_t target[8];
 	uint32_t maxvote;
-
+	uint32_t midstate[8];
 	char job_id[128];
 	size_t xnonce2_len;
 	uchar xnonce2[32];

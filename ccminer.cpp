@@ -82,6 +82,7 @@ struct workio_cmd {
 
 enum sha_algos {
 	ALGO_ANIME,
+	ALGO_BITC,
 	ALGO_BITCOIN,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
@@ -121,6 +122,7 @@ enum sha_algos {
 
 static const char *algo_names[] = {
 	"anime",
+	"credit",
 	"bitcoin",
 	"blake",
 	"blakecoin",
@@ -164,7 +166,7 @@ bool want_longpoll = true;
 bool have_longpoll = false;
 bool want_stratum = true;
 bool have_stratum = false;
-bool allow_gbt = true;
+bool allow_gbt = false;
 bool check_dups = false;
 static bool submit_old = false;
 bool use_syslog = false;
@@ -261,6 +263,7 @@ Options:\n\
 			bitcoin     Bitcoin\n\
 			blake       Blake 256 (SFR/NEOS)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
+			 credit      Credit\n\
 			deep        Deepcoin\n\
 			dmd-gr      Diamond-Groestl\n\
 			fresh       Freshcoin (shavite 80)\n\
@@ -522,12 +525,17 @@ static bool jobj_binary(const json_t *obj, const char *key,
 	return true;
 }
 
+
 static bool work_decode(const json_t *val, struct work *work)
 {
-	int data_size;
+	int data_size, midstate_size;
 	switch (opt_algo) {
 	case ALGO_NEO:
 		data_size = 84;
+		break;
+	case ALGO_BITC:
+		data_size = 168;
+		midstate_size = sizeof(work->midstate);
 		break;
 	default:
 		data_size = 128; // original sizeof(work->data); however data is now 64*4bit
@@ -545,15 +553,30 @@ static bool work_decode(const json_t *val, struct work *work)
 		applog(LOG_ERR, "JSON inval target");
 		return false;
 	}
+
+	if (opt_algo == ALGO_BITC) {
+		if (unlikely(!jobj_binary(val, "midstate", work->midstate, midstate_size))) {
+			applog(LOG_ERR, "JSON inval midstate");
+			return false;
+		}
+
+		for (i = 0; i < midstate_size>>2; i++)
+			work->midstate[i] = le32dec(work->midstate + i);
+	}
+
+
 	if (opt_algo == ALGO_HEAVY) {
 		if (unlikely(!jobj_binary(val, "maxvote", &work->maxvote, sizeof(work->maxvote)))) {
 			work->maxvote = 2048;
 		}
 	}
 	else work->maxvote = 0;
-
+	//	printf("the data: \n");
 	for (i = 0; i < adata_sz; i++)
 		work->data[i] = le32dec(work->data + i);
+
+	//		printf("i %d %08x \n",i, work->data[i]);}
+	//	printf("\n");
 	for (i = 0; i < atarget_sz; i++)
 		work->target[i] = le32dec(work->target + i);
 
@@ -573,7 +596,6 @@ static bool work_decode(const json_t *val, struct work *work)
 
 	return true;
 }
-
 
 /**
  * Calculate the work difficulty as double
@@ -1251,7 +1273,7 @@ static void *miner_thread(void *userdata)
 		uint64_t max64, minmax = 0x100000;
 
 		// &work.data[19]
-		int wcmplen = 76;
+		int wcmplen = (opt_algo == ALGO_BITC) ? 140 : 76;
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
 		if (have_stratum) {
@@ -1572,7 +1594,9 @@ static void *miner_thread(void *userdata)
 			case ALGO_YES:
 			rc = scanhash_yescrypt(thr_id, work.data, work.target, max_nonce, &hashes_done);
 			break;
-						
+		case ALGO_BITC:
+			rc = scanhash_bitcredit(thr_id, work.data, work.target, work.midstate, max_nonce, &hashes_done);
+			break;			
 		default:
 			/* should never happen */
 			goto out;
@@ -1624,7 +1648,7 @@ static void *miner_thread(void *userdata)
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
 
-		if ( !opt_quiet && (loopcnt > 0))
+		if (!opt_quiet && (opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt))
 		{
 			double hashrate = 0.0;
 
