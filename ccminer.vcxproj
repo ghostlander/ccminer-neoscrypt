@@ -475,6 +475,7 @@
       <MaxRegCount>64</MaxRegCount>
       <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">80</MaxRegCount>
     </CudaCompile>
+    <CudaCompile Include="x11\c11.cu" />
     <CudaCompile Include="x11\fresh.cu">
     </CudaCompile>
     <CudaCompile Include="x11\s3.cu" />

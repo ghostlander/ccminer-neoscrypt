@@ -1723,7 +1723,5 @@ void print_hash_tests(void)
 	x17hash(&hash[0], &buf[0]);
 	printpfx("X17", hash);
 
-	printf("\n");
-
 	do_gpu_tests();
 }

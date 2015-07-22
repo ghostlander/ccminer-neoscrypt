@@ -86,6 +86,7 @@ enum sha_algos {
 	ALGO_BITCOIN,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
+	ALGO_C11,
 	ALGO_DEEP,
 	ALGO_DMD_GR,
 	ALGO_DOOM,
@@ -116,7 +117,8 @@ enum sha_algos {
 	ALGO_X15,
 	ALGO_X17,
 	ALGO_NEO,
-	ALGO_YES
+	ALGO_YES,
+	ALGO_COUNT
 
 };
 
@@ -126,6 +128,7 @@ static const char *algo_names[] = {
 	"bitcoin",
 	"blake",
 	"blakecoin",
+	"c11", 
 	"deep",
 	"dmd-gr",
 	"doom", /* is luffa */
@@ -156,7 +159,8 @@ static const char *algo_names[] = {
 	"x15",
 	"x17",
 	"neoscrypt",
-	"yesscrypt"
+	"yesscrypt",
+	""
 };
 
 bool opt_debug = false;
@@ -263,7 +267,8 @@ Options:\n\
 			bitcoin     Bitcoin\n\
 			blake       Blake 256 (SFR/NEOS)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
-			 credit      Credit\n\
+			c11/flax    X11 variant\n\
+            credit      Credit\n\
 			deep        Deepcoin\n\
 			dmd-gr      Diamond-Groestl\n\
 			fresh       Freshcoin (shavite 80)\n\
@@ -1388,6 +1393,7 @@ static void *miner_thread(void *userdata)
 				minmax = 0x2000000;
 				break;
 			case ALGO_X11:
+			case ALGO_C11:
 				minmax = 0x800000;
 				break;
 			case ALGO_S3:
@@ -1463,6 +1469,11 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_C11:
+			rc = scanhash_c11(thr_id, work.data, work.target,
+			max_nonce, &hashes_done);
+			break;
+				
 		case ALGO_FUGUE256:
 			rc = scanhash_fugue256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
@@ -1976,13 +1987,13 @@ static void parse_arg(int key, char *arg)
 	case 'a':
 		p = strstr(arg, ":"); // optional factor
 		if (p) *p = '\0';
-		for (i = 0; i < ARRAY_SIZE(algo_names); i++) {
+		for (i = 0; i < ALGO_COUNT; i++) {
 			if (algo_names[i] && !strcasecmp(arg, algo_names[i])) {
 				opt_algo = (enum sha_algos)i;
 				break;
 			}
 		}
-		if (i == ARRAY_SIZE(algo_names))
+		if (i == ALGO_COUNT)
 			show_usage_and_exit(1);
 
 		if (p) 
