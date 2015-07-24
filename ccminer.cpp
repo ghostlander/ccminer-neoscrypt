@@ -1357,7 +1357,7 @@ static void *miner_thread(void *userdata)
 		pthread_mutex_unlock(&g_work_lock);
 
 		/* prevent gpu scans before a job is received */
-		if ((have_stratum && work.data[0] == 0 || network_fail_flag) && !opt_benchmark))
+		if ((have_stratum && work.data[0] == 0 || network_fail_flag) && !opt_benchmark)
 		{
 			sleep(1);
 			continue;	
@@ -1751,7 +1751,6 @@ static void *longpoll_thread(void *userdata)
 		goto out;
 	}
 
-start:
 	hdr_path = (char*)tq_pop(mythr->q, NULL);
 	if (!hdr_path)
 		goto out;
