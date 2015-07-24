@@ -53,40 +53,46 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 	// Compression ref. implementation
 	uint2 q[32];
 	uint2 tmp;
+//	const uint2 pre = (msg[10] ^ hash[10]) + (msg[13] ^ hash[13]);
+	const uint2 pre2 = (msg[12] ^ hash[12]) + (msg[15] ^ hash[15]);
+	const uint2 pre3 = (msg[14] ^ hash[14]) - (msg[7] ^ hash[7]);
+	const uint2 pre4 = (msg[6] ^ hash[6]) + (msg[9] ^ hash[9]);
+	const uint2 pre5 = (msg[8] ^ hash[8]) - (msg[5] ^ hash[5]);
+	const uint2 pre6 = (msg[1] ^ hash[1]) - (msg[14] ^ hash[14]);
+	const uint2 pre7 = (msg[8] ^ hash[8]) - (msg[1] ^ hash[1]);
 
-    tmp = (msg[ 5] ^ hash[ 5]) - (msg[ 7] ^ hash[ 7]) + (msg[10] ^ hash[10]) + (msg[13] ^ hash[13]) + (msg[14] ^ hash[14]);
+	tmp = (msg[5] ^ hash[5]) + (msg[10] ^ hash[10]) + (msg[13] ^ hash[13]) + pre3;
     q[0] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp,  4) ^ ROTL64(tmp, 37)) + hash[1];
-    tmp = (msg[ 6] ^ hash[ 6]) - (msg[ 8] ^ hash[ 8]) + (msg[11] ^ hash[11]) + (msg[14] ^ hash[14]) - (msg[15] ^ hash[15]);
+	tmp = (msg[6] ^ hash[6]) - (msg[8] ^ hash[8]) + pre2 - (msg[15] ^ hash[15]);
     q[1] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + hash[2];
-    tmp = (msg[ 0] ^ hash[ 0]) + (msg[ 7] ^ hash[ 7]) + (msg[ 9] ^ hash[ 9]) - (msg[12] ^ hash[12]) + (msg[15] ^ hash[15]);
+    tmp = (msg[ 0] ^ hash[ 0]) + (msg[ 7] ^ hash[ 7]) + (msg[ 9] ^ hash[ 9]) - pre2;
     q[2] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + hash[3];
-    tmp = (msg[ 0] ^ hash[ 0]) - (msg[ 1] ^ hash[ 1]) + (msg[ 8] ^ hash[ 8]) - (msg[10] ^ hash[10]) + (msg[13] ^ hash[13]);
+	tmp = (msg[0] ^ hash[0]) + pre7 - (msg[10] ^ hash[10]) + (msg[13] ^ hash[13]);
     q[3] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + hash[4];
-    tmp = (msg[ 1] ^ hash[ 1]) + (msg[ 2] ^ hash[ 2]) + (msg[ 9] ^ hash[ 9]) - (msg[11] ^ hash[11]) - (msg[14] ^ hash[14]);
+	tmp = pre6 + (msg[2] ^ hash[2]) + (msg[9] ^ hash[9]) - (msg[11] ^ hash[11]);
     q[4] = (SHR(tmp, 1) ^ tmp) + hash[5];
-    tmp = (msg[ 3] ^ hash[ 3]) - (msg[ 2] ^ hash[ 2]) + (msg[10] ^ hash[10]) - (msg[12] ^ hash[12]) + (msg[15] ^ hash[15]);
+	tmp = (msg[3] ^ hash[3]) - (msg[2] ^ hash[2]) + (msg[10] ^ hash[10]) - pre2;
     q[5] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp,  4) ^ ROTL64(tmp, 37)) + hash[6];
     tmp = (msg[ 4] ^ hash[ 4]) - (msg[ 0] ^ hash[ 0]) - (msg[ 3] ^ hash[ 3]) - (msg[11] ^ hash[11]) + (msg[13] ^ hash[13]);
     q[6] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + hash[7];
-    tmp = (msg[ 1] ^ hash[ 1]) - (msg[ 4] ^ hash[ 4]) - (msg[ 5] ^ hash[ 5]) - (msg[12] ^ hash[12]) - (msg[14] ^ hash[14]);
+    tmp = pre6 - (msg[ 4] ^ hash[ 4]) - (msg[ 5] ^ hash[ 5]) - (msg[12] ^ hash[12]);
     q[7] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + hash[8];
     tmp = (msg[ 2] ^ hash[ 2]) - (msg[ 5] ^ hash[ 5]) - (msg[ 6] ^ hash[ 6]) + (msg[13] ^ hash[13]) - (msg[15] ^ hash[15]);
     q[8] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + hash[9];
-    tmp = (msg[ 0] ^ hash[ 0]) - (msg[ 3] ^ hash[ 3]) + (msg[ 6] ^ hash[ 6]) - (msg[ 7] ^ hash[ 7]) + (msg[14] ^ hash[14]);
+    tmp = (msg[ 0] ^ hash[ 0]) - (msg[ 3] ^ hash[ 3]) + (msg[ 6] ^ hash[ 6])+pre3;
     q[9] = (SHR(tmp, 1) ^ tmp) + hash[10];
-    tmp = (msg[ 8] ^ hash[ 8]) - (msg[ 1] ^ hash[ 1]) - (msg[ 4] ^ hash[ 4]) - (msg[ 7] ^ hash[ 7]) + (msg[15] ^ hash[15]);
+	tmp = pre7 - (msg[4] ^ hash[4]) - (msg[7] ^ hash[7]) + (msg[15] ^ hash[15]);
     q[10] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp,  4) ^ ROTL64(tmp, 37)) + hash[11];
-    tmp = (msg[ 8] ^ hash[ 8]) - (msg[ 0] ^ hash[ 0]) - (msg[ 2] ^ hash[ 2]) - (msg[ 5] ^ hash[ 5]) + (msg[ 9] ^ hash[ 9]);
+    tmp = pre5 - (msg[ 0] ^ hash[ 0]) - (msg[ 2] ^ hash[ 2]) + (msg[ 9] ^ hash[ 9]);
     q[11] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + hash[12];
-    tmp = (msg[ 1] ^ hash[ 1]) + (msg[ 3] ^ hash[ 3]) - (msg[ 6] ^ hash[ 6]) - (msg[ 9] ^ hash[ 9]) + (msg[10] ^ hash[10]);
+	tmp = (msg[1] ^ hash[1]) + (msg[3] ^ hash[3]) - pre4 + (msg[10] ^ hash[10]);
     q[12] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + hash[13];
     tmp = (msg[ 2] ^ hash[ 2]) + (msg[ 4] ^ hash[ 4]) + (msg[ 7] ^ hash[ 7]) + (msg[10] ^ hash[10]) + (msg[11] ^ hash[11]);
     q[13] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + hash[14];
-    tmp = (msg[ 3] ^ hash[ 3]) - (msg[ 5] ^ hash[ 5]) + (msg[ 8] ^ hash[ 8]) - (msg[11] ^ hash[11]) - (msg[12] ^ hash[12]);
+    tmp = (msg[ 3] ^ hash[ 3]) +pre5 - (msg[11] ^ hash[11]) - (msg[12] ^ hash[12]);
     q[14] = (SHR(tmp, 1) ^ tmp) + hash[15];
-    tmp = (msg[12] ^ hash[12]) - (msg[ 4] ^ hash[ 4]) - (msg[ 6] ^ hash[ 6]) - (msg[ 9] ^ hash[ 9]) + (msg[13] ^ hash[13]);
+	tmp = (msg[12] ^ hash[12]) - (msg[4] ^ hash[4]) - pre4 + (msg[13] ^ hash[13]);
     q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + hash[0];
-
         q[0+16] =
         (SHR(q[0], 1) ^ SHL(q[0], 2) ^ ROTL64(q[0], 13) ^ ROTL64(q[0], 43)) +
         (SHR(q[0+1], 2) ^ SHL(q[0+1], 1) ^ ROTL64(q[0+1], 19) ^ ROTL64(q[0+1], 53)) +
@@ -260,8 +266,6 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		msg[5] = (inpHash[5]);
 		msg[6] = (inpHash[6]);
 		msg[7] = (inpHash[7]);
-		msg[8] = (0x80);
-		msg[15] = (512);
 		mxh[0] = msg[0] ^ hash2[0];
 		mxh[1] = msg[1] ^ hash2[1];
 		mxh[2] = msg[2] ^ hash2[2];
@@ -283,7 +287,6 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 			{ 0xFFFFFFF6, 0x9FFFFFFF },
 			{ 0x5555554B, 0xA5555555 },
 		};
-
 		uint2 q[32];
 
 		uint2 tmp;
@@ -320,8 +323,8 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		tmp = vectorize(hash2[12] - hash2[9] + hash2[13] - (mxh[4]) - (mxh[6]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + hash[0];
 
-#pragma unroll 16
-		for (int i = 0; i < 16; i++)
+#pragma unroll 8
+		for (int i = 0; i < 8; i++)
 		{
 			msg2[i] = vectorize(msg[i]);
 		}
@@ -382,7 +385,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 			ROL8(msg2[4 + 3])) ^ hash[4 + 7]);
 		q[5 + 16] = pre2 + CONST_EXP3(5) +
 			((precalcf[5] + ROTL64(msg2[5], 5 + 1) +
-			ROTL64(msg2[5 + 3], 5 + 4) - ROL16(msg2[5 + 10])) ^ hash[5 + 7]);
+			0x10000 - 0x02000000) ^ hash[5 + 7]);
 
 		pre1 = pre1 - q[4 + 0] + q[4 + 14];
 		pre2 = pre2 - q[5 + 0] + q[5 + 14];
@@ -399,7 +402,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		pre2 = pre2 - q[7 + 0] + q[7 + 14];
 
 		q[8 + 16] = pre1 + CONST_EXP3(8) +
-			((vectorize((8 + 16)*(0x0555555555555555ull)) + ROTL64(msg2[8], 8 + 1) -
+			((vectorize((8 + 16)*(0x0555555555555555ull) + 0x10000) -
 			ROTL64(msg2[8 - 6], (8 - 6) + 1)) ^ hash[8 + 7]);
 		q[25] = pre2 + CONST_EXP3(9) +
 			((vectorize((25)*(0x0555555555555555ull)) - ROTL64(msg2[3], 4)) ^ hash[0]);
@@ -416,7 +419,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		pre2 = pre2 - q[11 + 0] + q[11 + 14];
 
 		q[28] = pre1 + CONST_EXP3(12) +
-			((vectorize((28)*(0x0555555555555555ull)) + ROL16(msg2[15]) - ROTL64(msg2[6], 7)) ^ hash[3]);
+			((vectorize(0x955555555555554C + 0x02000000) - ROTL64(msg2[6], 7)) ^ hash[3]);
 		q[13 + 16] = pre2 + CONST_EXP3(13) +
 			((precalcf[6] +
 			ROTL64(msg2[13 - 13], (13 - 13) + 1) - ROL8(msg2[13 - 6])) ^ hash[13 - 9]);
@@ -425,10 +428,10 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		pre2 = pre2 - q[13 + 0] + q[13 + 14];
 
 		q[14 + 16] = pre1 + CONST_EXP3(14) +
-			((precalcf[7] +
-			ROTL64(msg2[14 - 13], (14 - 13) + 1) - ROTL64(msg2[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
+			((precalcf[7] - 0x10000 +
+			ROTL64(msg2[14 - 13], (14 - 13) + 1)) ^ hash[14 - 9]);
 		q[15 + 16] = pre2 + CONST_EXP3(15) +
-			((precalcf[8] + ROL16(msg2[15]) +
+			((precalcf[8] + 0x02000000 +
 			ROTL64(msg2[15 - 13], (15 - 13) + 1)) ^ hash[15 - 9]);
 
 
@@ -444,14 +447,14 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		h[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ msg2[6]) + (XL64    ^ q[30] ^ q[6]);
 		h[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ msg2[7]) + (XL64    ^ q[31] ^ q[7]);
 
-		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ msg2[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
+		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ 0x80) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
 		h[9] = ROTL64(h[5], 10) + (XH64     ^     q[25]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
 		h[10] = ROTL64(h[6], 11) + (XH64     ^     q[26]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
 		h[11] = ROTL64(h[7], 12) + (XH64     ^     q[27]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
 		h[12] = ROTL64(h[0], 13) + (XH64     ^     q[28]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
 		h[13] = ROTL64(h[1], 14) + (XH64     ^     q[29]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
 		h[14] = ROTL64(h[2], 15) + (XH64     ^     q[30]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
-		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ msg2[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
+		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ (512)) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
 		const uint2 cmsg[16] =
 		{
@@ -500,37 +503,45 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 			{ 0x5555554B, 0xA5555555 },
 		};
 
-		tmp = vectorize((msg[5]) - (msg[7]) + (msg[10]) + (msg[13]) + (msg[14]));
+		const uint64_t p2 = (msg[15] - msg[12]);
+		const uint64_t p3 = (msg[14]) - (msg[7]);
+		const uint64_t p4 = (msg[6]) + (msg[9]);
+		const uint64_t p5 = (msg[8]) - (msg[5]);
+		const uint64_t p6 = (msg[1]) - (msg[14]);
+		const uint64_t p7 = (msg[8]) - (msg[1]);
+
+
+		tmp = vectorize((msg[5])  + (msg[10]) + (msg[13]) + p3);
 		q[0] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[1];
 		tmp = vectorize((msg[6]) - (msg[8]) + (msg[11]) + (msg[14]) - (msg[15]));
 		q[1] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + cmsg[2];
-		tmp = vectorize((msg[0]) + (msg[7]) + (msg[9]) - (msg[12]) + (msg[15]));
+		tmp = vectorize((msg[0]) + (msg[7]) + (msg[9]) + p2);
 		q[2] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + cmsg[3];
-		tmp = vectorize((msg[0]) - (msg[1]) + (msg[8]) - (msg[10]) + (msg[13]));
+		tmp = vectorize((msg[0]) +p7 - (msg[10]) + (msg[13]));
 		q[3] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + cmsg[4];
-		tmp = vectorize((msg[1]) + (msg[2]) + (msg[9]) - (msg[11]) - (msg[14]));
+		tmp = vectorize((msg[2]) + (msg[9]) - (msg[11]) +p6);
 		q[4] = (SHR(tmp, 1) ^ tmp) + cmsg[5];
-		tmp = vectorize((msg[3]) - (msg[2]) + (msg[10]) - (msg[12]) + (msg[15]));
+		tmp = vectorize((msg[3]) - (msg[2]) + (msg[10]) +p2);
 		q[5] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[6];
 		tmp = vectorize((msg[4]) - (msg[0]) - (msg[3]) - (msg[11]) + (msg[13]));
 		q[6] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + cmsg[7];
-		tmp = vectorize((msg[1]) - (msg[4]) - (msg[5]) - (msg[12]) - (msg[14]));
+		tmp = vectorize(p6 - (msg[4]) - (msg[5]) - (msg[12]));
 		q[7] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + cmsg[8];
 		tmp = vectorize((msg[2]) - (msg[5]) - (msg[6]) + (msg[13]) - (msg[15]));
 		q[8] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + cmsg[9];
-		tmp = vectorize((msg[0]) - (msg[3]) + (msg[6]) - (msg[7]) + (msg[14]));
+		tmp = vectorize((msg[0]) - (msg[3]) + (msg[6]) + p3);
 		q[9] = (SHR(tmp, 1) ^ tmp) + cmsg[10];
-		tmp = vectorize((msg[8]) - (msg[1]) - (msg[4]) - (msg[7]) + (msg[15]));
+		tmp = vectorize(p7 - (msg[4]) - (msg[7]) + (msg[15]));
 		q[10] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[11];
-		tmp = vectorize((msg[8]) - (msg[0]) - (msg[2]) - (msg[5]) + (msg[9]));
+		tmp = vectorize(p5 - (msg[0]) - (msg[2]) + (msg[9]));
 		q[11] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + cmsg[12];
-		tmp = vectorize((msg[1]) + (msg[3]) - (msg[6]) - (msg[9]) + (msg[10]));
+		tmp = vectorize((msg[1]) + (msg[3]) - p4 + (msg[10]));
 		q[12] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + cmsg[13];
 		tmp = vectorize((msg[2]) + (msg[4]) + (msg[7]) + (msg[10]) + (msg[11]));
 		q[13] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + cmsg[14];
-		tmp = vectorize((msg[3]) - (msg[5]) + (msg[8]) - (msg[11]) - (msg[12]));
+		tmp = vectorize((msg[3]) + p5 - (msg[11]) - (msg[12]));
 		q[14] = (SHR(tmp, 1) ^ tmp) + cmsg[15];
-		tmp = vectorize((msg[12]) - (msg[4]) - (msg[6]) - (msg[9]) + (msg[13]));
+		tmp = vectorize((msg[12]) - (msg[4]) - p4 + (msg[13]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[0];
 
 		q[0 + 16] =
@@ -737,8 +748,6 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		msg[5] = (inpHash[5]);
 		msg[6] = (inpHash[6]);
 		msg[7] = (inpHash[7]);
-		msg[8] = (0x80);
-		msg[15] = (512);
 		mxh[0] = msg[0] ^ hash2[0];
 		mxh[1] = msg[1] ^ hash2[1];
 		mxh[2] = msg[2] ^ hash2[2];
@@ -760,7 +769,6 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 			{ 0xFFFFFFF6, 0x9FFFFFFF },
 			{ 0x5555554B, 0xA5555555 },
 		};
-
 		uint2 q[32];
 
 		uint2 tmp;
@@ -797,8 +805,8 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		tmp = vectorize(hash2[12] - hash2[9] + hash2[13] - (mxh[4]) - (mxh[6]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + hash[0];
 
-#pragma unroll 16
-		for (int i = 0; i < 16; i++)
+#pragma unroll 8
+		for (int i = 0; i < 8; i++)
 		{
 			msg2[i] = vectorize(msg[i]);
 		}
@@ -859,7 +867,7 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 			ROL8(msg2[4 + 3])) ^ hash[4 + 7]);
 		q[5 + 16] = pre2 + CONST_EXP3(5) +
 			((precalcf[5] + ROTL64(msg2[5], 5 + 1) +
-			ROTL64(msg2[5 + 3], 5 + 4) - ROL16(msg2[5 + 10])) ^ hash[5 + 7]);
+			0x10000 - 0x02000000) ^ hash[5 + 7]);
 
 		pre1 = pre1 - q[4 + 0] + q[4 + 14];
 		pre2 = pre2 - q[5 + 0] + q[5 + 14];
@@ -875,37 +883,37 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		pre1 = pre1 - q[6 + 0] + q[6 + 14];
 		pre2 = pre2 - q[7 + 0] + q[7 + 14];
 
-		q[8 + 16] = pre1+CONST_EXP3(8) +
-			((vectorize((8 + 16)*(0x0555555555555555ull)) + ROTL64(msg2[8], 8 + 1) -
+		q[8 + 16] = pre1 + CONST_EXP3(8) +
+			((vectorize((8 + 16)*(0x0555555555555555ull) + 0x10000) -
 			ROTL64(msg2[8 - 6], (8 - 6) + 1)) ^ hash[8 + 7]);
-		q[25] = pre2+CONST_EXP3(9) +
+		q[25] = pre2 + CONST_EXP3(9) +
 			((vectorize((25)*(0x0555555555555555ull)) - ROTL64(msg2[3], 4)) ^ hash[0]);
 
 		pre1 = pre1 - q[8 + 0] + q[8 + 14];
 		pre2 = pre2 - q[9 + 0] + q[9 + 14];
 
-		q[26] = pre1+CONST_EXP3(10) +
+		q[26] = pre1 + CONST_EXP3(10) +
 			((vectorize((26)*(0x0555555555555555ull)) - ROTL64(msg2[4], 5)) ^ hash[1]);
-		q[27] = pre2+CONST_EXP3(11) +
+		q[27] = pre2 + CONST_EXP3(11) +
 			((vectorize((27)*(0x0555555555555555ull)) - ROTL64(msg2[5], 6)) ^ hash[2]);
 
 		pre1 = pre1 - q[10 + 0] + q[10 + 14];
 		pre2 = pre2 - q[11 + 0] + q[11 + 14];
 
-		q[28] = pre1+CONST_EXP3(12) +
-			((vectorize((28)*(0x0555555555555555ull)) + ROL16(msg2[15]) - ROTL64(msg2[6], 7)) ^ hash[3]);
-		q[13 + 16] = pre2+CONST_EXP3(13) +
+		q[28] = pre1 + CONST_EXP3(12) +
+			((vectorize(0x955555555555554C + 0x02000000) - ROTL64(msg2[6], 7)) ^ hash[3]);
+		q[13 + 16] = pre2 + CONST_EXP3(13) +
 			((precalcf[6] +
 			ROTL64(msg2[13 - 13], (13 - 13) + 1) - ROL8(msg2[13 - 6])) ^ hash[13 - 9]);
 
 		pre1 = pre1 - q[12 + 0] + q[12 + 14];
 		pre2 = pre2 - q[13 + 0] + q[13 + 14];
 
-		q[14 + 16] = pre1+CONST_EXP3(14) +
-			((precalcf[7] +
-			ROTL64(msg2[14 - 13], (14 - 13) + 1) - ROTL64(msg2[14 - 6], (14 - 6) + 1)) ^ hash[14 - 9]);
-		q[15 + 16] = pre2+CONST_EXP3(15) +
-			((precalcf[8] + ROL16(msg2[15]) +
+		q[14 + 16] = pre1 + CONST_EXP3(14) +
+			((precalcf[7] - 0x10000 +
+			ROTL64(msg2[14 - 13], (14 - 13) + 1)) ^ hash[14 - 9]);
+		q[15 + 16] = pre2 + CONST_EXP3(15) +
+			((precalcf[8] + 0x02000000 +
 			ROTL64(msg2[15 - 13], (15 - 13) + 1)) ^ hash[15 - 9]);
 
 
@@ -921,14 +929,14 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		h[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ msg2[6]) + (XL64    ^ q[30] ^ q[6]);
 		h[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ msg2[7]) + (XL64    ^ q[31] ^ q[7]);
 
-		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ msg2[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
+		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ 0x80) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
 		h[9] = ROTL64(h[5], 10) + (XH64     ^     q[25]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
 		h[10] = ROTL64(h[6], 11) + (XH64     ^     q[26]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
 		h[11] = ROTL64(h[7], 12) + (XH64     ^     q[27]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
 		h[12] = ROTL64(h[0], 13) + (XH64     ^     q[28]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
 		h[13] = ROTL64(h[1], 14) + (XH64     ^     q[29]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
 		h[14] = ROTL64(h[2], 15) + (XH64     ^     q[30]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
-		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ msg2[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
+		h[15] = ROL16(h[3]) + (XH64     ^     q[31] ^ (512)) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
 		const uint2 cmsg[16] =
 		{
@@ -977,37 +985,45 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 			{ 0x5555554B, 0xA5555555 },
 		};
 
-		tmp = vectorize((msg[5]) - (msg[7]) + (msg[10]) + (msg[13]) + (msg[14]));
+		const uint64_t p2 = (msg[15] - msg[12]);
+		const uint64_t p3 = (msg[14]) - (msg[7]);
+		const uint64_t p4 = (msg[6]) + (msg[9]);
+		const uint64_t p5 = (msg[8]) - (msg[5]);
+		const uint64_t p6 = (msg[1]) - (msg[14]);
+		const uint64_t p7 = (msg[8]) - (msg[1]);
+
+
+		tmp = vectorize((msg[5]) + (msg[10]) + (msg[13]) + p3);
 		q[0] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[1];
 		tmp = vectorize((msg[6]) - (msg[8]) + (msg[11]) + (msg[14]) - (msg[15]));
 		q[1] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + cmsg[2];
-		tmp = vectorize((msg[0]) + (msg[7]) + (msg[9]) - (msg[12]) + (msg[15]));
+		tmp = vectorize((msg[0]) + (msg[7]) + (msg[9]) + p2);
 		q[2] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + cmsg[3];
-		tmp = vectorize((msg[0]) - (msg[1]) + (msg[8]) - (msg[10]) + (msg[13]));
+		tmp = vectorize((msg[0]) + p7 - (msg[10]) + (msg[13]));
 		q[3] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + cmsg[4];
-		tmp = vectorize((msg[1]) + (msg[2]) + (msg[9]) - (msg[11]) - (msg[14]));
+		tmp = vectorize((msg[2]) + (msg[9]) - (msg[11]) + p6);
 		q[4] = (SHR(tmp, 1) ^ tmp) + cmsg[5];
-		tmp = vectorize((msg[3]) - (msg[2]) + (msg[10]) - (msg[12]) + (msg[15]));
+		tmp = vectorize((msg[3]) - (msg[2]) + (msg[10]) + p2);
 		q[5] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[6];
 		tmp = vectorize((msg[4]) - (msg[0]) - (msg[3]) - (msg[11]) + (msg[13]));
 		q[6] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + cmsg[7];
-		tmp = vectorize((msg[1]) - (msg[4]) - (msg[5]) - (msg[12]) - (msg[14]));
+		tmp = vectorize(p6 - (msg[4]) - (msg[5]) - (msg[12]));
 		q[7] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + cmsg[8];
 		tmp = vectorize((msg[2]) - (msg[5]) - (msg[6]) + (msg[13]) - (msg[15]));
 		q[8] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + cmsg[9];
-		tmp = vectorize((msg[0]) - (msg[3]) + (msg[6]) - (msg[7]) + (msg[14]));
+		tmp = vectorize((msg[0]) - (msg[3]) + (msg[6]) + p3);
 		q[9] = (SHR(tmp, 1) ^ tmp) + cmsg[10];
-		tmp = vectorize((msg[8]) - (msg[1]) - (msg[4]) - (msg[7]) + (msg[15]));
+		tmp = vectorize(p7 - (msg[4]) - (msg[7]) + (msg[15]));
 		q[10] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[11];
-		tmp = vectorize((msg[8]) - (msg[0]) - (msg[2]) - (msg[5]) + (msg[9]));
+		tmp = vectorize(p5 - (msg[0]) - (msg[2]) + (msg[9]));
 		q[11] = (SHR(tmp, 1) ^ SHL(tmp, 2) ^ ROTL64(tmp, 13) ^ ROTL64(tmp, 43)) + cmsg[12];
-		tmp = vectorize((msg[1]) + (msg[3]) - (msg[6]) - (msg[9]) + (msg[10]));
+		tmp = vectorize((msg[1]) + (msg[3]) - p4 + (msg[10]));
 		q[12] = (SHR(tmp, 2) ^ SHL(tmp, 1) ^ ROTL64(tmp, 19) ^ ROTL64(tmp, 53)) + cmsg[13];
 		tmp = vectorize((msg[2]) + (msg[4]) + (msg[7]) + (msg[10]) + (msg[11]));
 		q[13] = (SHR(tmp, 2) ^ SHL(tmp, 2) ^ ROTL64(tmp, 28) ^ ROTL64(tmp, 59)) + cmsg[14];
-		tmp = vectorize((msg[3]) - (msg[5]) + (msg[8]) - (msg[11]) - (msg[12]));
+		tmp = vectorize((msg[3]) + p5 - (msg[11]) - (msg[12]));
 		q[14] = (SHR(tmp, 1) ^ tmp) + cmsg[15];
-		tmp = vectorize((msg[12]) - (msg[4]) - (msg[6]) - (msg[9]) + (msg[13]));
+		tmp = vectorize((msg[12]) - (msg[4]) - p4 + (msg[13]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + cmsg[0];
 
 		q[0 + 16] =
@@ -1065,57 +1081,57 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		q[4 + 16] = pre1 + CONST_EXP3(4) +
 			((precalc[4] + ROTL64(h[4], 4 + 1) +
 			ROL8(h[4 + 3]) - ROTL64(h[4 + 10], 4 + 11)) ^ cmsg[4 + 7]);
-		q[5 + 16] = pre2+ CONST_EXP3(5) +
+		q[5 + 16] = pre2 + CONST_EXP3(5) +
 			((precalc[5] + ROTL64(h[5], 5 + 1) +
 			ROTL64(h[5 + 3], 5 + 4) - ROL16(h[5 + 10])) ^ cmsg[5 + 7]);
 
 		pre1 = pre1 - q[4 + 0] + q[4 + 14];
 		pre2 = pre2 - q[5 + 0] + q[5 + 14];
 
-		q[6 + 16] = pre1+CONST_EXP3(6) +
+		q[6 + 16] = pre1 + CONST_EXP3(6) +
 			((precalc[6] + ROTL64(h[6], 6 + 1) +
 			ROTL64(h[6 + 3], 6 + 4) - ROTL64(h[6 - 6], (6 - 6) + 1)) ^ cmsg[6 + 7]);
-		q[7 + 16] = pre2+CONST_EXP3(7) +
+		q[7 + 16] = pre2 + CONST_EXP3(7) +
 			((precalc[7] + ROL8(h[7]) +
 			ROTL64(h[7 + 3], 7 + 4) - ROTL64(h[7 - 6], (7 - 6) + 1)) ^ cmsg[7 + 7]);
 
 		pre1 = pre1 - q[6 + 0] + q[6 + 14];
 		pre2 = pre2 - q[7 + 0] + q[7 + 14];
 
-		q[8 + 16] = pre1+CONST_EXP3(8) +
+		q[8 + 16] = pre1 + CONST_EXP3(8) +
 			((precalc[8] + ROTL64(h[8], 8 + 1) +
 			ROTL64(h[8 + 3], 8 + 4) - ROTL64(h[8 - 6], (8 - 6) + 1)) ^ cmsg[8 + 7]);
-		q[9 + 16] = pre2+CONST_EXP3(9) +
+		q[9 + 16] = pre2 + CONST_EXP3(9) +
 			((precalc[9] + ROTL64(h[9], 9 + 1) +
 			ROTL64(h[9 + 3], 9 + 4) - ROTL64(h[9 - 6], (9 - 6) + 1)) ^ cmsg[9 - 9]);
 
 		pre1 = pre1 - q[8 + 0] + q[8 + 14];
 		pre2 = pre2 - q[9 + 0] + q[9 + 14];
 
-		q[10 + 16] = pre1+CONST_EXP3(10) +
+		q[10 + 16] = pre1 + CONST_EXP3(10) +
 			((precalc[10] + ROTL64(h[10], 10 + 1) +
 			ROTL64(h[10 + 3], 10 + 4) - ROTL64(h[10 - 6], (10 - 6) + 1)) ^ cmsg[10 - 9]);
-		q[11 + 16] = pre2+CONST_EXP3(11) +
+		q[11 + 16] = pre2 + CONST_EXP3(11) +
 			((precalc[11] + ROTL64(h[11], 11 + 1) +
 			ROTL64(h[11 + 3], 11 + 4) - ROTL64(h[11 - 6], (11 - 6) + 1)) ^ cmsg[11 - 9]);
 
 		pre1 = pre1 - q[10 + 0] + q[10 + 14];
 		pre2 = pre2 - q[11 + 0] + q[11 + 14];
 
-		q[12 + 16] = pre1+CONST_EXP3(12) +
+		q[12 + 16] = pre1 + CONST_EXP3(12) +
 			((precalc[12] + ROTL64(h[12], 12 + 1) +
 			ROL16(h[12 + 3]) - ROTL64(h[12 - 6], (12 - 6) + 1)) ^ cmsg[12 - 9]);
-		q[13 + 16] = pre2+CONST_EXP3(13) +
+		q[13 + 16] = pre2 + CONST_EXP3(13) +
 			((precalc[13] + ROTL64(h[13], 13 + 1) +
 			ROTL64(h[13 - 13], (13 - 13) + 1) - ROL8(h[13 - 6])) ^ cmsg[13 - 9]);
 
 		pre1 = pre1 - q[12 + 0] + q[12 + 14];
 		pre2 = pre2 - q[13 + 0] + q[13 + 14];
 
-		q[14 + 16] = pre1+CONST_EXP3(14) +
+		q[14 + 16] = pre1 + CONST_EXP3(14) +
 			((precalc[14] + ROTL64(h[14], 14 + 1) +
 			ROTL64(h[14 - 13], (14 - 13) + 1) - ROTL64(h[14 - 6], (14 - 6) + 1)) ^ cmsg[14 - 9]);
-		q[15 + 16] = pre2+CONST_EXP3(15) +
+		q[15 + 16] = pre2 + CONST_EXP3(15) +
 			((precalc[15] + ROL16(h[15]) +
 			ROTL64(h[15 - 13], (15 - 13) + 1) - ROTL64(h[15 - 6], (15 - 6) + 1)) ^ cmsg[15 - 9]);
 
