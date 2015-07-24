@@ -537,7 +537,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	int data_size, midstate_size;
 	switch (opt_algo) {
 	case ALGO_NEO:
-		data_size = 84;
+		data_size = 80;
 		break;
 	case ALGO_BITC:
 		data_size = 168;
