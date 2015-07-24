@@ -215,6 +215,7 @@ bool autotune = true;
 bool opt_autotune = true;
 
 bool abort_flag = false;
+bool network_fail_flag = false;
 char *jane_params = NULL;
 
 char *rpc_user = NULL;
@@ -1356,7 +1357,7 @@ static void *miner_thread(void *userdata)
 		pthread_mutex_unlock(&g_work_lock);
 
 		/* prevent gpu scans before a job is received */
-		if (have_stratum && loopcnt>0 && work.data[0] == 0) 
+		if ((have_stratum && work.data[0] == 0 || network_fail_flag) && !opt_benchmark))
 		{
 			sleep(1);
 			continue;	
@@ -1811,7 +1812,7 @@ start:
 				free(lp_url);
 				lp_url = NULL;
 				sleep(opt_fail_pause);
-				goto start;
+				network_fail_flag = true;
 			}
 		}
 	}
@@ -1913,6 +1914,7 @@ static void *stratum_thread(void *userdata)
 			g_work_time = time(NULL);
 			if (stratum.job.clean) 
 			{
+				network_fail_flag = false;
 				if (!opt_quiet)
 					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
 						stratum.job.height);
