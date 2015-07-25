@@ -770,7 +770,7 @@ static __device__ __inline__ uint32_t __ldgtoint_unaligned2(const uint8_t *ptr)
 
 #endif
 
-static __forceinline__ __device__ void shift256R2(uint32_t * ret, const uint8 &vec4, uint32_t shift)
+static __forceinline__ __device__ void shift256R2(uint32_t * ret, const uint8 &vec4, const uint32_t shift)
 {
 	uint32_t truc = 0, truc2 = cuda_swab32(vec4.s7), truc3 = 0;
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift));
