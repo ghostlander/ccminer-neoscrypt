@@ -14,7 +14,8 @@ static uint32_t *d_hash[MAX_GPUS] ;
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
 extern void neoscrypt_cpu_init(int thr_id, int threads,uint32_t* hash);
 extern uint32_t neoscrypt_cpu_hash_k4(int stratum,int thr_id, int threads, uint32_t startNounce, int order);
-  
+extern uint32_t neoscrypt_cpu_hash_k4_52(int stratum, int thr_id, int threads, uint32_t startNounce, int order);
+
 
 extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -91,8 +92,20 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
 
 	do {
 		int order = 0;
-		uint32_t foundNonce = neoscrypt_cpu_hash_k4(stratum, thr_id, throughput, pdata[19], order++);
-//		foundNonce = 10 + pdata[19];
+		
+		
+		uint32_t foundNonce;
+		
+
+
+		if (device_sm[device_map[thr_id]] > 500)
+			foundNonce = neoscrypt_cpu_hash_k4_52(stratum, thr_id, throughput, pdata[19], order++);
+		else
+			foundNonce = neoscrypt_cpu_hash_k4(stratum, thr_id, throughput, pdata[19], order++);
+
+
+
+		//		foundNonce = 10 + pdata[19];
 		if  (foundNonce != 0xffffffff)
 		{
 			if (opt_benchmark)
