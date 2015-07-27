@@ -50,7 +50,10 @@ typedef struct {
 #define ROTATEUPWARDS7(a)  LROT(a,7)
 #define ROTATEUPWARDS11(a) LROT(a,11)
 
-#define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
+#define SWAP(v1, v2) \
+		a^=b;\
+		b ^= a;\
+		a ^= b;
 
 #define TWEAK(a0,a1,a2,a3,j)\
     a0 = LROT(a0,j);\

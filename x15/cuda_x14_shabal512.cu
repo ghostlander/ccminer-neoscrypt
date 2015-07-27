@@ -95,9 +95,9 @@
 		A01 ^= Whigh; \
 
 #define SWAP(v1, v2) \
-		tmp = (v1); \
-		(v1) = (v2); \
-		(v2) = tmp; \
+		v1^=v2;\
+		v2 ^= v1;\
+		v1 ^= v2;
 
 #define SWAP_BC   \
 		SWAP(B0, C0); \
@@ -377,7 +377,6 @@ void x14_shabal512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t 
 		uint32_t nounce =  (startNounce + thread);
 		uint32_t hashPosition = nounce - startNounce;
 		uint32_t *Hash = &g_hash[hashPosition*16]; // [hashPosition * 8]
-		uint32_t tmp;
 		uint32_t A00 = d_A512[0], A01 = d_A512[1], A02 = d_A512[2], A03 = d_A512[3],
 			A04 = d_A512[4], A05 = d_A512[5], A06 = d_A512[6], A07 = d_A512[7],
 			A08 = d_A512[8], A09 = d_A512[9], A0A = d_A512[10], A0B = d_A512[11];
