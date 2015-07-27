@@ -244,10 +244,14 @@ __global__ void __launch_bounds__(256, 4)
 
         if ((threadIdx.x & 0x03) == 0)
         {
-            uint32_t *outpHash = &hashBuffer[16 * thread];
-#pragma unroll 16
-            for(int k=0;k<16;k++) outpHash[k] = out_state[k];
-        }
+			uint4 *outpHash = (uint4*)&hashBuffer[16 * thread];
+			uint4 *phash = (uint4*)out_state;
+			uint4 *outpt = outpHash;
+			outpt[0] = phash[0];
+			outpt[1] = phash[1];
+			outpt[2] = phash[2];
+			outpt[3] = phash[3];
+		}
     }
 }
 
