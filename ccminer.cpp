@@ -82,6 +82,7 @@ struct workio_cmd {
 
 enum sha_algos {
 	ALGO_ANIME,
+	ALGO_AXIOM,
 	ALGO_BITC,
 	ALGO_BITCOIN,
 	ALGO_BLAKE,
@@ -124,6 +125,7 @@ enum sha_algos {
 
 static const char *algo_names[] = {
 	"anime",
+	"axiom",
 	"credit",
 	"bitcoin",
 	"blake",
@@ -265,6 +267,7 @@ Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
 			anime       Animecoin\n\
+			axiom		Axiomcoin\n\
 			bitcoin     Bitcoin\n\
 			blake       Blake 256 (SFR/NEOS)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
@@ -1395,6 +1398,7 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_X11:
 			case ALGO_C11:
+			case ALGO_AXIOM:
 				minmax = 0x800000;
 				break;
 			case ALGO_S3:
@@ -1523,6 +1527,10 @@ static void *miner_thread(void *userdata)
 		case ALGO_ANIME:
 			rc = scanhash_anime(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
+			break;
+		case ALGO_AXIOM:
+			rc = scanhash_axiom(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
 			break;
 
 		case ALGO_BITCOIN:

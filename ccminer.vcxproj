@@ -491,6 +491,8 @@
     </CudaCompile>
     <CudaCompile Include="x13\x13.cu">
     </CudaCompile>
+    <CudaCompile Include="x15\axiom.cu" />
+    <CudaCompile Include="x15\cuda_axiom.cu" />
     <CudaCompile Include="x15\cuda_whirlpoolx.cu" />
     <CudaCompile Include="x15\cuda_x14_shabal512.cu">
     </CudaCompile>
