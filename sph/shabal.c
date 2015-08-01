@@ -663,7 +663,7 @@ shabal_close(void *cc, unsigned ub, unsigned n, void *dst, unsigned size_words)
 	shabal_init(sc, size_words << 5);
 }
 
-#if 0
+#if 1
 /* see sph_shabal.h */
 void
 sph_shabal192_init(void *cc)
