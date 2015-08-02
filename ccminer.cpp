@@ -635,6 +635,7 @@ static int share_result(int result, const char *reason)
 {
 	char s[345];
 	double hashrate = 0.;
+	const char *sres;
 
 	pthread_mutex_lock(&stats_lock);
 
@@ -647,15 +648,25 @@ static int share_result(int result, const char *reason)
 
 	global_hashrate = llround(hashrate);
 
-	sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * hashrate);
-	applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s khash/s %s",
-			accepted_count,
-			accepted_count + rejected_count,
-			100. * accepted_count / (accepted_count + rejected_count),
-			s,
-			use_colors ?
-				(result ? CL_GRN "yay!!!" : CL_RED "booooo")
-			:	(result ? "(yay!!!)" : "(booooo)"));
+	if (use_colors)
+		sres = (result ? CL_GRN "yes!" : CL_RED "nooooo");
+	else
+		sres = (result ? "(yes!!!)" : "(nooooo)");
+
+	switch (opt_algo) {
+	case ALGO_AXIOM:
+		sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate);
+		applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s H/s %s",
+			accepted_count, accepted_count + rejected_count,
+			100. * accepted_count / (accepted_count + rejected_count), s, sres);
+		break;
+	default:
+		sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate / 1000.0);
+		applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s kH/s %s",
+			accepted_count, accepted_count + rejected_count,
+			100. * accepted_count / (accepted_count + rejected_count), s, sres);
+		break;
+	}
 
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
@@ -763,7 +774,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build hex string */
 		char *str = NULL;
-		int data_size = (opt_algo == ALGO_NEO) ? 80 : sizeof(work->data);
+		int data_size = ((opt_algo == ALGO_NEO) ) ? 80 : sizeof(work->data);
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
 			for (int i = 0; i < (data_size >> 2); i++)
 				le32enc(work->data + i, work->data[i]);
@@ -1395,7 +1406,6 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_X11:
 			case ALGO_C11:
-			case ALGO_AXIOM:
 				minmax = 0x800000;
 				break;
 			case ALGO_S3:
@@ -1698,9 +1708,19 @@ static void *miner_thread(void *userdata)
 			for (int i = 0; i < opt_n_threads; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			pthread_mutex_unlock(&stats_lock);
-			if (opt_benchmark) {
-				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate / 1000.);
-				applog(LOG_NOTICE, "Total: %s kH/s", s);
+			if (opt_benchmark) 
+			{
+				switch (opt_algo) {
+				case ALGO_AXIOM:
+					applog(LOG_INFO, "CPU #%d: %.2f H/s", thr_id, thr_hashrates[thr_id]);
+					break;
+				default:
+					sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
+						thr_hashrates[thr_id] / 1e3);
+					applog(LOG_INFO, "CPU #%d: %s kH/s", thr_id, s);
+					break;
+				}
+	
 			}
 
 			// X-Mining-Hashrate

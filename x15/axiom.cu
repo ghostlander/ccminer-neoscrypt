@@ -28,12 +28,12 @@ extern "C" void axiomhash(void *output, const void *input)
 	sph_shabal256((void *)&ctx, input, 80);
 	sph_shabal256_close((void *)&ctx, M[0]);
 
-//	for(int i = 1; i < N; i++) {
-//		sph_shabal256((void *)&ctx, M[i - 1], 32);
-//		sph_shabal256_close((void *)&ctx, M[i]);
-//	}
+	for(int i = 1; i < N; i++) {
+		sph_shabal256((void *)&ctx, M[i - 1], 32);
+		sph_shabal256_close((void *)&ctx, M[i]);
+	}
 
-/*	for(int b = 0; b < N; b++)
+	for(int b = 0; b < N; b++)
 	{
 		const int p = b > 0 ? b - 1 : 0xFFFF;
 		const int q = M[p][0] % 0xFFFF;
@@ -52,7 +52,6 @@ extern "C" void axiomhash(void *output, const void *input)
 		sph_shabal256_close(&ctx, M[b]);
 	}
 	memcpy(output, M[N-1], 32);
-	*/
 }
 
 
@@ -63,7 +62,7 @@ extern "C" int scanhash_axiom(int thr_id, uint32_t *pdata, uint32_t *ptarget, ui
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, (1 << 20));
 	throughput = min(throughput, max_nonce - first_nonce);
 	if (opt_benchmark)
-		ptarget[7] = 0xfffffff;
+		ptarget[7] = 0xffffff;
 
 	uint32_t _ALIGN(128) hash64[8];
 
