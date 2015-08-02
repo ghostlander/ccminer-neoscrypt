@@ -386,7 +386,7 @@ extern "C"{
 		if ((Wlow = T32(Wlow + 1)) == 0) \
 			Whigh = T32(Whigh + 1); \
 	} while (0)
-#if 0
+#if 1
 static const sph_u32 A_init_192[] = {
 	C32(0xFD749ED4), C32(0xB798E530), C32(0x33904B6F), C32(0x46BDA85E),
 	C32(0x076934B4), C32(0x454B4058), C32(0x77F74527), C32(0xFB4CF465),
@@ -500,7 +500,7 @@ shabal_init(void *cc, unsigned size)
 	sph_shabal_context *sc;
 
 	switch (size) {
-#if 0
+#if 1
 	case 192:
 		A_init = A_init_192;
 		B_init = B_init_192;
