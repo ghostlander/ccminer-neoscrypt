@@ -340,18 +340,14 @@ void rnd512_first(uint32_t *statebuffer, uint32_t *statechainv)
 	statechainv[6 + 8 * 3] ^= statebuffer[3];
 	statechainv[7 + 8 * 3] ^= statebuffer[4];
 
-	MULT2(statebuffer, 0);
-	MULT2(statebuffer, 0);
-	MULT2(statebuffer, 0);
-	MULT2(statebuffer, 0);
+	statechainv[4 + 8 * 4] ^= statebuffer[0] ^ statebuffer[4];
+	statechainv[5 + 8 * 4] ^= statebuffer[1];
+	statechainv[6 + 8 * 4] ^= statebuffer[2];
+	statechainv[7 + 8 * 4] ^= statebuffer[3];
+	statechainv[0 + 8 * 4] ^= statebuffer[4];
 
-	statechainv[0 + 8 * 4] ^= statebuffer[0];
-	statechainv[1 + 8 * 4] ^= statebuffer[1];
-	statechainv[3 + 8 * 4] ^= statebuffer[3];
-	statechainv[4 + 8 * 4] ^= statebuffer[4];
-	statechainv[5 + 8 * 4] ^= statebuffer[5];
-	statechainv[6 + 8 * 4] ^= statebuffer[6];
-	statechainv[7 + 8 * 4] ^= statebuffer[7];
+	statechainv[1 + 8 * 4] = (statechainv[1 + 8 * 4] ^ statebuffer[4]);
+	statechainv[3 + 8 * 4] = (statechainv[3 + 8 * 4] ^ statebuffer[4]);
 
 #pragma unroll 8
 	for (i = 0; i<8; i++) {
@@ -773,39 +769,6 @@ void finalization512(uint32_t *const __restrict__ statebuffer, uint32_t *const _
 __device__ __forceinline__
 void finalization512_qubit(uint32_t *const __restrict__ statebuffer, uint32_t *const __restrict__ statechainv, uint32_t *const __restrict__ b)
 {
-	int i, j;
-
-	statebuffer[4] = 0x80000000;
-#pragma unroll 3
-	for (int i = 5; i<8; i++)
-		statebuffer[i] = 0;
-	rnd512_first(statebuffer, statechainv);
-
-	rnd512_nullhash(statechainv);
-
-#pragma unroll 8
-	for (i = 0; i<8; i++) {
-		b[i] = 0;
-#pragma unroll 5
-		for (j = 0; j<5; j++) {
-			b[i] ^= statechainv[i + 8 * j];
-		}
-		b[i] = BYTES_SWAP32((b[i]));
-	}
-
-	rnd512_nullhash(statechainv);
-
-#pragma unroll 8
-	for (i = 0; i<8; i++)
-	{
-		b[8 + i] = 0;
-#pragma unroll 5
-		for (j = 0; j<5; j++)
-		{
-			b[8 + i] ^= statechainv[i + 8 * j];
-		}
-		b[8 + i] = BYTES_SWAP32((b[8 + i]));
-	}
 }
 
 
@@ -820,6 +783,7 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		int i, j;
 		const uint32_t nounce = startNounce + thread;
 		uint64_t buff[16];
 
@@ -844,7 +808,39 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 			statechainv[i] = statechainvpre[i];
 
 		uint32_t *outHash = outputHash + 16 * thread;
-		finalization512_qubit(statebuffer, statechainv, outHash);
+
+		statebuffer[4] = 0x80000000;
+
+		rnd512_first(statebuffer, statechainv);
+		rnd512_nullhash(statechainv);
+
+
+		#pragma unroll
+		for (i = 0; i<8; i++) 
+		{
+			buff[i] = statechainv[i];
+			#pragma unroll
+			for (j = 1; j<5; j++) {
+				buff[i] ^= statechainv[i + 8 * j];
+			}
+			outHash[i] = BYTES_SWAP32((buff[i]));
+		}
+
+		rnd512_nullhash(statechainv);
+
+#pragma unroll 8
+		for (i = 0; i<8; i++)
+		{
+			buff[8 + i] = statechainv[i];
+#pragma unroll 5
+			for (j = 1; j<5; j++)
+			{
+				buff[8 + i] ^= statechainv[i + 8 * j];
+			}
+			outHash[8 + i] = BYTES_SWAP32((buff[8 + i]));
+		}
+
+
 	}
 }
 
