@@ -262,19 +262,36 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 #define SINGLE_EVEN(i, bc)        ( A(i, (bc)) )
     uint32_t b[8];
 
-#pragma unroll 8
-    for(int i=0;i<8;i++)
-        b[i] = DOUBLE_ODD(i, 1) ^ DOUBLE_EVEN(i, 3);
+		b[0] = (S(0, (1)) ^ A(0, (1) + 1)) ^ DOUBLE_EVEN(0, 3);
+		b[1] = (S(1, (1)) ^ A(1, (1) + 1)) ^ DOUBLE_EVEN(1, 3);
+		b[2] = (S(2, (1)) ^ A(2, (1) + 1)) ^ DOUBLE_EVEN(2, 3);
+		b[3] = (S(3, (1)) ^ A(3, (1) + 1)) ^ DOUBLE_EVEN(3, 3);
+		b[4] = (S(4, (1)) ^ A(4, (1) + 1)) ^ DOUBLE_EVEN(4, 3);
+		b[5] = (S(5, (1)) ^ A(5, (1) + 1)) ^ DOUBLE_EVEN(5, 3);
+		b[6] = (S(6, (1)) ^ A(6, (1) + 1)) ^ DOUBLE_EVEN(6, 3);
+		b[7] = (S(7, (1)) ^ A(7, (1) + 1)) ^ DOUBLE_EVEN(7, 3);
 
     G256_Mul2(b);
-#pragma unroll 8
-    for(int i=0;i<8;i++)
-        b[i] = b[i] ^ DOUBLE_ODD(i, 3) ^ DOUBLE_ODD(i, 4) ^ SINGLE_ODD(i, 6);
+
+		b[0] = b[0] ^ DOUBLE_ODD(0, 3) ^ DOUBLE_ODD(0, 4) ^ SINGLE_ODD(0, 6);
+		b[1] = b[1] ^ DOUBLE_ODD(1, 3) ^ DOUBLE_ODD(1, 4) ^ SINGLE_ODD(1, 6);
+		b[2] = b[2] ^ DOUBLE_ODD(2, 3) ^ DOUBLE_ODD(2, 4) ^ SINGLE_ODD(2, 6);
+		b[3] = b[3] ^ DOUBLE_ODD(3, 3) ^ DOUBLE_ODD(3, 4) ^ SINGLE_ODD(3, 6);
+		b[4] = b[4] ^ DOUBLE_ODD(4, 3) ^ DOUBLE_ODD(4, 4) ^ SINGLE_ODD(4, 6);
+		b[5] = b[5] ^ DOUBLE_ODD(5, 3) ^ DOUBLE_ODD(5, 4) ^ SINGLE_ODD(5, 6);
+		b[6] = b[6] ^ DOUBLE_ODD(6, 3) ^ DOUBLE_ODD(6, 4) ^ SINGLE_ODD(6, 6);
+		b[7] = b[7] ^ DOUBLE_ODD(7, 3) ^ DOUBLE_ODD(7, 4) ^ SINGLE_ODD(7, 6);
 
     G256_Mul2(b);
-#pragma unroll 8
-    for(int i=0;i<8;i++)
-        r[i] = b[i] ^ DOUBLE_EVEN(i, 2) ^ DOUBLE_EVEN(i, 3) ^ SINGLE_EVEN(i, 5);
+
+		r[0] = b[0] ^ DOUBLE_EVEN(0, 2) ^ DOUBLE_EVEN(0, 3) ^ SINGLE_EVEN(0, 5);
+		r[1] = b[1] ^ DOUBLE_EVEN(1, 2) ^ DOUBLE_EVEN(1, 3) ^ SINGLE_EVEN(1, 5);
+		r[2] = b[2] ^ DOUBLE_EVEN(2, 2) ^ DOUBLE_EVEN(2, 3) ^ SINGLE_EVEN(2, 5);
+		r[3] = b[3] ^ DOUBLE_EVEN(3, 2) ^ DOUBLE_EVEN(3, 3) ^ SINGLE_EVEN(3, 5);
+		r[4] = b[4] ^ DOUBLE_EVEN(4, 2) ^ DOUBLE_EVEN(4, 3) ^ SINGLE_EVEN(4, 5);
+		r[5] = b[5] ^ DOUBLE_EVEN(5, 2) ^ DOUBLE_EVEN(5, 3) ^ SINGLE_EVEN(5, 5);
+		r[6] = b[6] ^ DOUBLE_EVEN(6, 2) ^ DOUBLE_EVEN(6, 3) ^ SINGLE_EVEN(6, 5);
+		r[7] = b[7] ^ DOUBLE_EVEN(7, 2) ^ DOUBLE_EVEN(7, 3) ^ SINGLE_EVEN(7, 5);
 
 #undef S
 #undef A
