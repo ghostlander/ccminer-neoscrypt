@@ -764,14 +764,6 @@ void finalization512(uint32_t *const __restrict__ statebuffer, uint32_t *const _
 	}
 }
 
-
-
-__device__ __forceinline__
-void finalization512_qubit(uint32_t *const __restrict__ statebuffer, uint32_t *const __restrict__ statechainv, uint32_t *const __restrict__ b)
-{
-}
-
-
 /***************************************************/
 // Die Hash-Funktion
 __global__

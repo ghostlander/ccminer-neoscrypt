@@ -304,6 +304,154 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
     }
 }
 
+
+__device__ __forceinline__
+void rnd512_finalfirst(uint32_t *statechainv)
+{
+	int i, j;
+	uint32_t t[40];
+	uint32_t chainv[8];
+	uint32_t tmp;
+
+#pragma unroll 8
+	for (i = 0; i<8; i++)
+	{
+		t[i] = 0;
+#pragma unroll 5
+		for (j = 0; j<5; j++)
+		{
+			t[i] ^= statechainv[i + 8 * j];
+		}
+	}
+
+	MULT2(t, 0);
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			statechainv[i + 8 * j] ^= t[i];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			t[i + 8 * j] = statechainv[i + 8 * j];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			statechainv[8 * j + i] ^= t[8 * ((j + 1) % 5) + i];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			t[i + 8 * j] = statechainv[i + 8 * j];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			statechainv[8 * j + i] ^= t[8 * ((j + 4) % 5) + i];
+		}
+	}
+
+	statechainv[0 + 8 * 0] ^= 0x80000000;
+	statechainv[1 + 8 * 1] ^= 0x80000000;
+	statechainv[2 + 8 * 2] ^= 0x80000000;
+	statechainv[3 + 8 * 3] ^= 0x80000000;
+	statechainv[4 + 8 * 4] ^= 0x80000000;
+
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		chainv[i] = statechainv[i];
+	}
+
+#pragma unroll 1
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i)], c_CNS[(2 * i) + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i] = chainv[i];
+		chainv[i] = statechainv[i + 8];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
+
+#pragma unroll 1
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 8] = chainv[i];
+		chainv[i] = statechainv[i + 16];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
+
+#pragma unroll 1
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 16] = chainv[i];
+		chainv[i] = statechainv[i + 24];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
+
+#pragma unroll 1
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 24] = chainv[i];
+		chainv[i] = statechainv[i + 32];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
+
+#pragma unroll 1
+	for (i = 0; i<8; i++) {
+		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 32] = chainv[i];
+	}
+}
+
+
 __device__ __forceinline__
 void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 {
@@ -542,15 +690,10 @@ void Update512(uint32_t *statebuffer, uint32_t *statechainv, const uint32_t *dat
 
 /***************************************************/
 __device__ __forceinline__
-void finalization512(uint32_t *statebuffer, uint32_t *statechainv, uint32_t *b)
+void finalization512(uint32_t *statechainv, uint32_t *b)
 {
     int i,j;
-
-    statebuffer[0] = 0x80000000;
-	#pragma unroll 7
-    for(int i=1;i<8;i++) statebuffer[i] = 0;
-	rnd512(statebuffer, statechainv);
-
+	rnd512_finalfirst(statechainv);
     /*---- blank round with m=0 ----*/
 	rnd512_nullhash(statechainv);
 
@@ -810,7 +953,7 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		};
 
 		Update512(statebuffer, statechainv, Hash);
-		finalization512(statebuffer, statechainv, Hash);
+		finalization512(statechainv, Hash);
 		//Cubehash
 
 		uint32_t x0 = (0x2AEA2A61), x1 = (0x50F494D4), x2 = (0x2D538B8B), x3 = (0x4167D83E);
