@@ -1,18 +1,5 @@
 #include "cuda_helper.h"
 
-__device__ __forceinline__ void G256_Mul2(uint32_t *const regs)
-{
-    uint32_t tmp = regs[7];
-    regs[7] = regs[6];
-    regs[6] = regs[5];
-    regs[5] = regs[4];
-    regs[4] = regs[3] ^ tmp;
-    regs[3] = regs[2] ^ tmp;
-    regs[2] = regs[1];
-    regs[1] = regs[0] ^ tmp;
-    regs[0] = tmp;
-}
-
 __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, const int round)
 {
 	x0 = ~x0;
@@ -24,7 +11,7 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 	x6 = ~x6;
 	x7 = ~x7;
 
-	uint32_t andmask1 = ((-((threadIdx.x & 0x03) == 3)) & 0xffff0000);
+	const uint32_t andmask1 = ((-((threadIdx.x & 0x03) == 3)) & 0xffff0000);
 
 	x0 ^= ((-(round & 0x01)) & andmask1);
 	x1 ^= ((-(round & 0x02)) & andmask1);
@@ -38,7 +25,7 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
 
 __device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, const int round)
 {
-	uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
+	const uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
 	x4 ^= (0xAAAA & andmask1);
 	x5 ^= (0xCCCC & andmask1);
@@ -262,36 +249,34 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 #define SINGLE_EVEN(i, bc)        ( A(i, (bc)) )
     uint32_t b[8];
 
-		b[0] = (S(0, (1)) ^ A(0, (1) + 1)) ^ DOUBLE_EVEN(0, 3);
-		b[1] = (S(1, (1)) ^ A(1, (1) + 1)) ^ DOUBLE_EVEN(1, 3);
-		b[2] = (S(2, (1)) ^ A(2, (1) + 1)) ^ DOUBLE_EVEN(2, 3);
-		b[3] = (S(3, (1)) ^ A(3, (1) + 1)) ^ DOUBLE_EVEN(3, 3);
-		b[4] = (S(4, (1)) ^ A(4, (1) + 1)) ^ DOUBLE_EVEN(4, 3);
-		b[5] = (S(5, (1)) ^ A(5, (1) + 1)) ^ DOUBLE_EVEN(5, 3);
-		b[6] = (S(6, (1)) ^ A(6, (1) + 1)) ^ DOUBLE_EVEN(6, 3);
-		b[7] = (S(7, (1)) ^ A(7, (1) + 1)) ^ DOUBLE_EVEN(7, 3);
+	b[0] = (S(0, (1)) ^ A(0, (1) + 1)) ^ DOUBLE_EVEN(0, 3);
+	b[1] = (S(1, (1)) ^ A(1, (1) + 1)) ^ DOUBLE_EVEN(1, 3);
+	b[2] = (S(2, (1)) ^ A(2, (1) + 1)) ^ DOUBLE_EVEN(2, 3);
+	b[3] = (S(3, (1)) ^ A(3, (1) + 1)) ^ DOUBLE_EVEN(3, 3);
+	b[4] = (S(4, (1)) ^ A(4, (1) + 1)) ^ DOUBLE_EVEN(4, 3);
+	b[5] = (S(5, (1)) ^ A(5, (1) + 1)) ^ DOUBLE_EVEN(5, 3);
+	b[6] = (S(6, (1)) ^ A(6, (1) + 1)) ^ DOUBLE_EVEN(6, 3);
+	b[7] = (S(7, (1)) ^ A(7, (1) + 1)) ^ DOUBLE_EVEN(7, 3);
 
-    G256_Mul2(b);
+	uint32_t tmp = b[7];
+	b[7] = b[6] ^ (S(7, (3)) ^ A(7, (3) + 1)) ^ DOUBLE_ODD(7, 4) ^ SINGLE_ODD(7, 6);
+	b[6] = b[5] ^ (S(6, (3)) ^ A(6, (3) + 1)) ^ DOUBLE_ODD(6, 4) ^ SINGLE_ODD(6, 6);
+	b[5] = b[4] ^ (S(5, (3)) ^ A(5, (3) + 1)) ^ DOUBLE_ODD(5, 4) ^ SINGLE_ODD(5, 6);
+	b[4] = b[3] ^ (S(4, (3)) ^ A(4, (3) + 1)) ^ DOUBLE_ODD(4, 4) ^ SINGLE_ODD(4, 6) ^ tmp;
+	b[3] = b[2] ^ (S(3, (3)) ^ A(3, (3) + 1)) ^ DOUBLE_ODD(3, 4) ^ SINGLE_ODD(3, 6) ^ tmp;
+	b[2] = b[1] ^ (S(2, (3)) ^ A(2, (3) + 1)) ^ DOUBLE_ODD(2, 4) ^ SINGLE_ODD(2, 6);
+	b[1] = b[0] ^ (S(1, (3)) ^ A(1, (3) + 1)) ^ DOUBLE_ODD(1, 4) ^ SINGLE_ODD(1, 6) ^ tmp;
+	b[0] = tmp ^ (S(0, (3)) ^ A(0, (3) + 1)) ^ DOUBLE_ODD(0, 4) ^ SINGLE_ODD(0, 6);
 
-		b[0] = b[0] ^ DOUBLE_ODD(0, 3) ^ DOUBLE_ODD(0, 4) ^ SINGLE_ODD(0, 6);
-		b[1] = b[1] ^ DOUBLE_ODD(1, 3) ^ DOUBLE_ODD(1, 4) ^ SINGLE_ODD(1, 6);
-		b[2] = b[2] ^ DOUBLE_ODD(2, 3) ^ DOUBLE_ODD(2, 4) ^ SINGLE_ODD(2, 6);
-		b[3] = b[3] ^ DOUBLE_ODD(3, 3) ^ DOUBLE_ODD(3, 4) ^ SINGLE_ODD(3, 6);
-		b[4] = b[4] ^ DOUBLE_ODD(4, 3) ^ DOUBLE_ODD(4, 4) ^ SINGLE_ODD(4, 6);
-		b[5] = b[5] ^ DOUBLE_ODD(5, 3) ^ DOUBLE_ODD(5, 4) ^ SINGLE_ODD(5, 6);
-		b[6] = b[6] ^ DOUBLE_ODD(6, 3) ^ DOUBLE_ODD(6, 4) ^ SINGLE_ODD(6, 6);
-		b[7] = b[7] ^ DOUBLE_ODD(7, 3) ^ DOUBLE_ODD(7, 4) ^ SINGLE_ODD(7, 6);
-
-    G256_Mul2(b);
-
-		r[0] = b[0] ^ DOUBLE_EVEN(0, 2) ^ DOUBLE_EVEN(0, 3) ^ SINGLE_EVEN(0, 5);
-		r[1] = b[1] ^ DOUBLE_EVEN(1, 2) ^ DOUBLE_EVEN(1, 3) ^ SINGLE_EVEN(1, 5);
-		r[2] = b[2] ^ DOUBLE_EVEN(2, 2) ^ DOUBLE_EVEN(2, 3) ^ SINGLE_EVEN(2, 5);
-		r[3] = b[3] ^ DOUBLE_EVEN(3, 2) ^ DOUBLE_EVEN(3, 3) ^ SINGLE_EVEN(3, 5);
-		r[4] = b[4] ^ DOUBLE_EVEN(4, 2) ^ DOUBLE_EVEN(4, 3) ^ SINGLE_EVEN(4, 5);
-		r[5] = b[5] ^ DOUBLE_EVEN(5, 2) ^ DOUBLE_EVEN(5, 3) ^ SINGLE_EVEN(5, 5);
-		r[6] = b[6] ^ DOUBLE_EVEN(6, 2) ^ DOUBLE_EVEN(6, 3) ^ SINGLE_EVEN(6, 5);
-		r[7] = b[7] ^ DOUBLE_EVEN(7, 2) ^ DOUBLE_EVEN(7, 3) ^ SINGLE_EVEN(7, 5);
+	tmp = b[7];
+	r[7] = b[6] ^ DOUBLE_EVEN(7, 2) ^ DOUBLE_EVEN(7, 3) ^ SINGLE_EVEN(7, 5);
+	r[6] = b[5] ^ DOUBLE_EVEN(6, 2) ^ DOUBLE_EVEN(6, 3) ^ SINGLE_EVEN(6, 5);
+	r[5] = b[4] ^ DOUBLE_EVEN(5, 2) ^ DOUBLE_EVEN(5, 3) ^ SINGLE_EVEN(5, 5);
+	r[4] = b[3] ^ DOUBLE_EVEN(4, 2) ^ DOUBLE_EVEN(4, 3) ^ SINGLE_EVEN(4, 5) ^ tmp;
+	r[3] = b[2] ^ DOUBLE_EVEN(3, 2) ^ DOUBLE_EVEN(3, 3) ^ SINGLE_EVEN(3, 5) ^ tmp;
+	r[2] = b[1] ^ DOUBLE_EVEN(2, 2) ^ DOUBLE_EVEN(2, 3) ^ SINGLE_EVEN(2, 5);
+	r[1] = b[0] ^ DOUBLE_EVEN(1, 2) ^ DOUBLE_EVEN(1, 3) ^ SINGLE_EVEN(1, 5)^tmp;
+	r[0] = tmp ^ DOUBLE_EVEN(0, 2) ^ DOUBLE_EVEN(0, 3) ^ SINGLE_EVEN(0, 5);
 
 #undef S
 #undef A
@@ -325,18 +310,46 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 
 __device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t *const __restrict__ state, uint32_t *const __restrict__ message)
 {
-#pragma unroll 8
-    for(int u=0;u<8;u++) state[u] = message[u];
+	state[0] = message[0];
+	state[1] = message[1];
+	state[2] = message[2];
+	state[3] = message[3];
+	state[4] = message[4];
+	state[5] = message[5];
+	state[6] = message[6];
+	state[7] = message[7];
 
     if ((threadIdx.x & 0x03) == 3) state[ 1] ^= 0x00008000;
     groestl512_perm_P_quad(state);
     if ((threadIdx.x & 0x03) == 3) state[ 1] ^= 0x00008000;
     groestl512_perm_Q_quad(message);
-#pragma unroll 8
-    for(int u=0;u<8;u++) state[u] ^= message[u];
-#pragma unroll 8
-    for(int u=0;u<8;u++) message[u] = state[u];
-    groestl512_perm_P_quad(message);
-#pragma unroll 8
-    for(int u=0;u<8;u++) state[u] ^= message[u];
+
+	state[0] ^= message[0];
+	state[1] ^= message[1];
+	state[2] ^= message[2];
+	state[3] ^= message[3];
+	state[4] ^= message[4];
+	state[5] ^= message[5];
+	state[6] ^= message[6];
+	state[7] ^= message[7];
+
+	message[0] = state[0];
+	message[1] = state[1];
+	message[2] = state[2];
+	message[3] = state[3];
+	message[4] = state[4];
+	message[5] = state[5];
+	message[6] = state[6];
+	message[7] = state[7];
+
+	groestl512_perm_P_quad(message);
+		
+	state[0] ^= message[0];
+	state[1] ^= message[1];
+	state[2] ^= message[2];
+	state[3] ^= message[3];
+	state[4] ^= message[4];
+	state[5] ^= message[5];
+	state[6] ^= message[6];
+	state[7] ^= message[7];
 }
