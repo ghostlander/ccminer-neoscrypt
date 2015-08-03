@@ -4,6 +4,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 #define TPB 512
 #define THF 4
@@ -42,14 +43,15 @@ void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, u
 
 		from_bitslice_quad(state, hash);
 
-		if (thr != 0) return;
-
-		uint4 *phash = (uint4*)hash;
-		uint4 *outpt = (uint4*)inpHash; /* var kept for hash align */
-		outpt[0] = phash[0];
-		outpt[1] = phash[1];
-		outpt[2] = phash[2];
-		outpt[3] = phash[3];
+		if (thr == 0)
+		{
+			uint28 *phash = (uint28*)hash;
+			uint28 *outpt = (uint28*)inpHash; /* var kept for hash align */
+			outpt[0] = phash[0];
+			outpt[1] = phash[1];
+//			outpt[2] = phash[2];
+//			outpt[3] = phash[3];
+		}
     }
 }
 
