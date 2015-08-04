@@ -454,13 +454,34 @@ G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
 
 __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 {    
-	for (int round = 0; round<14; round++)
+#if __CUDA_ARCH__ > 500
+	for (int round = 0; round<12; round++)
     {
         G256_AddRoundConstantQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
         sbox_quad(r);
         G256_ShiftBytesQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
         G256_MixFunction_quad(r);
     }
+
+	G256_AddRoundConstantQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], 12);
+	sbox_quad(r);
+	G256_ShiftBytesQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+
+	G256_AddRoundConstantQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], 13);
+	sbox_quad(r);
+	G256_ShiftBytesQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+#else
+	for (int round = 0; round<14; round++)
+	{
+		G256_AddRoundConstantQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
+		sbox_quad(r);
+		G256_ShiftBytesQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+		G256_MixFunction_quad(r);
+	}
+#endif
+
 }
 
 __device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t *const __restrict__ state, uint32_t *const __restrict__ message)
