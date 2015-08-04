@@ -287,14 +287,169 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 
 __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *const r)
 {
+#if __CUDA_ARCH__ > 500
+	const uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
-	for(int round=0;round<14;round++)
-    {
-        G256_AddRoundConstantP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
-        sbox_quad(r);
-        G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
-        G256_MixFunction_quad(r);
-    }
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[0] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[1] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+
+	for (int round = 3; round<14; round++)
+	{
+		G256_AddRoundConstantP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
+		sbox_quad(r);
+		G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+		G256_MixFunction_quad(r);
+	}
+
+#else
+	for (int round = 0; round<14; round++)
+	{
+		G256_AddRoundConstantP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
+		sbox_quad(r);
+		G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+		G256_MixFunction_quad(r);
+	}
+#endif
+
+/*
+
+
+
+r[4] ^= (0xAAAA & andmask1);
+r[5] ^= (0xCCCC & andmask1);
+r[6] ^= (0xF0F0 & andmask1);
+r[7] ^= (0xFF00 & andmask1);
+r[0] ^= andmask1;
+r[1] ^= andmask1;
+sbox_quad(r);
+G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+G256_MixFunction_quad(r);
+
+r[4] ^= (0xAAAA & andmask1);
+r[5] ^= (0xCCCC & andmask1);
+r[6] ^= (0xF0F0 & andmask1);
+r[7] ^= (0xFF00 & andmask1);
+r[2] ^= andmask1;
+sbox_quad(r);	
+G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+
+
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[2] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[0] ^= andmask1;
+	r[2] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[1] ^= andmask1;
+	r[2] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[0] ^= andmask1;
+	r[1] ^= andmask1;
+	r[2] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[3] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[0] ^= andmask1;
+	r[3] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[1] ^= andmask1;
+	r[3] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[0] ^= andmask1;
+	r[1] ^= andmask1;
+	r[3] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[2] ^= andmask1;
+	r[3] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	r[4] ^= (0xAAAA & andmask1);
+	r[5] ^= (0xCCCC & andmask1);
+	r[6] ^= (0xF0F0 & andmask1);
+	r[7] ^= (0xFF00 & andmask1);
+	r[0] ^= andmask1;
+	r[2] ^= andmask1;
+	r[3] ^= andmask1;
+	sbox_quad(r);
+	G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
+	G256_MixFunction_quad(r);
+	*/
 }
 
 __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
