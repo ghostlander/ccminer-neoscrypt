@@ -104,25 +104,21 @@ void FFT_8(int *y, int stripe) {
  * Unrolled decimation in frequency (DIF) radix-2 NTT.
  * Output data is in revbin_permuted order.
  */
-
+	uint32_t u, v;
 #define X(i) y[stripe*i]
 
 #define DO_REDUCE(i) \
 	X(i) = REDUCE(X(i))
 
 #define DO_REDUCE_FULL_S(i) \
-do { \
 	X(i) = REDUCE(X(i)); \
-	X(i) = EXTRA_REDUCE_S(X(i)); \
-} while(0)
+	X(i) = EXTRA_REDUCE_S(X(i));
 
 #define BUTTERFLY(i,j,n) \
-do { \
-	int u= X(i); \
-	int v= X(j); \
+	u= y[stripe*i]; \
+	v= y[stripe*j]; \
 	X(i) = u+v; \
-	X(j) = (u-v) << (2*n); \
-} while(0)
+	X(j) = (u-v) << (2*n);
 
 	BUTTERFLY(0, 4, 0);
 	BUTTERFLY(1, 5, 1);
@@ -167,11 +163,8 @@ __device__ __forceinline__ void FFT_16(int *y) {
  * Output data is in revbin_permuted order.
  */
 #define DO_REDUCE_FULL_S(i) \
-	do { \
 		y[i] = REDUCE(y[i]); \
-		y[i] = EXTRA_REDUCE_S(y[i]); \
-	} while(0)
-
+		y[i] = EXTRA_REDUCE_S(y[i]);
 	int u,v;
 
 	// BUTTERFLY(0, 8, 0);
@@ -329,14 +322,197 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 	int expanded[32];
 #pragma unroll 4
 	for (int i=0; i < 4; i++) {
-		expanded[  i] = __byte_perm(__shfl((int)data[0], 2*i, 8), __shfl((int)data[0], (2*i)+1, 8), threadIdx.x&7)&0xff;
-		expanded[4+i] = __byte_perm(__shfl((int)data[1], 2*i, 8), __shfl((int)data[1], (2*i)+1, 8), threadIdx.x&7)&0xff;
+		expanded[i] = __byte_perm(__shfl((int)data[0], 2 * i, 8), __shfl((int)data[0], (2 * i) + 1, 8), threadIdx.x & 7) & 0xff;
+		expanded[4 + i] = __byte_perm(__shfl((int)data[1], 2 * i, 8), __shfl((int)data[1], (2 * i) + 1, 8), threadIdx.x & 7) & 0xff;
 	}
-#pragma unroll 8
-	for (int i=8; i < 16; i++)
-		expanded[i] = 0;
 
-	FFT_256_halfzero(expanded);
+	expanded[9] = 0;
+	expanded[11] = 0;
+	expanded[13] = 0;
+	expanded[15] = 0;
+
+//	FFT_256_halfzero(expanded);
+
+	/*
+	* FFT_256 using w=41 as 256th root of unity.
+	* Decimation in frequency (DIF) NTT.
+	* Output data is in revbin_permuted order.
+	* In place.
+	*/
+//	const int tmp = expanded[15];
+
+	#pragma unroll 8
+	for (int i = 0; i<8; i++)
+		expanded[16 + i] = REDUCE(expanded[i] * c_FFT256_2_128_Twiddle[8 * i + (threadIdx.x & 7)]);
+
+
+//#pragma unroll 8
+//	for (int i = 24; i<32; i++)
+//		expanded[i] = 0;
+	expanded[9+16] = 0;
+	expanded[11 + 16] = 0;
+	expanded[13 + 16] = 0;
+	expanded[15 + 16] = 0;
+
+	/* handle X^255 with an additional butterfly */
+	if ((threadIdx.x & 7) == 7)
+	{
+		expanded[15] = 1;
+		expanded[31] = 0x0100 * 94; 
+	}
+
+	//	FFT_128_full(expanded);
+
+		int i;
+		uint32_t u, v;
+
+#define DO_REDUCE(i) \
+	expanded[2*i] = REDUCE(expanded[2*i])
+
+#define DO_REDUCE_FULL_S(i) \
+	expanded[2*i] = REDUCE(expanded[2*i]); \
+	expanded[2*i] = EXTRA_REDUCE_S(expanded[2*i]);
+
+#define BUTTERFLY(i,j,n) \
+	u= expanded[2*i]; \
+	v= expanded[2*j]; \
+	expanded[2*i] = u+v; \
+	expanded[2*j] = (u-v) << (2*n);
+
+//		BUTTERFLY(0, 4, 0);		//0 8 0
+		expanded[2 * 4] = expanded[2 * 0];
+
+//		BUTTERFLY(1, 5, 1);		//2 10 2
+		u = expanded[2 * 1];
+		expanded[2 * 5] = (u ) << (2 * 1);
+
+//		BUTTERFLY(2, 6, 2);		//4 12 4
+		u = expanded[2 * 2];
+		expanded[2 * 6] = (u) << (2 * 2);
+
+//		BUTTERFLY(3, 7, 3);		//6 14 6
+		u = expanded[2 * 3];
+		expanded[2 * 7] = (u) << (2 * 3);
+
+		expanded[2 * 6] = REDUCE(expanded[2 * 6]);
+		expanded[2 * 7] = REDUCE(expanded[2 * 7]);
+
+		BUTTERFLY(0, 2, 0);
+		BUTTERFLY(4, 6, 0);
+		BUTTERFLY(1, 3, 2);
+		BUTTERFLY(5, 7, 2);
+
+		DO_REDUCE(7);
+
+		BUTTERFLY(0, 1, 0);
+		BUTTERFLY(2, 3, 0);
+		BUTTERFLY(4, 5, 0);
+		BUTTERFLY(6, 7, 0);
+
+		DO_REDUCE_FULL_S(0);
+		DO_REDUCE_FULL_S(1);
+		DO_REDUCE_FULL_S(2);
+		DO_REDUCE_FULL_S(3);
+		DO_REDUCE_FULL_S(4);
+		DO_REDUCE_FULL_S(5);
+		DO_REDUCE_FULL_S(6);
+		DO_REDUCE_FULL_S(7);
+
+#undef X
+#undef DO_REDUCE
+#undef DO_REDUCE_FULL_S
+#undef BUTTERFLY
+
+//		FFT_8(expanded + 0, 2); // eight parallel FFT8's
+
+		FFT_8(expanded + 1, 2); // eight parallel FFT8's
+
+		expanded[0] = REDUCE(expanded[0]);
+		expanded[1] = REDUCE(expanded[1]);
+#pragma unroll
+		for (i = 2; i<16; i++)
+			expanded[i] = REDUCE(expanded[i] * c_FFT128_8_16_Twiddle[i * 8 + (threadIdx.x & 7)]);
+
+		//#pragma unroll 8
+		for (i = 0; i<16; i += 2)
+			FFT_16(expanded + i);  // eight sequential FFT16's, each one executed in parallel by 8 threads
+
+
+		
+//		FFT_128_full(expanded + 16);
+
+#define DO_REDUCE(i) \
+	expanded[2*i+ 16] = REDUCE(expanded[2*i+ 16])
+
+#define DO_REDUCE_FULL_S(i) \
+	expanded[2*i+ 16] = REDUCE(expanded[2*i+ 16]); \
+	expanded[2*i+ 16] = EXTRA_REDUCE_S(expanded[2*i+ 16]);
+
+#define BUTTERFLY(i,j,n) \
+	u= expanded[2*i+ 16]; \
+	v= expanded[2*j+ 16]; \
+	expanded[2*i+ 16] = u+v; \
+	expanded[2*j+ 16] = (u-v) << (2*n);
+
+		//		BUTTERFLY(0, 4, 0);		//0 8 0
+		expanded[2 * 4 + 16] = expanded[2 * 0 + 16];
+
+		//		BUTTERFLY(1, 5, 1);		//2 10 2
+		u = expanded[2 * 1 + 16];
+		expanded[2 * 5 + 16] = (u) << (2 * 1);
+
+		//		BUTTERFLY(2, 6, 2);		//4 12 4
+		u = expanded[2 * 2 + 16];
+		expanded[2 * 6 + 16] = (u) << (2 * 2);
+
+		//		BUTTERFLY(3, 7, 3);		//6 14 6
+		u = expanded[2 * 3 + 16];
+		expanded[2 * 7 + 16] = (u) << (2 * 3);
+
+		expanded[2 * 6 + 16] = REDUCE(expanded[2 * 6 + 16]);
+		expanded[2 * 7 + 16] = REDUCE(expanded[2 * 7 + 16]);
+
+		BUTTERFLY(0, 2, 0);
+		BUTTERFLY(4, 6, 0);
+		BUTTERFLY(1, 3, 2);
+		BUTTERFLY(5, 7, 2);
+
+		DO_REDUCE(7);
+
+		BUTTERFLY(0, 1, 0);
+		BUTTERFLY(2, 3, 0);
+		BUTTERFLY(4, 5, 0);
+		BUTTERFLY(6, 7, 0);
+
+		DO_REDUCE_FULL_S(0);
+		DO_REDUCE_FULL_S(1);
+		DO_REDUCE_FULL_S(2);
+		DO_REDUCE_FULL_S(3);
+		DO_REDUCE_FULL_S(4);
+		DO_REDUCE_FULL_S(5);
+		DO_REDUCE_FULL_S(6);
+		DO_REDUCE_FULL_S(7);
+
+#undef X
+#undef DO_REDUCE
+#undef DO_REDUCE_FULL_S
+#undef BUTTERFLY
+
+		//		FFT_8(expanded + 0, 2); // eight parallel FFT8's
+
+
+		FFT_8(expanded + 1 + 16, 2); // eight parallel FFT8's
+
+		expanded[0 + 16] = REDUCE(expanded[0 + 16]);
+		expanded[1 + 16] = REDUCE(expanded[1 + 16]);
+#pragma unroll
+		for (i = 2; i<16; i++)
+			expanded[i + 16] = REDUCE(expanded[i + 16] * c_FFT128_8_16_Twiddle[i * 8 + (threadIdx.x & 7)]);
+
+		//#pragma unroll 8
+		for (i = 0; i<16; i += 2)
+			FFT_16(expanded + i+ 16);  // eight sequential FFT16's, each one executed in parallel by 8 threads
+
 
 	// store w matrices in global memory
 
