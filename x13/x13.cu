@@ -157,7 +157,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[MAX_GPUS] = { 0 };
-	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 26 : 256 * 256 * 13;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
 
