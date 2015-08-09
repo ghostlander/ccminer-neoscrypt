@@ -2,6 +2,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 #define ROTR(x,n) ROTR64(x,n)
 
@@ -66,14 +67,30 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 		uint64_t *inpHash = &g_hash[hashPosition*8];
 		uint2 block[16];
-		block[0] = vectorizeswap(inpHash[0]);
-		block[1] = vectorizeswap(inpHash[1]);
-		block[2] = vectorizeswap(inpHash[2]);
-		block[3] = vectorizeswap(inpHash[3]);
-		block[4] = vectorizeswap(inpHash[4]);
-		block[5] = vectorizeswap(inpHash[5]);
-		block[6] = vectorizeswap(inpHash[6]);
-		block[7] = vectorizeswap(inpHash[7]);
+		uint2 msg[16];
+
+		uint28 *phash = (uint28*)inpHash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+		block[0].x = cuda_swab32(msg[0].y);
+		block[0].y = cuda_swab32(msg[0].x);
+		block[1].x = cuda_swab32(msg[1].y);
+		block[1].y = cuda_swab32(msg[1].x);
+		block[2].x = cuda_swab32(msg[2].y);
+		block[2].y = cuda_swab32(msg[2].x);
+		block[3].x = cuda_swab32(msg[3].y);
+		block[3].y = cuda_swab32(msg[3].x);
+		block[4].x = cuda_swab32(msg[4].y);
+		block[4].y = cuda_swab32(msg[4].x);
+		block[5].x = cuda_swab32(msg[5].y);
+		block[5].y = cuda_swab32(msg[5].x);
+		block[6].x = cuda_swab32(msg[6].y);
+		block[6].y = cuda_swab32(msg[6].x);
+		block[7].x = cuda_swab32(msg[7].y);
+		block[7].y = cuda_swab32(msg[7].x);
+
+
 		block[8] = vectorizehigh(0x80000000);
 		block[9] = vectorizelow(0x0);
 		block[10] = vectorizelow(0x0);

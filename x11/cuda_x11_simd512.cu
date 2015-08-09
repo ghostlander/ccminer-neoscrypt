@@ -6,8 +6,8 @@
 // STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
 
 #define TPB 256
-
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 #include <stdio.h>
 
 

@@ -1273,10 +1273,18 @@ __device__ __forceinline__ void SIMD_Compress1(uint32_t *const __restrict__ A, c
 {
 	int i;
 	const int thr_offset = thr_id << 6; // thr_id * 128 (je zwei elemente)
+
+	uint32_t msg[16];
+
+	uint28 *phash = (uint28*)M;
+	uint28 *outpt = (uint28*)msg;
+	outpt[0] = phash[0];
+	outpt[1] = phash[1];
+
 #pragma unroll 8
 	for(i=0; i<8; i++) {
-		A[i] ^= M[i];
-		(&A[8])[i] ^= M[8+i];
+		A[i] ^= msg[i];
+		(&A[8])[i] ^= msg[8 + i];
 	}
 	Round8_0(A, thr_offset, 3, 23, 17, 27, g_fft4);
 	Round8_1(A, thr_offset, 28, 19, 22, 7, g_fft4);

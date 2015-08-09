@@ -464,12 +464,11 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition *8];
 
 		uint32_t h[16];
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)h;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
 
-#pragma unroll 16
-		for (int i = 0; i < 16; i++)
-		{
-			h[i] = Hash[i];
-		}
 		uint32_t backup = h[7];
 
 		AES_2ROUND(sharedMemory,

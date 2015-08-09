@@ -165,11 +165,18 @@ void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		uint2 s[25];
 		uint2 bc[5], tmpxor[5], tmp1, tmp2;
 
-		tmpxor[0] = inpHash[0] ^ inpHash[5];
-		tmpxor[1] = inpHash[1] ^ inpHash[6];
-		tmpxor[2] = inpHash[2] ^ inpHash[7];
-		tmpxor[3] = inpHash[3] ^ make_uint2(0x1, 0x80000000);
-		tmpxor[4] = inpHash[4];
+		uint2 msg[8];
+
+		uint28 *phash = (uint28*)inpHash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
+		tmpxor[0] = msg[0] ^ msg[5];
+		tmpxor[1] = msg[1] ^ msg[6];
+		tmpxor[2] = msg[2] ^ msg[7];
+		tmpxor[3] = msg[3] ^ make_uint2(0x1, 0x80000000);
+		tmpxor[4] = msg[4];
 
 		bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
 		bc[1] = tmpxor[1] ^ ROL2(tmpxor[3], 1);
@@ -1784,14 +1791,21 @@ void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, c
 		int hashPosition = nounce - startNounce;
 		const uint2 *inpHash = &g_hash[8 * hashPosition];
 
+		uint2 msg[8];
+
+		uint28 *phash = (uint28*)inpHash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
 		uint2 s[25];
 		uint2 bc[5], tmpxor[5], tmp1, tmp2;
 
-		tmpxor[0] = inpHash[0] ^ inpHash[5];
-		tmpxor[1] = inpHash[1] ^ inpHash[6];
-		tmpxor[2] = inpHash[2] ^ inpHash[7];
-		tmpxor[3] = inpHash[3] ^ make_uint2(0x1, 0x80000000);
-		tmpxor[4] = inpHash[4];
+		tmpxor[0] = msg[0] ^ msg[5];
+		tmpxor[1] = msg[1] ^ msg[6];
+		tmpxor[2] = msg[2] ^ msg[7];
+		tmpxor[3] = msg[3] ^ make_uint2(0x1, 0x80000000);
+		tmpxor[4] = msg[4];
 
 		bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
 		bc[1] = tmpxor[1] ^ ROL2(tmpxor[3], 1);
