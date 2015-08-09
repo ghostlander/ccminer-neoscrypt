@@ -343,23 +343,14 @@ Options:\n\
   -c, --config=FILE     load a JSON-format configuration file\n\
   -V, --version         display version information and exit\n\
   -h, --help            display this help text and exit\n\
+  -X  --Experimental intensity     GPU intensity 1-xxx (default: auto) \n\
 ";
 
-static char const short_options[] =
-#ifndef WIN32
-	"B"
-#endif
-#ifdef HAVE_SYSLOG_H
-	"S"
-#endif
-	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e:M:C";
+static char const short_options[] = "a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e:M:C:X";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
 	{ "api-bind", 1, NULL, 'b' },
-#ifndef WIN32
-	{ "background", 0, NULL, 'B' },
-#endif
 	{ "benchmark", 0, NULL, 1005 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
@@ -384,10 +375,6 @@ static struct option const options[] = {
 	{ "retry-pause", 1, NULL, 'R' },
 	{ "scantime", 1, NULL, 's' },
 	{ "statsavg", 1, NULL, 'N' },
-#ifdef HAVE_SYSLOG_H
-	{ "syslog", 0, NULL, 'S' },
-	{ "syslog-prefix", 1, NULL, 1008 },
-#endif
 	{ "threads", 1, NULL, 't' },
 	{ "gputhreads", 1, NULL, 'g' },
 	{ "gpu-engine", 1, NULL, 1070 },
@@ -402,6 +389,7 @@ static struct option const options[] = {
 	{ "version", 0, NULL, 'V' },
 	{ "devices", 1, NULL, 'd' },
 	{ "diff", 1, NULL, 'f' },
+	{ "Xintensity", 1, NULL, 'X' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -2119,6 +2107,44 @@ static void parse_arg(int key, char *arg)
 			}
 		}
 		break;	
+	case 'X':
+		v = atoi(arg);
+		if (v < 1)
+			opt_statsavg = INT_MAX;
+		opt_statsavg = v;
+		break;
+		/*
+		v = atoi(arg);
+		if (v < 0 || v > 999)
+			show_usage_and_exit(1); 
+		{
+			int n = 0;
+			uint32_t adds = 0;
+			int ngpus = cuda_num_devices();
+			char * pch = strtok(arg, ",");
+			if (!pch || pch == arg) 
+			{
+				// single value, set intensity for all cards
+				for (n = 0; n < ngpus; n++)
+					gpus_intensity[n] = v*256*256;
+				applog(LOG_INFO, "Intensity set to %.1f, %u cuda threads", v, gpus_intensity[0]);
+				break; 
+			}
+			while (pch != NULL) 
+			{
+				v = atoi(pch);
+				if (v > 7) 
+				{ /- 0 = default -/
+					gpus_intensity[n] = (v*256*256);
+						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
+							v, gpus_intensity[n]);
+				}
+				n++;
+				pch = strtok(NULL, ",");
+			}
+		}
+		break;
+		*/
 	case 'N':
 		v = atoi(arg);
 		if (v < 1)

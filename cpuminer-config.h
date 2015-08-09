@@ -33,7 +33,7 @@
 #define HAVE_DECL_LE32ENC 0
 
 /* Define to 1 if you have the `getopt_long' function. */
-#define HAVE_GETOPT_LONG 1
+#define HAVE_GETOPT_LONG 0
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
