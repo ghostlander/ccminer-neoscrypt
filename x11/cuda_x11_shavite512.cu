@@ -1,6 +1,6 @@
 #include "cuda_helper.h"
 #include <memory.h> // memcpy()
-
+#include "cuda_vector.h"
 #define TPB 320
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
@@ -1277,16 +1277,24 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		int hashPosition = nounce - startNounce;
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition*8];
 
+
 		// kopiere init-state
 
 		uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
 		uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
 		uint32_t x0, x1, x2, x3;
 		uint32_t rk[32];
-		const uint32_t msg[16] =
-		{
-			Hash[0], Hash[1], Hash[2], Hash[3], Hash[4], Hash[5], Hash[6], Hash[7], Hash[8], Hash[9], Hash[10], Hash[11], Hash[12], Hash[13], Hash[14], Hash[15]
-		};
+		uint32_t msg[16];
+//		{
+//			Hash[0], Hash[1], Hash[2], Hash[3], Hash[4], Hash[5], Hash[6], Hash[7], Hash[8], Hash[9], Hash[10], Hash[11], Hash[12], Hash[13], Hash[14], Hash[15]
+//		};
+
+
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
 		const uint32_t state[16] = 
 		{
 			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),

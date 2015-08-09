@@ -2,6 +2,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 #ifdef _MSC_VER
 #define UINT2(x,y) { x, y }
@@ -37,14 +38,22 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
         int hashPosition = nounce - startNounce;
         uint2 *inpHash = &g_hash[8 * hashPosition];
 
+
+		uint2 msg[8];
+
+		uint28 *phash = (uint28*)inpHash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
         uint2 s[25];
 		uint2 bc[5], tmpxor[5], tmp1, tmp2;
 
-		tmpxor[0] = inpHash[0] ^ inpHash[5];
-		tmpxor[1] = inpHash[1] ^ inpHash[6];
-		tmpxor[2] = inpHash[2] ^ inpHash[7];
-		tmpxor[3] = inpHash[3] ^ make_uint2(0x1, 0x80000000);
-		tmpxor[4] = inpHash[4];
+		tmpxor[0] = msg[0] ^ msg[5];
+		tmpxor[1] = msg[1] ^ msg[6];
+		tmpxor[2] = msg[2] ^ msg[7];
+		tmpxor[3] = msg[3] ^ make_uint2(0x1, 0x80000000);
+		tmpxor[4] = msg[4];
 
 		bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
 		bc[1] = tmpxor[1] ^ ROL2(tmpxor[3], 1);
@@ -52,31 +61,31 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 		bc[3] = tmpxor[3] ^ ROL2(tmpxor[0], 1);
 		bc[4] = tmpxor[4] ^ ROL2(tmpxor[1], 1);
 
-		s[0] = inpHash[0] ^ bc[4];
-		s[1] = ROL2(inpHash[6] ^ bc[0], 44);
+		s[0] = msg[0] ^ bc[4];
+		s[1] = ROL2(msg[6] ^ bc[0], 44);
 		s[6] = ROL2(bc[3], 20);
 		s[9] = ROL2(bc[1], 61);
 		s[22] = ROL2(bc[3], 39);
 		s[14] = ROL2(bc[4], 18);
-		s[20] = ROL2(inpHash[2] ^ bc[1], 62);
+		s[20] = ROL2(msg[2] ^ bc[1], 62);
 		s[2] = ROL2(bc[1], 43);
 		s[12] = ROL2(bc[2], 25);
 		s[13] = ROL8(bc[3]);
 		s[19] = ROR8(bc[2]);
 		s[23] = ROL2(bc[4], 41);
-		s[15] = ROL2(inpHash[4] ^ bc[3], 27);
+		s[15] = ROL2(msg[4] ^ bc[3], 27);
 		s[4] = ROL2(bc[3], 14);
 		s[24] = ROL2(bc[0], 2);
 		s[21] = ROL2(make_uint2(0x1, 0x80000000) ^ bc[2], 55);
 		s[8] = ROL2(bc[0], 45);
-		s[16] = ROL2(inpHash[5] ^ bc[4], 36);
-		s[5] = ROL2(inpHash[3] ^ bc[2], 28);
+		s[16] = ROL2(msg[5] ^ bc[4], 36);
+		s[5] = ROL2(msg[3] ^ bc[2], 28);
 		s[3] = ROL2(bc[2], 21);
 		s[18] = ROL2(bc[1], 15);
 		s[17] = ROL2(bc[0], 10);
-		s[11] = ROL2(inpHash[7] ^ bc[1], 6);
+		s[11] = ROL2(msg[7] ^ bc[1], 6);
 		s[7] = ROL2(bc[4], 3);
-		s[10] = ROL2(inpHash[1] ^ bc[0], 1);
+		s[10] = ROL2(msg[1] ^ bc[0], 1);
 
 		tmp1 = s[0]; tmp2 = s[1]; s[0] = bitselect(s[0] ^ s[2], s[0], s[1]); s[1] = bitselect(s[1] ^ s[3], s[1], s[2]); s[2] = bitselect(s[2] ^ s[4], s[2], s[3]); s[3] = bitselect(s[3] ^ tmp1, s[3], s[4]); s[4] = bitselect(s[4] ^ tmp2, s[4], tmp1);
 		tmp1 = s[5]; tmp2 = s[6]; s[5] = bitselect(s[5] ^ s[7], s[5], s[6]); s[6] = bitselect(s[6] ^ s[8], s[6], s[7]); s[7] = bitselect(s[7] ^ s[9], s[7], s[8]); s[8] = bitselect(s[8] ^ tmp1, s[8], s[9]); s[9] = bitselect(s[9] ^ tmp2, s[9], tmp1);

@@ -3,6 +3,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h" 
+#include "cuda_vector.h" 
 
 static __constant__ uint64_t c_PaddedMessage80[2];
 __constant__ uint2 precalcvalues[9];
@@ -390,14 +391,22 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		const int hashPosition = nounce - startNounce;
 		uint64_t *Hash = &g_hash[8 * hashPosition];
 
-		h[0] = skein_p[0] = vectorize(Hash[0]);
-		h[1] = skein_p[1] = vectorize(Hash[1]);
-		h[2] = skein_p[2] = vectorize(Hash[2]);
-		h[3] = skein_p[3] = vectorize(Hash[3]);
-		h[4] = skein_p[4] = vectorize(Hash[4]);
-		h[5] = skein_p[5] = vectorize(Hash[5]);
-		h[6] = skein_p[6] = vectorize(Hash[6]);
-		h[7] = skein_p[7] = vectorize(Hash[7]);
+
+		uint2 msg[8];
+
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
+		h[0] = skein_p[0] = (msg[0]);
+		h[1] = skein_p[1] = (msg[1]);
+		h[2] = skein_p[2] = (msg[2]);
+		h[3] = skein_p[3] = (msg[3]);
+		h[4] = skein_p[4] = (msg[4]);
+		h[5] = skein_p[5] = (msg[5]);
+		h[6] = skein_p[6] = (msg[6]);
+		h[7] = skein_p[7] = (msg[7]);
 
 		skein_p[0] += vectorize(0x4903ADFF749C51CEULL);
 		skein_p[1] += vectorize(0x0D95DE399746DF03ULL);

@@ -1,5 +1,5 @@
 #include "cuda_helper.h"
-
+#include "cuda_vector.h"
 
 #ifdef _MSC_VER
 #define UINT2(x,y) { x, y }
@@ -294,11 +294,19 @@ void quark_jh512Keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 				{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 				{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc } };
 
+
+		uint32_t msg[16];
+
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
 #pragma unroll 16
-		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)Hash)[i];
+		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= (msg)[i];
 		E8(x);
 #pragma unroll 16
-		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)Hash)[i];
+		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= (msg)[i];
 
 		x[0 >> 2][0 & 3] ^= 0x80;
 		x[15 >> 2][15 & 3] ^= 0x00020000;

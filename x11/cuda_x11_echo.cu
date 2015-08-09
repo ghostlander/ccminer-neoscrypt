@@ -2,6 +2,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 #include "cuda_x11_aes.cu"
 
@@ -26,7 +27,6 @@ __device__ __forceinline__ void AES_2ROUND(
 __device__ __forceinline__ void cuda_echo_round(
 	const uint32_t *const __restrict__ sharedMemory, uint32_t *const __restrict__  hash)
 {
-	uint32_t h[16];
 	const uint32_t P[48] = {
 		0xe7e9f5f5,
 		0xf5e7e9f5,
@@ -94,11 +94,12 @@ __device__ __forceinline__ void cuda_echo_round(
 	};
 	uint32_t k0;
 
-#pragma unroll
-	for (int i = 0; i < 16; i++)
-	{
-		h[i] = hash[i];
-	}
+
+	uint32_t h[16];
+	uint28 *phash = (uint28*)hash;
+	uint28 *outpt = (uint28*)h;
+	outpt[0] = phash[0];
+	outpt[1] = phash[1];
 
 	k0 = 512 + 8;
 

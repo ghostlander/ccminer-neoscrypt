@@ -2,6 +2,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 
 // die Message it Padding zur Berechnung auf der GPU
@@ -258,14 +259,19 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		uint2    msg2[16];
 		uint64_t mxh[8];
 		uint2 h[16];
-		msg[0] = (inpHash[0]);
-		msg[1] = (inpHash[1]);
-		msg[2] = (inpHash[2]);
-		msg[3] = (inpHash[3]);
-		msg[4] = (inpHash[4]);
-		msg[5] = (inpHash[5]);
-		msg[6] = (inpHash[6]);
-		msg[7] = (inpHash[7]);
+		
+		uint28 *phash = (uint28*)inpHash;
+		uint28 *outpt = (uint28*)msg2;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
+#pragma unroll 8
+		for (int i = 0; i < 8; i++)
+		{
+			msg[i] = devectorize(msg2[i]);
+		}
+
+
 		mxh[0] = msg[0] ^ hash2[0];
 		mxh[1] = msg[1] ^ hash2[1];
 		mxh[2] = msg[2] ^ hash2[2];
@@ -323,12 +329,6 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		q[14] = (SHR(tmp, 1) ^ tmp) + hash[15];
 		tmp = vectorize(hash2[12] - hash2[9] + hash2[13] - (mxh[4]) - (mxh[6]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + hash[0];
-
-#pragma unroll 8
-		for (int i = 0; i < 8; i++)
-		{
-			msg2[i] = vectorize(msg[i]);
-		}
 
 		q[0 + 16] =
 			(SHR(q[0], 1) ^ SHL(q[0], 2) ^ ROTL64(q[0], 13) ^ ROTL64(q[0], 43)) +
@@ -742,14 +742,19 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		uint2    msg2[16];
 		uint64_t mxh[8];
 		uint2 h[16];
-		msg[0] = (inpHash[0]);
-		msg[1] = (inpHash[1]);
-		msg[2] = (inpHash[2]);
-		msg[3] = (inpHash[3]);
-		msg[4] = (inpHash[4]);
-		msg[5] = (inpHash[5]);
-		msg[6] = (inpHash[6]);
-		msg[7] = (inpHash[7]);
+
+		uint28 *phash = (uint28*)inpHash;
+		uint28 *outpt = (uint28*)msg2;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
+#pragma unroll 8
+		for (int i = 0; i < 8; i++)
+		{
+			msg[i] = devectorize(msg2[i]);
+		}
+		
+
 		mxh[0] = msg[0] ^ hash2[0];
 		mxh[1] = msg[1] ^ hash2[1];
 		mxh[2] = msg[2] ^ hash2[2];
@@ -808,11 +813,13 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		tmp = vectorize(hash2[12] - hash2[9] + hash2[13] - (mxh[4]) - (mxh[6]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + hash[0];
 
+		/*
 #pragma unroll 8
 		for (int i = 0; i < 8; i++)
 		{
 			msg2[i] = vectorize(msg[i]);
 		}
+		*/
 
 		q[0 + 16] =
 			(SHR(q[0], 1) ^ SHL(q[0], 2) ^ ROTL64(q[0], 13) ^ ROTL64(q[0], 43)) +

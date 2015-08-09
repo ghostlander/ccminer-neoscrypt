@@ -1,5 +1,5 @@
 #include "cuda_helper.h"
-
+#include "cuda_vector.h"
 __constant__ static __align__(16) uint32_t c_E8_bslice32[42][8] = {
 	// Round 0 (Function0)
 		{ 0xa2ded572, 0x90d6ab81, 0x67f815df, 0xf6875a4d, 0x0a15847b, 0xc54f9f4e, 0x571523b7, 0x402bd1c3 },
@@ -282,11 +282,18 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 				{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 				{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc } };
 
+		uint32_t msg[16];
+
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
 #pragma unroll 16
-		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)Hash)[i];
+		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= msg[i];
 		E8(x);
 #pragma unroll 16
-		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)Hash)[i];
+		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= msg[i];
 
 		x[0 >> 2][0 & 3] ^= 0x80;
 		x[15 >> 2][15 & 3] ^= 0x00020000;
@@ -326,6 +333,15 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		int hashPosition = nounce - startNounce;
 		const uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
 
+
+		uint32_t msg[16];
+
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
+
 		uint32_t x[8][4] = {
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
 			{ 0x8d5e228a, 0x0bef970c, 0x591234e9, 0x61c3b3f2 },
@@ -336,7 +352,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 			{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc } };
 
-		F8(x, Hash);
+		F8(x, msg);
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;

@@ -14,7 +14,7 @@
 uint4 *d_temp4[MAX_GPUS];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
-texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
+//texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
 
 __constant__ uint8_t c_perm0[8] = { 2, 3, 6, 7, 0, 1, 4, 5 };
 __constant__ uint8_t c_perm1[8] = { 6, 7, 2, 3, 4, 5, 0, 1 };
@@ -791,11 +791,11 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 	CUDA_SAFE_CALL(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads));
 
 	// Texture for 128-Bit Zugriffe
-	cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();
-	texRef1D_128.normalized = 0;
-	texRef1D_128.filterMode = cudaFilterModePoint;
-	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
-	CUDA_SAFE_CALL(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads));
+//	cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();
+//	texRef1D_128.normalized = 0;
+//	texRef1D_128.filterMode = cudaFilterModePoint;
+//	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
+//	CUDA_SAFE_CALL(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads));
 	return 0;
 }
 void x11_simd512_cpu_free(int thr_id)
