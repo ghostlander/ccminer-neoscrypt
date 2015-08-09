@@ -1297,10 +1297,9 @@ __device__ __forceinline__ void Compression1(const uint32_t *const __restrict__ 
 	};
 
 	SIMD_Compress1(A, texture_id, hashval, g_fft4);
-	uint32_t *state = (uint32_t*)&g_state[blockIdx.x * (blockDim.x*32)];
 #pragma unroll 32
 	for (int i=0; i < 32; i++)
-		state[threadIdx.x+blockDim.x*i] = A[i];
+		g_state[i] = A[i];
 }
 
 __device__ __forceinline__ void SIMD_Compress2(uint32_t *const __restrict__ A, const int thr_id, const uint4 *const __restrict__ g_fft4)
@@ -1324,12 +1323,11 @@ __device__ __forceinline__ void Compression2(const int texture_id, const uint4 *
 {
 	uint32_t A[32];
 	int i;
-	uint32_t *state = &g_state[blockIdx.x * (blockDim.x*32)];
 #pragma unroll 32
-	for (i=0; i < 32; i++) A[i] = state[threadIdx.x+blockDim.x*i];
+	for (i = 0; i < 32; i++) A[i] = g_state[i];
 	SIMD_Compress2(A, texture_id, g_fft4);
 #pragma unroll 32
-	for (i=0; i < 32; i++) state[threadIdx.x+blockDim.x*i] = A[i];
+	for (i=0; i < 32; i++) g_state[i] = A[i];
 }
 
 __device__ __forceinline__ void SIMD_Compress_Final(uint32_t *const __restrict__ A)
@@ -1360,10 +1358,9 @@ __device__ __forceinline__ void Final(uint32_t *const __restrict__ hashval, cons
 {
 	uint32_t A[32];
 	int i;
-	const uint32_t *state = &g_state[blockIdx.x * (blockDim.x*32)];
 #pragma unroll 32
 	for (i=0; i < 32; i++)
-		A[i] = state[threadIdx.x+blockDim.x*i];
+		A[i] = g_state[i];
 
 	SIMD_Compress_Final(A);
 #pragma unroll 16

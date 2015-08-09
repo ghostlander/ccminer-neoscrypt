@@ -50,7 +50,7 @@ extern void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNou
 extern void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, const uint32_t simdthreads);
 
 extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
@@ -159,6 +159,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	static bool init[MAX_GPUS] = { 0 };
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 20 : 256 * 256 * 10;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
+	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
 
 	throughput = min(throughput, (max_nonce - first_nonce));
 
@@ -216,7 +217,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		cuda_jh512Keccak512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
 		x11_luffaCubehash512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
 		x11_shavite512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
-		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id],simdthreads);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x13_hamsi512_cpu_hash_64(throughput, pdata[19],  d_hash[thr_id]);
 		x13_fugue512_cpu_hash_64_final(thr_id, throughput, pdata[19], d_hash[thr_id], h_found[thr_id]);
