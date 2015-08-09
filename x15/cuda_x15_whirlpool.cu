@@ -10,6 +10,7 @@
 #define USE_SHARED 1
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t pTarget[8];
@@ -1445,11 +1446,20 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		uint2 hash[8], state[8], n[8], h[8];
 		int i;
 
-
-
-#pragma unroll 8
+		uint28 *phash = (uint28*)&g_hash[hashPosition];
+		uint28 *outpt = (uint28*)hash;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
 		for (i = 0; i < 8; i++)
-			n[i] = hash[i] = vectorize(g_hash[hashPosition + i]);
+		{
+			n[i] = hash[i];
+		}
+
+//#pragma unroll 8
+//		for (i = 0; i < 8; i++)
+//			n[i] = hash[i] = vectorize(g_hash[hashPosition + i]);
+
+
 
 		uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, pre;
 

@@ -2,7 +2,7 @@
  * Shabal-512 for X14/X15 (STUB)
  */
 #include "cuda_helper.h"
-
+#include "cuda_vector.h"
 
 /* $Id: shabal.c 175 2010-05-07 16:03:20Z tp $ */
 /*
@@ -390,23 +390,31 @@ void x14_shabal512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t 
 			CC = d_C512[12], CD = d_C512[13], CE = d_C512[14], CF = d_C512[15];
 		uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF;
 
-		M0 = Hash[0];
-		M1 = Hash[1];
-		M2 = Hash[2];
-		M3 = Hash[3];
-		M4 = Hash[4];
-		M5 = Hash[5];
-		M6 = Hash[6];
-		M7 = Hash[7];
 
-		M8 = Hash[8];
-		M9 = Hash[9];
-		MA = Hash[10];
-		MB = Hash[11];
-		MC = Hash[12];
-		MD = Hash[13];
-		ME = Hash[14];
-		MF = Hash[15];
+		uint32_t msg[16];
+
+		uint28 *phash = (uint28*)Hash;
+		uint28 *outpt = (uint28*)msg;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+
+		M0 = msg[0];
+		M1 = msg[1];
+		M2 = msg[2];
+		M3 = msg[3];
+		M4 = msg[4];
+		M5 = msg[5];
+		M6 = msg[6];
+		M7 = msg[7];
+
+		M8 = msg[8];
+		M9 = msg[9];
+		MA = msg[10];
+		MB = msg[11];
+		MC = msg[12];
+		MD = msg[13];
+		ME = msg[14];
+		MF = msg[15];
 
 		INPUT_BLOCK_ADD;
 		A00 ^= 1;
