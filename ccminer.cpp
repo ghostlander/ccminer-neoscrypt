@@ -343,12 +343,12 @@ Options:\n\
   -c, --config=FILE     load a JSON-format configuration file\n\
   -V, --version         display version information and exit\n\
   -h, --help            display this help text and exit\n\
-  -X  --Experimental intensity     GPU intensity 1-xxx (default: auto) \n\
+  -X,  --XIntensity     intensity GPU intensity(default: auto) \n\
 ";
 
-static char const short_options[] = "a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e:M:C:X";
+char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e:M:C:";
 
-static struct option const options[] = {
+struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
 	{ "api-bind", 1, NULL, 'b' },
 	{ "benchmark", 0, NULL, 1005 },
@@ -389,7 +389,7 @@ static struct option const options[] = {
 	{ "version", 0, NULL, 'V' },
 	{ "devices", 1, NULL, 'd' },
 	{ "diff", 1, NULL, 'f' },
-	{ "Xintensity", 1, NULL, 'X' },
+	{ "X", 1, NULL, 'X'},
 	{ 0, 0, 0, 0 }
 };
 
@@ -1993,6 +1993,7 @@ static void parse_arg(int key, char *arg)
 	char *pch;
 	int n;
 	int last;
+	opterr = 1;
 
 	switch(key) {
 	case 'a':
@@ -2109,12 +2110,6 @@ static void parse_arg(int key, char *arg)
 		break;	
 	case 'X':
 		v = atoi(arg);
-		if (v < 1)
-			opt_statsavg = INT_MAX;
-		opt_statsavg = v;
-		break;
-		/*
-		v = atoi(arg);
 		if (v < 0 || v > 999)
 			show_usage_and_exit(1); 
 		{
@@ -2127,14 +2122,14 @@ static void parse_arg(int key, char *arg)
 				// single value, set intensity for all cards
 				for (n = 0; n < ngpus; n++)
 					gpus_intensity[n] = v*256*256;
-				applog(LOG_INFO, "Intensity set to %.1f, %u cuda threads", v, gpus_intensity[0]);
+				applog(LOG_INFO, "XIntensity set to %u, %u cuda threads", v, gpus_intensity[0]);
 				break; 
 			}
 			while (pch != NULL) 
 			{
 				v = atoi(pch);
 				if (v > 7) 
-				{ /- 0 = default -/
+				{ 
 					gpus_intensity[n] = (v*256*256);
 						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
 							v, gpus_intensity[n]);
@@ -2144,7 +2139,6 @@ static void parse_arg(int key, char *arg)
 			}
 		}
 		break;
-		*/
 	case 'N':
 		v = atoi(arg);
 		if (v < 1)
