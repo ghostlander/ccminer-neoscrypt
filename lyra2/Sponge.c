@@ -41,7 +41,6 @@
     //First 512 bis are zeros
     memset(state, 0, 64);
     //Remainder BLOCK_LEN_BLAKE2_SAFE_BYTES are reserved to the IV
-
     state[8] = blake2b_IV[0];
     state[9] = blake2b_IV[1];
     state[10] = blake2b_IV[2];
@@ -50,7 +49,6 @@
     state[13] = blake2b_IV[5];
     state[14] = blake2b_IV[6];
     state[15] = blake2b_IV[7];
-
 }
 
 /**
@@ -80,7 +78,7 @@ __inline static void blake2bLyra(uint64_t *v) {
 __inline static void reducedBlake2bLyra(uint64_t *v) {
     ROUND_LYRA(0);
 }
-
+ 
 /**
  * Performs a squeeze operation, using Blake2b's G function as the
  * internal permutation
@@ -95,9 +93,9 @@ __inline static void reducedBlake2bLyra(uint64_t *v) {
     int i;
     //Squeezes full blocks
     for (i = 0; i < fullBlocks; i++) {
-        memcpy(ptr, state, BLOCK_LEN_BYTES);
-        blake2bLyra(state);
-        ptr += BLOCK_LEN_BYTES;
+	memcpy(ptr, state, BLOCK_LEN_BYTES);
+	blake2bLyra(state);
+	ptr += BLOCK_LEN_BYTES;
     }
 
     //Squeezes remaining bytes
@@ -111,7 +109,7 @@ __inline static void reducedBlake2bLyra(uint64_t *v) {
  * @param state The current state of the sponge
  * @param in    The block to be absorbed (BLOCK_LEN_INT64 words)
  */
-void absorbBlock(uint64_t *state, const uint64_t *in) {
+ void absorbBlock(uint64_t *state, const uint64_t *in) {
     //XORs the first BLOCK_LEN_INT64 words of "in" with the current state
     state[0] ^= in[0];
     state[1] ^= in[1];
@@ -137,9 +135,10 @@ void absorbBlock(uint64_t *state, const uint64_t *in) {
  * @param state The current state of the sponge
  * @param in    The block to be absorbed (BLOCK_LEN_BLAKE2_SAFE_INT64 words)
  */
-void absorbBlockBlake2Safe(uint64_t *state, const uint64_t *in) {
+ void absorbBlockBlake2Safe(uint64_t *state, const uint64_t *in) {
     //XORs the first BLOCK_LEN_BLAKE2_SAFE_INT64 words of "in" with the current state
-    state[0] ^= in[0];
+
+	state[0] ^= in[0];
     state[1] ^= in[1];
     state[2] ^= in[2];
     state[3] ^= in[3];
@@ -148,14 +147,10 @@ void absorbBlockBlake2Safe(uint64_t *state, const uint64_t *in) {
     state[6] ^= in[6];
     state[7] ^= in[7];
 
+
     //Applies the transformation f to the sponge's state
     blake2bLyra(state);
-/*
-    for(int i = 0; i<16; i++) {
-        printf(" final state %d %08x %08x in %08x %08x\n", i, (uint32_t)(state[i] & 0xFFFFFFFFULL), (uint32_t)(state[i] >> 32),
-        (uint32_t)(in[i] & 0xFFFFFFFFULL), (uint32_t)(in[i] >> 32));
-    }
-*/
+
 }
 
 /**
@@ -166,12 +161,11 @@ void absorbBlockBlake2Safe(uint64_t *state, const uint64_t *in) {
  * @param state     The current state of the sponge
  * @param rowOut    Row to receive the data squeezed
  */
-void reducedSqueezeRow0(uint64_t* state, uint64_t* rowOut) {
-    uint64_t* ptrWord = rowOut + (N_COLS-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to M[0][C-1]
+ void reducedSqueezeRow0(uint64_t* state, uint64_t* rowOut, uint64_t nCols) {
+    uint64_t* ptrWord = rowOut + (nCols-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to M[0][C-1]
     int i;
     //M[row][C-1-col] = H.reduced_squeeze()
-    for (i = 0; i < N_COLS; i++) {
-
+    for (i = 0; i < nCols; i++) {
 	ptrWord[0] = state[0];
 	ptrWord[1] = state[1];
 	ptrWord[2] = state[2];
@@ -184,12 +178,7 @@ void reducedSqueezeRow0(uint64_t* state, uint64_t* rowOut) {
 	ptrWord[9] = state[9];
 	ptrWord[10] = state[10];
 	ptrWord[11] = state[11];
-	/*
-for (int i = 0; i<12; i++) {
-		printf(" after reducedSqueezeRow0 %d %08x %08x in %08x %08x\n", i, (uint32_t)(ptrWord[i] & 0xFFFFFFFFULL), (uint32_t)(ptrWord[i] >> 32),
-			(uint32_t)(state[i] & 0xFFFFFFFFULL), (uint32_t)(state[i] >> 32));
-	}
-*/
+
 	//Goes to next block (column) that will receive the squeezed data
 	ptrWord -= BLOCK_LEN_INT64;
 
@@ -207,12 +196,12 @@ for (int i = 0; i<12; i++) {
  * @param rowIn		Row to feed the sponge
  * @param rowOut	Row to receive the sponge's output
  */
- void reducedDuplexRow1(uint64_t *state, uint64_t *rowIn, uint64_t *rowOut) {
+ void reducedDuplexRow1(uint64_t *state, uint64_t *rowIn, uint64_t *rowOut, uint64_t nCols) {
     uint64_t* ptrWordIn = rowIn;				//In Lyra2: pointer to prev
-    uint64_t* ptrWordOut = rowOut + (N_COLS-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to row
+    uint64_t* ptrWordOut = rowOut + (nCols-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to row
     int i;
 
-    for (i = 0; i < N_COLS; i++) {
+    for (i = 0; i < nCols; i++) {
 
 	//Absorbing "M[prev][col]"
 	state[0]  ^= (ptrWordIn[0]);
@@ -267,12 +256,13 @@ for (int i = 0; i<12; i++) {
  * @param rowOut         Row receiving the output
  *
  */
- void reducedDuplexRowSetup(uint64_t *state, uint64_t *rowIn, uint64_t *rowInOut, uint64_t *rowOut) {
+ void reducedDuplexRowSetup(uint64_t *state, uint64_t *rowIn, uint64_t *rowInOut, uint64_t *rowOut, uint64_t nCols) {
     uint64_t* ptrWordIn = rowIn;				//In Lyra2: pointer to prev
     uint64_t* ptrWordInOut = rowInOut;				//In Lyra2: pointer to row*
-    uint64_t* ptrWordOut = rowOut + (N_COLS-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to row
+    uint64_t* ptrWordOut = rowOut + (nCols-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to row
     int i;
-    for (i = 0; i < N_COLS; i++) {
+
+    for (i = 0; i < nCols; i++) {
 	//Absorbing "M[prev] [+] M[row*]"
 	state[0]  ^= (ptrWordIn[0]  + ptrWordInOut[0]);
 	state[1]  ^= (ptrWordIn[1]  + ptrWordInOut[1]);
@@ -340,13 +330,13 @@ for (int i = 0; i<12; i++) {
  * @param rowOut         Row receiving the output
  *
  */
-void reducedDuplexRow(uint64_t *state, uint64_t *rowIn, uint64_t *rowInOut, uint64_t *rowOut) {
+ void reducedDuplexRow(uint64_t *state, uint64_t *rowIn, uint64_t *rowInOut, uint64_t *rowOut, uint64_t nCols) {
     uint64_t* ptrWordInOut = rowInOut; //In Lyra2: pointer to row*
     uint64_t* ptrWordIn = rowIn; //In Lyra2: pointer to prev
     uint64_t* ptrWordOut = rowOut; //In Lyra2: pointer to row
     int i;
 
-    for (i = 0; i < N_COLS; i++) {
+    for (i = 0; i < nCols; i++) {
 
 	//Absorbing "M[prev] [+] M[row*]"
 	state[0]  ^= (ptrWordIn[0]  + ptrWordInOut[0]);
@@ -744,12 +734,13 @@ inline void reducedDuplexRowd(uint64_t *state, uint64_t *rowIn, uint64_t *rowInO
  Prints an array of unsigned chars
  */
 void printArray(unsigned char *array, unsigned int size, char *name) {
-	unsigned int i;
-	printf("%s: ", name);
-	for (i = 0; i < size; i++) {
-		printf("%2x|", array[i]);
-	}
-	printf("\n");
+    int i;
+    printf("%s: ", name);
+    for (i = 0; i < size; i++) {
+	printf("%2x|", array[i]);
+    }
+    printf("\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
+ 

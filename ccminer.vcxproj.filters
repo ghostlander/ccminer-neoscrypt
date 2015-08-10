@@ -70,6 +70,9 @@
     <Filter Include="Header Files\lyra2">
       <UniqueIdentifier>{2ff6e4ce-7c92-4cb2-a3ad-c331e94fd81d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\Lyra2">
+      <UniqueIdentifier>{03b56ddb-6ebb-40b7-9a62-0a22c8c2865f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -549,12 +552,6 @@
     <CudaCompile Include="Algo256\cuda_skein256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
-    <CudaCompile Include="lyra2\cuda_lyra2.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="lyra2\lyra2RE.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
     <CudaCompile Include="quark\cuda_jh512keccak512.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
@@ -585,6 +582,24 @@
     </CudaCompile>
     <CudaCompile Include="x15\cuda_axiom.cu">
       <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_bmw256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_cubehash256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2.cu">
+      <Filter>Source Files\CUDA\Lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2RE.cu">
+      <Filter>Source Files\CUDA\Lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2v2.cu">
+      <Filter>Source Files\CUDA\Lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2REv2.cu">
+      <Filter>Source Files\CUDA\Lyra2</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>
