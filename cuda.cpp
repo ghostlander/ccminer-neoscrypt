@@ -20,6 +20,7 @@
 
 #include "cuda_runtime.h"
 cudaStream_t gpustream[MAX_GPUS] = { 0 };
+extern int opt_api_listen;
 
 // CUDA Devices on the System
 int cuda_num_devices()
@@ -115,7 +116,7 @@ int cuda_finddevice(char *name)
 uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
 {
 	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
-	//api_set_throughput(thr_id, throughput);
+	if(opt_api_listen!=0) api_set_throughput(thr_id, throughput);
 	return throughput;
 }
 
