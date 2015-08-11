@@ -1078,6 +1078,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	uchar merkle_root[64];
 	int i;
 
+	 applog(LOG_WARNING, "stratum_gen_work: pool fuck");
 	if (!sctx->job.job_id) {
 		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
 		return;
