@@ -419,8 +419,6 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
-    <CudaCompile Include="quark\animecoin.cu">
-    </CudaCompile>
     <CudaCompile Include="quark\cuda_bmw512.cu">
       <MaxRegCount>128</MaxRegCount>
       <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">80</MaxRegCount>

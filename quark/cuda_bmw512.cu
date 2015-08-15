@@ -4,12 +4,6 @@
 #include "cuda_helper.h"
 #include "cuda_vector.h"
 
-
-// die Message it Padding zur Berechnung auf der GPU
-__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
-
-//#define SHL(x, n)            ((x) << (n))
-//#define SHR(x, n)            ((x) >> (n))
 #define SHR(x, n) SHR2(x, n) 
 #define SHL(x, n) SHL2(x, n) 
 
@@ -671,19 +665,17 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		msg2[9] = ROTL64(msg2[5], 10) + (XH64     ^     q[25] ^ h[9]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
 		msg2[10] = ROTL64(msg2[6], 11) + (XH64     ^     q[26] ^ h[10]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
 		msg2[11] = ROTL64(msg2[7], 12) + (XH64     ^     q[27] ^ h[11]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
+		uint28 *phash2 = (uint28*)inpHash;
+		phash2[0] = make_uint28(msg2[8], msg2[9], msg2[10], msg2[11]);
+
 		msg2[12] = ROTL64(msg2[0], 13) + (XH64     ^     q[28] ^ h[12]) + (SHR(XL64, 3) ^ q[19] ^ q[12]);
 		msg2[13] = ROTL64(msg2[1], 14) + (XH64     ^     q[29] ^ h[13]) + (SHR(XL64, 4) ^ q[20] ^ q[13]);
 		msg2[14] = ROTL64(msg2[2], 15) + (XH64     ^     q[30] ^ h[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
 		msg2[15] = ROL16(msg2[3]) + (XH64     ^     q[31] ^ h[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
-		inpHash[0] = devectorize(msg2[0 + 8]);
-		inpHash[1] = devectorize(msg2[1 + 8]);
-		inpHash[2] = devectorize(msg2[2 + 8]);
-		inpHash[3] = devectorize(msg2[3 + 8]);
-		inpHash[4] = devectorize(msg2[4 + 8]);
-		inpHash[5] = devectorize(msg2[5 + 8]);
-		inpHash[6] = devectorize(msg2[6 + 8]);
-		inpHash[7] = devectorize(msg2[7 + 8]);
+		phash2[1] = make_uint28(msg2[8], msg2[9], msg2[10], msg2[11]);
+		phash2[1] = make_uint28(msg2[12], msg2[13], msg2[14], msg2[15]);
+
 	}
 }
 
@@ -812,14 +804,6 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		q[14] = (SHR(tmp, 1) ^ tmp) + hash[15];
 		tmp = vectorize(hash2[12] - hash2[9] + hash2[13] - (mxh[4]) - (mxh[6]));
 		q[15] = (SHR(tmp, 1) ^ SHL(tmp, 3) ^ ROTL64(tmp, 4) ^ ROTL64(tmp, 37)) + hash[0];
-
-		/*
-#pragma unroll 8
-		for (int i = 0; i < 8; i++)
-		{
-			msg2[i] = vectorize(msg[i]);
-		}
-		*/
 
 		q[0 + 16] =
 			(SHR(q[0], 1) ^ SHL(q[0], 2) ^ ROTL64(q[0], 13) ^ ROTL64(q[0], 43)) +
@@ -1172,86 +1156,13 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		msg2[14] = ROTL64(msg2[2], 15) + (XH64     ^     q[30] ^ h[14]) + (SHR(XL64, 7) ^ q[21] ^ q[14]);
 		msg2[15] = ROL16(msg2[3]) + (XH64     ^     q[31] ^ h[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 
-		inpHash[1] = devectorize(msg2[1 + 8]);
-		inpHash[2] = devectorize(msg2[2 + 8]);
-		inpHash[3] = devectorize(msg2[3 + 8]);
-		inpHash[4] = devectorize(msg2[4 + 8]);
-		inpHash[5] = devectorize(msg2[5 + 8]);
-		inpHash[6] = devectorize(msg2[6 + 8]);
-		inpHash[7] = devectorize(msg2[7 + 8]);
+		uint28 *phash2 = (uint28*)inpHash;
+		phash2[0] = make_uint28(msg2[8], msg2[9], msg2[10], msg2[11]);
+		phash2[1] = make_uint28(msg2[12], msg2[13], msg2[14], msg2[15]);
+
 	}
 }
 
-
-__global__ __launch_bounds__(256, 2)
-void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
-{
-    const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-        const uint32_t nounce = startNounce + thread;
-
-        // Init
-		uint2 __align__(64) h[16] = {
-			{ 0x84858687UL, 0x80818283UL },
-			{ 0x8C8D8E8FUL, 0x88898A8BUL },
-			{ 0x94959697UL, 0x90919293UL },
-			{ 0x9C9D9E9FUL, 0x98999A9BUL },
-			{ 0xA4A5A6A7UL, 0xA0A1A2A3UL },
-			{ 0xACADAEAFUL, 0xA8A9AAABUL },
-			{ 0xB4B5B6B7UL, 0xB0B1B2B3UL },
-			{ 0xBCBDBEBFUL, 0xB8B9BABBUL },
-			{ 0xC4C5C6C7UL, 0xC0C1C2C3UL },
-			{ 0xCCCDCECFUL, 0xC8C9CACBUL },
-			{ 0xD4D5D6D7UL, 0xD0D1D2D3UL },
-			{ 0xDCDDDEDFUL, 0xD8D9DADBUL },
-			{ 0xE4E5E6E7UL, 0xE0E1E2E3UL },
-			{ 0xECEDEEEFUL, 0xE8E9EAEBUL },
-			{ 0xF4F5F6F7UL, 0xF0F1F2F3UL },
-			{ 0xFCFDFEFFUL, 0xF8F9FAFBUL }
-		};
-
-		uint2 message[16];
-#pragma unroll 16
-        for(int i=0;i<16;i++)
-			message[i] = vectorize(c_PaddedMessage80[i]);
-
-		message[9].y = cuda_swab32(nounce);	//REPLACE_HIWORD(message[9], cuda_swab32(nounce));
-        Compression512(message, h);
-
-#pragma unroll 16
-        for(int i=0;i<16;i++)
-			message[i] = make_uint2(0xaaaaaaa0+i,0xaaaaaaaa);
-
-
-		Compression512(h, message);
-
-        // fertig
-        uint64_t *outpHash = &g_hash[8 * thread];
-
-#pragma unroll 8
-        for(int i=0;i<8;i++)
-            outpHash[i] = devectorize(message[i+8]);
-    }
-}
-
-// Bmw512 für 80 Byte grosse Eingangsdaten
-__host__ void quark_bmw512_cpu_setBlock_80(void *pdata)
-{
-	// Message mit Padding bereitstellen
-	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
-	unsigned char PaddedMessage[128];
-	memcpy(PaddedMessage, pdata, 80);
-	memset(PaddedMessage+80, 0, 48);
-	uint64_t *message = (uint64_t*)PaddedMessage;
-	// Padding einfügen (Byteorder?!?)
-	message[10] = SPH_C64(0x80);
-	// Länge (in Bits, d.h. 80 Byte * 8 = 640 Bits
-	message[15] = SPH_C64(640);
-
-	// die Message zur Berechnung auf der GPU
-	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-}
 
 __host__ void quark_bmw512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
@@ -1273,17 +1184,3 @@ __host__ void quark_bmw512_cpu_hash_64_quark(uint32_t threads, uint32_t startNou
 
 	quark_bmw512_gpu_hash_64_quark << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
-
-
-
-__host__ void quark_bmw512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
-{
-    const uint32_t threadsperblock = 128;
-
-    // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid((threads + threadsperblock-1)/threadsperblock);
-    dim3 block(threadsperblock);
-
-    quark_bmw512_gpu_hash_80<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
-}
-
