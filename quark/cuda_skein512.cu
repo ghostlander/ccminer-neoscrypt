@@ -1881,15 +1881,18 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		hash64[4] += hash64[3];
 		hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
 
-		Hash[0] = devectorize(hash64[0] + h0);
-		Hash[1] = devectorize(hash64[1] + h1);
-		Hash[2] = devectorize(hash64[2] + h2);
-		Hash[3] = devectorize(hash64[3] + h3);
-		Hash[4] = devectorize(hash64[4] + h4);
-		Hash[5] = devectorize(hash64[5] + h5)+ 8;
-		Hash[6] = devectorize(hash64[6] + h6)+ 0xff00000000000000ULL;
-		Hash[7] = devectorize(hash64[7] + h7)+ 18;
+		hash64[0] = (hash64[0] + h0);
+		hash64[1] = (hash64[1] + h1);
+		hash64[2] = (hash64[2] + h2);
+		hash64[3] = (hash64[3] + h3);
+		hash64[4] = (hash64[4] + h4);
+		hash64[5] = (hash64[5] + h5) + vectorizelow(8);
+		hash64[6] = (hash64[6] + h6) + vectorize(0xff00000000000000ULL);
+		hash64[7] = (hash64[7] + h7) + vectorizelow(18);
 
+		uint48 *phash2 = (uint48*)&g_hash[8 * hashPosition];
+		phash2[0] = make_uint48(make_uint4(hash64[0].x, hash64[0].y, hash64[1].x, hash64[1].y), make_uint4(hash64[2].x, hash64[2].y, hash64[3].x, hash64[3].y));
+		phash2[1] = make_uint48(make_uint4(hash64[4].x, hash64[4].y, hash64[5].x, hash64[5].y), make_uint4(hash64[6].x, hash64[6].y, hash64[7].x, hash64[7].y));
 #undef h0
 #undef h1
 #undef h2

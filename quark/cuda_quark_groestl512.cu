@@ -45,12 +45,9 @@ void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, u
 
 		if (thr == 0)
 		{
-			uint28 *phash = (uint28*)hash;
-			uint28 *outpt = (uint28*)inpHash; /* var kept for hash align */
-			outpt[0] = phash[0];
-			outpt[1] = phash[1];
-//			outpt[2] = phash[2];
-//			outpt[3] = phash[3];
+			uint48 *phash2 = (uint48*)inpHash;
+			phash2[0] = make_uint48(make_uint4(hash[0], hash[1], hash[2], hash[3]), make_uint4(hash[4], hash[5], hash[6], hash[7]));
+			phash2[1] = make_uint48(make_uint4(hash[8], hash[9], hash[10], hash[11]), make_uint4(hash[12], hash[13], hash[14], hash[15]));
 		}
     }
 }

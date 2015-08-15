@@ -19,6 +19,7 @@
  */
 
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 typedef unsigned char BitSequence;
 
@@ -1207,22 +1208,9 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 			}
 		}
 
-		Hash[0] = x0;
-		Hash[1] = x1;
-		Hash[2] = x2;
-		Hash[3] = x3;
-		Hash[4] = x4;
-		Hash[5] = x5;
-		Hash[6] = x6;
-		Hash[7] = x7;
-		Hash[8] = x8;
-		Hash[9] = x9;
-		Hash[10] = xa;
-		Hash[11] = xb;
-		Hash[12] = xc;
-		Hash[13] = xd;
-		Hash[14] = xe;
-		Hash[15] = xf;
+		uint48 *phash2 = (uint48 *)Hash;
+		phash2[0] = make_uint48(make_uint4(x0, x1, x2, x3), make_uint4(x4, x5,x6,x7));
+		phash2[1] = make_uint48(make_uint4(x8, x9, xa, xb), make_uint4(xc, xd, xe, xf));
 	}
 }
 
