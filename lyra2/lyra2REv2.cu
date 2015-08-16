@@ -13,7 +13,6 @@ extern "C" {
 
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 static  uint64_t *d_hash2[MAX_GPUS];
-static  uint64_t *d_hash3[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
@@ -96,7 +95,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 15;
+		intensity = 256 * 256 * 8;
 	}
 	else if (strstr(props.name, "750"))
 	{
@@ -104,7 +103,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "960"))
 	{
-		intensity = 256 * 256 * 15;
+		intensity = 256 * 256 * 8;
 	}
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
