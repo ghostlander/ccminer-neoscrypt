@@ -13,7 +13,6 @@ static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 static  uint64_t *d_hash2[MAX_GPUS];
 
 
-extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
@@ -82,7 +81,6 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		{
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		groestl256_cpu_init(thr_id, throughput);

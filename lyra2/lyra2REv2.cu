@@ -14,7 +14,6 @@ extern "C" {
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 static  uint64_t *d_hash2[MAX_GPUS];
 
-extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 
@@ -108,7 +107,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		((uint32_t*)ptarget)[7] = 0x004f;
 
 	if (!init[thr_id])
 	{ 
@@ -118,7 +117,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		{
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
-		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
@@ -170,7 +168,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 				}
 				pdata[19] = foundNonce[0];
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[0], vhash64[7], Htarg);
-				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+			//	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 				return res;
 			}
 			else
@@ -185,6 +183,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+//	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }
