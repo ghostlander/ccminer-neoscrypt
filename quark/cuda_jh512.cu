@@ -301,11 +301,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 		x[(16 + 0) >> 2][(16 + 0) & 3] ^= 0x80;
 		x[(16 + 15) >> 2][(16 + 15) & 3] ^= 0x00020000;
 
-		uint48 *phash2 = (uint48*)Hash;
-		phash2[0] = make_uint48(make_uint4(x[4][0], x[4][1],x[4][2], x[4][3]), make_uint4(x[5][0], x[5][1],x[5][2], x[5][3]));
-		phash2[1] = make_uint48(make_uint4(x[6][0], x[6][1],x[6][2], x[6][3]), make_uint4(x[7][0], x[7][1],x[7][2], x[7][3]));
-
-/*		Hash[0] = x[4][0];
+		Hash[0] = x[4][0];
 		Hash[1] = x[4][1];
 		Hash[2] = x[4][2];
 		Hash[3] = x[4][3];
@@ -321,7 +317,6 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 		Hash[13] = x[7][1];
 		Hash[14] = x[7][2];
 		Hash[15] = x[7][3];
-*/
 	}
 }
 

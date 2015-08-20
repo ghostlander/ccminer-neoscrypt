@@ -144,11 +144,10 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 			s[0] ^= c_keccak_round_constants35[i];
 		}
 
-		uint48 *phash2 = (uint48*)inpHash;
-		phash2[0] = make_uint48(make_uint4(s[0].x, s[0].y, s[1].x, s[1].y), make_uint4(s[2].x, s[2].y, s[3].x, s[3].y));
-		phash2[1] = make_uint48(make_uint4(s[4].x, s[4].y, s[5].x, s[5].y), make_uint4(s[6].x, s[6].y, s[7].x, s[7].y));
-
-	}
+#pragma unroll
+        for(int i=0;i<8;i++)
+			inpHash[i] = s[i];
+    }
 }
 
 
@@ -1755,19 +1754,20 @@ void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 	hash64[4] += hash64[3];
 	hash64[3] = ROL2(hash64[3], 22) ^ hash64[4];
 
-	hash64[0] = (hash64[0] + h0);
-	hash64[1] = (hash64[1] + h1);
-	hash64[2] = (hash64[2] + h2);
-	hash64[3] = (hash64[3] + h3);
-	hash64[4] = (hash64[4] + h4);
-	hash64[5] = (hash64[5] + h5) + vectorizelow(8);
-	hash64[6] = (hash64[6] + h6) + vectorize(0xff00000000000000ULL);
-	hash64[7] = (hash64[7] + h7) + vectorizelow(18);
+	//#pragma unroll
+	//		for (int i = 0; i<8; i++)
+	//			inpHash[i] = s[i];
+	uint64_t *outHash = (uint64_t *)&g_hash[8 * hashPosition];
 
-	uint48 *phash2 = (uint48*)&g_hash[8 * hashPosition];
-	phash2[0] = make_uint48(make_uint4(hash64[0].x, hash64[0].y, hash64[1].x, hash64[1].y), make_uint4(hash64[2].x, hash64[2].y, hash64[3].x, hash64[3].y));
-	phash2[1] = make_uint48(make_uint4(hash64[4].x, hash64[4].y, hash64[5].x, hash64[5].y), make_uint4(hash64[6].x, hash64[6].y, hash64[7].x, hash64[7].y));
 
+	outHash[0] = devectorize(hash64[0] + h0);
+	outHash[1] = devectorize(hash64[1] + h1);
+	outHash[2] = devectorize(hash64[2] + h2);
+	outHash[3] = devectorize(hash64[3] + h3);
+	outHash[4] = devectorize(hash64[4] + h4);
+	outHash[5] = devectorize(hash64[5] + h5) + 8;
+	outHash[6] = devectorize(hash64[6] + h6) + 0xff00000000000000ULL;
+	outHash[7] = devectorize(hash64[7] + h7) + 18;
 	}
 
 #undef h0
