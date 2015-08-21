@@ -83,7 +83,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	uint32_t intensity = 256 * 256 * 23;
+	uint32_t intensity = 256 * 256 * 8;
 
 	cudaDeviceProp props;
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
@@ -93,7 +93,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "980"))
 	{
-		intensity = 256 * 256 * 24;
+		intensity = 256 * 256 * 22;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
