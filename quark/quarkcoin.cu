@@ -168,9 +168,12 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		quark_compactTest_cpu_init(thr_id, throughput);
 
-		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput);
-		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput);
-		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput);
+		uint32_t noncebuffersize = throughput * 7 / 10;
+		uint32_t noncebuffersize2 = (throughput * 7 / 10)*7/10;
+
+		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*noncebuffersize2);
+		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*noncebuffersize2);
+		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*noncebuffersize);
 		quark_blake512_cpu_init(thr_id);
 		quark_keccak512_cpu_init(thr_id);
 		quark_jh512_cpu_init(thr_id);
@@ -231,10 +234,10 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
-			d_branch1Nonces[thr_id], &nrm1,
+			d_branch3Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2);
 		
-		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces2[thr_id][0]);
+		quark_keccak512_cpu_hash_64_final(thr_id, nrm1, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces2[thr_id][0]);
 		quark_jh512_cpu_hash_64_final(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], ptarget[7], &foundnonces[thr_id][0]);
 
 		if (foundnonces[thr_id][0] != 0xffffffff)
