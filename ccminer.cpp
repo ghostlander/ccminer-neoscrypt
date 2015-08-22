@@ -2443,6 +2443,9 @@ static void parse_arg(int key, char *arg)
 		active_gpus= opt_n_threads;
 		opt_extranonce = false;
 		break;
+	case 'D':
+		opt_debug = true;
+		break;
 	case 'V':
 		show_version_and_exit();
 	case 'h':
