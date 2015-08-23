@@ -1665,6 +1665,7 @@ static void *miner_thread(void *userdata)
 		if (!opt_quiet && (opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt))
 		{
 			double hashrate = 0.0;
+			bool   writelog = false;
 
 			if (opt_n_gputhreads != 1)
 			{
@@ -1675,18 +1676,34 @@ static void *miner_thread(void *userdata)
 					{
 						hashrate += thr_hashrates[(index*opt_n_gputhreads) + i];
 					}
-					sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
-					1e-3 * hashrate);
-					applog(LOG_INFO, "GPU #%d: %s, %s", device_map[thr_id], device_name[device_map[thr_id]], s);
+					writelog = true;
 				}
 
 			}
 			else
 			{
 				hashrate = thr_hashrates[thr_id];
-				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f",
-					1e-3 * hashrate);
-				applog(LOG_INFO, "GPU #%d: %s, %s", device_map[thr_id], device_name[device_map[thr_id]], s);
+				writelog = true;
+			}
+
+			if (writelog)
+			{
+#ifdef USE_WRAPNVML
+				if (hnvml != NULL) {
+					unsigned int tempC=0, fanpcnt=0, mwatts=0;
+
+					nvml_get_tempC(hnvml, device_map[thr_id], &tempC);
+					nvml_get_fanpcnt(hnvml, device_map[thr_id], &fanpcnt);
+					//if (nvml_get_power_usage(hnvml, device_map[thr_id], &mwatts) == 0)
+					//    sprintf(gpupowbuf, "%dW", (mwatts / 1000));
+
+					applog(LOG_INFO, "GPU #%d: %s, %*.f Temp=%3dC Fan=%3d%%", device_map[thr_id], device_name[device_map[thr_id]], (hashrate > 1e6) ? 0 : 2, 1e-3 * hashrate, tempC, fanpcnt);
+				}
+				else
+#endif
+				{
+					applog(LOG_INFO, "GPU #%d: %s, %*.f", device_map[thr_id], device_name[device_map[thr_id]], (hashrate > 1e6) ? 0 : 2, 1e-3 * hashrate);
+				}
 			}
 		}
 
