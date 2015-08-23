@@ -25,8 +25,7 @@ extern void lyra2_cpu_hash_32_multi(int thr_id, uint32_t threads, uint32_t start
 
 extern void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t* matrix);
 extern void lyra2_cpu_init_multi(int thr_id, uint32_t threads, uint64_t *hash, uint64_t* hash2);
-extern void groestl256_setTarget(const void *ptarget);
-extern void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, uint32_t *resultnonces);
+extern void groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, uint32_t *resultnonces,uint32_t target);
 extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 
 extern "C" void lyra2_hash(void *state, const void *input)
@@ -100,7 +99,6 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	blake256_cpu_setBlock_80(pdata);
-	groestl256_setTarget(ptarget);
 	do {
 		uint32_t foundNonce[2] = { 0, 0 };
 
@@ -108,7 +106,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
+		groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce,ptarget[7]);
 		if (foundNonce[0] != 0)
 		{
 			CUDA_SAFE_CALL(cudaGetLastError());
@@ -129,7 +127,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 				}
 				pdata[19] = foundNonce[0];
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[0], vhash64[7], Htarg);
-				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
+//				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 				return res;
 			}
 			else
