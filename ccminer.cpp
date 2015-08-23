@@ -2903,6 +2903,9 @@ int main(int argc, char *argv[])
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
+	/* wait for mining threads */
+	for (i = 0; i < opt_n_threads; i++)
+		pthread_join(thr_info[i].pth, NULL);
 #ifdef WIN32
 	timeEndPeriod(1); // be nice and forego high timer precision
 #endif
