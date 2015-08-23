@@ -29,9 +29,8 @@ extern void skeinCube256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t star
 extern void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
 extern void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t* matrix);
 
-extern void bmw256_setTarget(const void *ptarget);
 extern void bmw256_cpu_init(int thr_id, uint32_t threads);
-extern void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resultnonces);
+extern void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resultnonces, uint64_t target);
 
 extern void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash);
 
@@ -139,7 +138,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	blake256_cpu_setBlock_80(pdata);
-	bmw256_setTarget(ptarget);
 
 	do {
 		uint32_t foundNonce[2] = { 0, 0 };
@@ -150,10 +148,9 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput,pdata[19], d_hash[thr_id]);
-		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce);
+		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ((uint64_t*)ptarget)[3]);
 		if (foundNonce[0] != 0)
 		{
-//			CUDA_SAFE_CALL(cudaGetLastError());
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce[0]);
@@ -171,7 +168,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 				}
 				pdata[19] = foundNonce[0];
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[0], vhash64[7], Htarg);
-//				MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 				return res;
 			}
 			else
@@ -186,6 +182,5 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-//	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }

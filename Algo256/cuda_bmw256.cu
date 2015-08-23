@@ -11,7 +11,7 @@ __constant__ uint32_t ZDH[16];
 static uint32_t *d_gnounce[MAX_GPUS];
 static uint32_t *d_GNonce[MAX_GPUS];
 
-__constant__ uint64_t pTarget[8];
+//__constant__ uint64_t pTarget[8];
 #define shl(x, n)            ((x) << (n))
 #define shr(x, n)            ((x) >> (n))
 //#define SHR(x, n) SHR2(x, n) 
@@ -242,7 +242,7 @@ __forceinline__ __device__ void Compression256_2(uint32_t *  M32)
 
 #define TPB 512
 __global__ __launch_bounds__(TPB, 2)
-void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *const __restrict__ nonceVector)
+void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *const __restrict__ nonceVector, uint64_t Target)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -258,7 +258,7 @@ void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g_hash
 		Compression256(message);
 		Compression256_2(message);
 
-		if (((uint64_t*)message)[7] <= pTarget[3])
+		if (((uint64_t*)message)[7] <= Target)
 		{
 
 			uint32_t tmp = atomicExch(&nonceVector[0], startNounce + thread);
@@ -270,7 +270,7 @@ void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g_hash
 
 
 __host__
-void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash,uint32_t *resultnonces)
+void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resultnonces, uint64_t Target)
 {
 	cudaMemset(d_GNonce[thr_id], 0x0, 2 * sizeof(uint32_t));
 	const uint32_t threadsperblock = TPB;
@@ -279,7 +279,7 @@ void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	bmw256_gpu_hash_32 << <grid, block >> >(threads, startNounce, g_hash, d_GNonce[thr_id]);
+	bmw256_gpu_hash_32 << <grid, block >> >(threads, startNounce, g_hash, d_GNonce[thr_id],Target);
 	cudaMemcpy(d_gnounce[thr_id], d_GNonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	resultnonces[0] = *(d_gnounce[thr_id]);
 	resultnonces[1] = *(d_gnounce[thr_id] + 1);
@@ -293,8 +293,10 @@ void bmw256_cpu_init(int thr_id, uint32_t threads)
 	cudaMallocHost(&d_gnounce[thr_id], 2 * sizeof(uint32_t));
 }
 
+/*
 __host__
 void bmw256_setTarget(const void *pTargetIn)
 {
 	cudaMemcpyToSymbol(pTarget, pTargetIn, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }
+*/
