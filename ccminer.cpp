@@ -969,7 +969,7 @@ static void *workio_thread(void *userdata)
 		return NULL;
 	}
 
-	while (ok) {
+	while (ok && !abort_flag) {
 		struct workio_cmd *wc;
 
 		/* wait for workio_cmd sent to us, on our queue */
@@ -1264,7 +1264,7 @@ static void *miner_thread(void *userdata)
 		}
 	}
 
-	while (1) 
+	while (!abort_flag)
 	{
 		if (opt_benchmark)
 		{
@@ -1761,6 +1761,8 @@ static void *miner_thread(void *userdata)
 		loopcnt++;
 	}
 
+	return NULL;
+
 out:
 	tq_freeze(mythr->q);
 
@@ -1805,7 +1807,7 @@ static void *longpoll_thread(void *userdata)
 
 	applog(LOG_INFO, "Long-polling activated for %s", lp_url);
 
-	while (1) {
+	while (!abort_flag) {
 		json_t *val, *soval;
 		int err;
 
@@ -1905,7 +1907,7 @@ static void *stratum_thread(void *userdata)
 		goto out;
 	applog(LOG_BLUE, "Starting Stratum on %s", stratum.url);
 
-	while (1) {
+	while (!abort_flag) {
 		int failures = 0;
 
 		if (stratum_need_reset) {
@@ -1914,7 +1916,7 @@ static void *stratum_thread(void *userdata)
 			applog(LOG_DEBUG, "stratum connection reset");
 		}
 
-		while (!stratum.curl) {
+		while (!stratum.curl && !abort_flag) {
 			pthread_mutex_lock(&g_work_lock);
 			g_work_time = 0;
 			pthread_mutex_unlock(&g_work_lock);
@@ -1971,6 +1973,8 @@ static void *stratum_thread(void *userdata)
 			stratum_handle_response(s);
 		free(s);
 	}
+
+	stratum_disconnect(&stratum);
 
 out:
 	return NULL;
