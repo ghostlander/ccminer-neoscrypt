@@ -43,45 +43,81 @@ void applog(int prio, const char *fmt, ...)
 #endif
 	else {
 		const char* color = "";
-		char *f;
-		int len;
+		char* hdr     = NULL;
+		int   hdr_len = 0;
 		struct tm tm;
 		time_t now = time(NULL);
 
 		localtime_r(&now, &tm);
+		
+		if (use_colors) {
+			switch (prio) {
+				case LOG_ERR:     color = CL_RED; break;
+				case LOG_WARNING: color = CL_YLW; break;
+				case LOG_NOTICE:  color = CL_WHT; break;
+				case LOG_INFO:    color = ""; break;
+				case LOG_DEBUG:   color = CL_GRY; break;
 
-		switch (prio) {
-			case LOG_ERR:     color = CL_RED; break;
-			case LOG_WARNING: color = CL_YLW; break;
-			case LOG_NOTICE:  color = CL_WHT; break;
-			case LOG_INFO:    color = ""; break;
-			case LOG_DEBUG:   color = CL_GRY; break;
-
-			case LOG_BLUE:
-				prio = LOG_NOTICE;
-				color = CL_CYN;
-				break;
+				case LOG_BLUE:
+					prio = LOG_NOTICE;
+					color = CL_CYN;
+					break;
+			}
+		} else if (prio == LOG_BLUE) {
+			prio = LOG_NOTICE;
 		}
-		if (!use_colors)
-			color = "";
+#define HDR_FMT "[%d-%02d-%02d %02d:%02d:%02d]%s "
 
-		len = 40 + (int) strlen(fmt) + 2;
-		f = (char*) alloca(len);
-		sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d]%s %s%s\n",
+		hdr_len = snprintf(hdr, hdr_len, HDR_FMT,
 			tm.tm_year + 1900,
 			tm.tm_mon + 1,
 			tm.tm_mday,
 			tm.tm_hour,
 			tm.tm_min,
 			tm.tm_sec,
-			color,
-			fmt,
-			use_colors ? CL_N : ""
-		);
-		pthread_mutex_lock(&applog_lock);
-		vfprintf(stderr, f, ap);	/* atomic write to stderr */
-		fflush(stderr);
-		pthread_mutex_unlock(&applog_lock);
+			color);
+
+		if (hdr_len > 0) {
+			hdr_len += 1; /* Make room for NUL terminal */
+			if (NULL != (hdr = alloca(hdr_len * sizeof(char)))) {
+				char* msg     = NULL;
+				int   msg_len = 0;
+				va_list ap2;
+
+				va_copy(ap2, ap);
+				msg_len = vsnprintf(msg, msg_len, fmt, ap2);
+				va_end(ap2);
+
+				if (msg_len > 0) {
+					msg_len += 1; /* Make room for NUL terminal */
+
+					if (NULL != (msg = alloca(msg_len * sizeof(char)))) {
+						const char* eol = "\n";
+
+						if (use_colors)
+							eol = CL_N "\n";
+
+						snprintf(hdr, hdr_len, HDR_FMT,
+							tm.tm_year + 1900,
+							tm.tm_mon + 1,
+							tm.tm_mday,
+							tm.tm_hour,
+							tm.tm_min,
+							tm.tm_sec,
+							color);
+						vsnprintf(msg, msg_len, fmt, ap);
+
+						pthread_mutex_lock(&applog_lock);
+						fwrite(hdr, sizeof(char), hdr_len, stderr);
+						fwrite(msg, sizeof(char), msg_len, stderr);
+						fwrite(eol, sizeof(char), strlen(eol), stderr);
+						pthread_mutex_unlock(&applog_lock);
+
+						fflush(stderr);
+					}
+				}
+			}
+		}
 	}
 	va_end(ap);
 }
