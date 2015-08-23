@@ -477,31 +477,19 @@ void proper_exit(int reason)
 	thr = &thr_info[work_thr_id];
 	tq_freeze(thr->q);
 
+	if (reason != CCEXIT_SIG) {
 #ifdef USE_WRAPNVML
-	#ifndef WIN32
-		if (hnvml)
-			nvml_destroy(hnvml);
- 	#endif
+		#ifndef WIN32
+			if (hnvml)
+				nvml_destroy(hnvml);
+		#endif
 #endif
 
-
-	pthread_mutex_lock(&g_work_lock);	//freeze stratum
-	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
-
-	free(opt_syslog_pfx);
-	free(opt_api_allow);
-	hashlog_purge_all();
-	stats_purge_all();
-	cuda_devicereset();
-
-	try
-	{
-		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
-		exit(0);
-	}
-	catch (...)
-	{
-		int t = 0;
+		free(opt_syslog_pfx);
+		free(opt_api_allow);
+		hashlog_purge_all();
+		stats_purge_all();
+		cuda_devicereset();
 	}
 }
 
