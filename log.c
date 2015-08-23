@@ -2,6 +2,7 @@
 #include "log.h"
 #include "miner.h" /* TODO: Drop this header */
 #include "compat/localtime_r.h"
+#include "compat/gettid.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -47,6 +48,7 @@ void applog(int prio, const char *fmt, ...)
 		int   hdr_len = 0;
 		struct tm tm;
 		time_t now = time(NULL);
+		int    tid = gettid();
 
 		localtime_r(&now, &tm);
 		
@@ -66,7 +68,7 @@ void applog(int prio, const char *fmt, ...)
 		} else if (prio == LOG_BLUE) {
 			prio = LOG_NOTICE;
 		}
-#define HDR_FMT "[%d-%02d-%02d %02d:%02d:%02d]%s "
+#define HDR_FMT "[%d-%02d-%02d %02d:%02d:%02d] tid(%#010x)%s "
 
 		hdr_len = snprintf(hdr, hdr_len, HDR_FMT,
 			tm.tm_year + 1900,
@@ -75,6 +77,7 @@ void applog(int prio, const char *fmt, ...)
 			tm.tm_hour,
 			tm.tm_min,
 			tm.tm_sec,
+			tid,
 			color);
 
 		if (hdr_len > 0) {
@@ -104,6 +107,7 @@ void applog(int prio, const char *fmt, ...)
 							tm.tm_hour,
 							tm.tm_min,
 							tm.tm_sec,
+							tid,
 							color);
 						vsnprintf(msg, msg_len, fmt, ap);
 
