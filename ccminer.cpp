@@ -346,7 +346,7 @@ Options:\n\
   -X,  --XIntensity     intensity GPU intensity(default: auto) \n\
 ";
 
-char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:D:e:M:C:";
+char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C:";
 
 struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -2442,6 +2442,9 @@ static void parse_arg(int key, char *arg)
 		opt_n_threads = active_gpus*opt_n_gputhreads;
 		active_gpus= opt_n_threads;
 		opt_extranonce = false;
+		break;
+	case 'D':
+		opt_debug = true;
 		break;
 	case 'V':
 		show_version_and_exit();
