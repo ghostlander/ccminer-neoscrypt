@@ -215,6 +215,7 @@ bool autotune = true;
 bool opt_autotune = true;
 
 bool abort_flag = false;
+bool scan_abort_flag = false;
 bool network_fail_flag = false;
 char *jane_params = NULL;
 
@@ -2538,6 +2539,16 @@ static void parse_cmdline(int argc, char *argv[])
 }
 
 #ifndef WIN32
+static void signal_handler2(int sig)
+{
+	switch (sig) {
+	case SIGINT:
+		signal(sig, SIG_IGN);
+		applog(LOG_INFO, "SIGINT received, aborting miner jobs");
+                scan_abort_flag = true;
+		break;
+	}
+}
 static void signal_handler(int sig)
 {
 	switch (sig) {
@@ -2545,11 +2556,12 @@ static void signal_handler(int sig)
 		applog(LOG_INFO, "SIGHUP received");
 		break;
 	case SIGINT:
-		signal(sig, SIG_IGN);
-		applog(LOG_INFO, "SIGINT received, exiting");
+		signal(sig, signal_handler2);
+		applog(LOG_INFO, "SIGINT received, exiting once miner jobs complete.  Ctrl+C again to abort miner jobs");
 		proper_exit(CCEXIT_SIG);
 		break;
 	case SIGTERM:
+		scan_abort_flag = true;
 		applog(LOG_INFO, "SIGTERM received, exiting");
 		proper_exit(CCEXIT_SIG);
 		break;
@@ -2560,9 +2572,19 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 {
 	switch (dwType) {
 	case CTRL_C_EVENT:
-		applog(LOG_INFO, "CTRL_C_EVENT received, exiting");
-		proper_exit(CCEXIT_SIG);
+	{
+		static bool called = false;
+		if (!called) {
+			called = true;
+			applog(LOG_INFO, "CTRL_C_EVENT received, exiting once miner jobs complete.  Ctrl+C again to abort miner jobs");
+			proper_exit(CCEXIT_SIG);
+		} else {
+			applog(LOG_INFO, "CTRL_C_EVENT received, aborting miner jobs");
+			scan_abort_flag = true;
+		}
+
 		break;
+	}
 	case CTRL_BREAK_EVENT:
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
 		proper_exit(CCEXIT_SIG);
