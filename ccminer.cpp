@@ -466,6 +466,8 @@ void get_currentalgo(char* buf, int sz)
 /**
  * Exit app
  */
+
+#define CCEXIT_SIG -1
 void proper_exit(int reason)
 {
 	struct thr_info* thr;
@@ -2557,11 +2559,11 @@ static void signal_handler(int sig)
 	case SIGINT:
 		signal(sig, SIG_IGN);
 		applog(LOG_INFO, "SIGINT received, exiting");
-		proper_exit(0);
+		proper_exit(CCEXIT_SIG);
 		break;
 	case SIGTERM:
 		applog(LOG_INFO, "SIGTERM received, exiting");
-		proper_exit(0);
+		proper_exit(CCEXIT_SIG);
 		break;
 	}
 }
@@ -2571,11 +2573,11 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 	switch (dwType) {
 	case CTRL_C_EVENT:
 		applog(LOG_INFO, "CTRL_C_EVENT received, exiting");
-		proper_exit(0);
+		proper_exit(CCEXIT_SIG);
 		break;
 	case CTRL_BREAK_EVENT:
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
-		proper_exit(0);
+		proper_exit(CCEXIT_SIG);
 		break;
 	default:
 		return false;
