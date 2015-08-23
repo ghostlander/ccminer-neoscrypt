@@ -468,7 +468,12 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
+	struct thr_info* thr;
+
 	abort_flag = true;
+
+	thr = &thr_info[work_thr_id];
+	tq_freeze(thr->q);
 
 #ifdef USE_WRAPNVML
 	#ifndef WIN32
