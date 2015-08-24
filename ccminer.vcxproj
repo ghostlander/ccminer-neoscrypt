@@ -250,6 +250,7 @@
     <CudaCompile Include="cuda_bitcoin.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <ClCompile Include="log.c" />
     <ClCompile Include="sph\neoscrypt.c" />
     <ClCompile Include="sph\sha256_Y.c" />
     <ClCompile Include="sph\sph_sha2.c" />

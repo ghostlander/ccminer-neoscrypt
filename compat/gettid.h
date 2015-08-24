@@ -4,7 +4,7 @@
 #include <Windows.h>
 // #include <Processthreadsapi.h>  XXX: For Win8+ ???
 
-#define gettid() GetCurrentThreadId(void)
+#define gettid() GetCurrentThreadId()
 
 #else
 #include <sys/syscall.h>
