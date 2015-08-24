@@ -340,19 +340,27 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 				{ 0x137e2179UL, 0x5be0cd19UL }
 		};
 
+		/*
 		uint2 v[16] =
 		{
 			h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
 			u512[0], u512[1], u512[2], u512[3], u512[4] ^ 640, u512[5] ^ 640, u512[6], u512[7]
 		};
+		*/
+		uint2 v[16] =
+		{
+			Hostprecalc[0], Hostprecalc[1], Hostprecalc[2], Hostprecalc[3], Hostprecalc[4], Hostprecalc[5],
+			Hostprecalc[6], Hostprecalc[7], Hostprecalc[8], Hostprecalc[9], Hostprecalc[10], Hostprecalc[11],
+			Hostprecalc[12], Hostprecalc[13], Hostprecalc[14], Hostprecalc[15],
+		};
 
-		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
-			Gprecalc(1, 5, 9, 13, 0x3, 0x2)
-			Gprecalc(2, 6, 10, 14, 0x5, 0x4)
-			Gprecalc(3, 7, 11, 15, 0x7, 0x6)
+	//		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+	//		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
+	//		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
+	//		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
 			Gprecalc(0, 5, 10, 15, 0x9, 0x8)
-			Gprecalc(1, 6, 11, 12, 0xb, 0xa)
-			Gprecalc(2, 7, 8, 13, 0xd, 0xc)
+	//		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
+	//		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
 			Gprecalc(3, 4, 9, 14, 0xf, 0xe)
 
 			Gprecalc(0, 4, 8, 12, 0xa, 0xe)
@@ -535,6 +543,8 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 		block[14] = vectorizelow(0);
 		block[15] = vectorizelow(0x280);
 		block[9].x = nounce;
+		block[9].y = 0;
+
 
 		const uint2 u512[16] =
 		{
@@ -561,9 +571,8 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 
 		uint2 v[16] =
 		{
-			Hostprecalc[0], Hostprecalc[1], Hostprecalc[2], Hostprecalc[3], Hostprecalc[4], Hostprecalc[5], 
-			Hostprecalc[6], Hostprecalc[7], Hostprecalc[8], Hostprecalc[9], Hostprecalc[10], Hostprecalc[11],
-			Hostprecalc[12], Hostprecalc[13], Hostprecalc[14], Hostprecalc[15],
+			h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
+			u512[0], u512[1], u512[2], u512[3], u512[4] ^ 640, u512[5] ^ 640, u512[6], u512[7]
 		};
 
 //		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
@@ -572,8 +581,8 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 //		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
 
 		Gprecalc(0, 5, 10, 15, 0x9, 0x8)
-		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
-		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
+//		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
+//		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
 		Gprecalc(3, 4, 9, 14, 0xf, 0xe)
 
 		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
@@ -801,8 +810,10 @@ __host__ void quark_blake512_cpu_setBlock_80(uint64_t *pdata)
 	GprecalcHost(2, 6, 10, 14, 0x5, 0x4)
 	GprecalcHost(3, 7, 11, 15, 0x7, 0x6)
 
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(Hostprecalc, &v[0], 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+	GprecalcHost(1, 6, 11, 12, 0xb, 0xa)
+	GprecalcHost(2, 7, 8, 13, 0xd, 0xc)
 
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(Hostprecalc, v, 16 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 
 }
 
