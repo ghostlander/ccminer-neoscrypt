@@ -612,7 +612,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 		cur = (cur+1)&1;
 		nxt = (nxt+1)&1;
 		++iteration;
-	} while (n <= max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (n <= max_nonce && !work_restart[thr_id].restart);
 
 	scrypt_free(&Vbuf);
 	scrypt_free(&Ybuf);

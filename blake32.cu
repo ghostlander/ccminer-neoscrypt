@@ -499,7 +499,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 		pdata[19] += throughput;
 
-	} while (!scan_abort_flag && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
 exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1; // (+1 to prevent locks)

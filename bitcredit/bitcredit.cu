@@ -90,7 +90,7 @@ extern "C" int scanhash_bitcredit(int thr_id, uint32_t *pdata,
         } else { 
     
 		pdata[35] += throughput;}
-	} while (pdata[19] < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 	*hashes_done = pdata[35] - first_nonce + 1;
 	return 0;
 }

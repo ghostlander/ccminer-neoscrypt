@@ -91,7 +91,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 
 		pdata[19] += throughput;
 
-	} while (!scan_abort_flag && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

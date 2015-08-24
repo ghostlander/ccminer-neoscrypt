@@ -289,7 +289,7 @@ emptyNonceVector:
 
         pdata[19] += throughput;
 
-    } while (pdata[19] < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+    } while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
     *hashes_done = pdata[19] - first_nonce;
 
 exit:

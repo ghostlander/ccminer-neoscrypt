@@ -916,7 +916,7 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 		++iteration;
 
 		//printf("n=%d, thr=%d, max=%d, rest=%d\n", n, throughput, max_nonce, work_restart[thr_id].restart);
-	} while (n <= max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (n <= max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = n - pdata[19];
 	pdata[19] = n;

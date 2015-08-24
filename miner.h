@@ -524,8 +524,6 @@ extern uint16_t opt_vote;
 extern uint64_t global_hashrate;
 extern double   global_diff;
 
-extern bool scan_abort_flag;
-
 #define MAX_GPUS 32
 extern char* device_name[MAX_GPUS];
 extern int device_map[MAX_GPUS];

@@ -122,7 +122,7 @@ extern "C" int scanhash_axiom(int thr_id, uint32_t *pdata, uint32_t *ptarget, ui
 			}
 			n++;
 			*hashes_done = n;
-	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (n < max_nonce && !work_restart[thr_id].restart);
 
 	//	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 

@@ -520,7 +520,7 @@ static inline int scanhash_sha256d_4way(int thr_id, uint32_t *pdata,
 				}
 			}
 		}
-	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (n < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = n - first_nonce + 1;
 	pdata[19] = n;
@@ -580,7 +580,7 @@ static inline int scanhash_sha256d_8way(int thr_id, uint32_t *pdata,
 				}
 			}
 		}
-	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (n < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = n - first_nonce + 1;
 	pdata[19] = n;
@@ -630,7 +630,7 @@ int scanhash_sha256d(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 				return 1;
 			}
 		}
-	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
+	} while (n < max_nonce && !work_restart[thr_id].restart);
 
 	*hashes_done = n - first_nonce + 1;
 	pdata[19] = n;
