@@ -1,10 +1,9 @@
 # allow to use Host cuda functions in C/C++
 DEF_INCLUDES = @CUDA_INCLUDES@
 
+JANSSON_INCLUDES=
 if WANT_JANSSON
 JANSSON_INCLUDES= -I$(top_srcdir)/compat/jansson
-else
-JANSSON_INCLUDES=
 endif
 
 EXTRA_DIST		= autogen.sh README.txt LICENSE.txt \
