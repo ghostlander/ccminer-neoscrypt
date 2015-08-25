@@ -537,10 +537,9 @@ static __device__ __forceinline__ void operator^= (uint2 &a, uint2 b) { a = a ^ 
 static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
 {
 	uint2 result;
-	asm("{\n\t"
+	asm(
 		"add.cc.u32 %0,%2,%4; \n\t"
 		"addc.u32 %1,%3,%5;   \n\t"
-	"}\n\t"
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
 	return result;
 }
@@ -548,10 +547,8 @@ static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
 static __device__ __forceinline__ uint2 operator+ (uint2 a, uint32_t b)
 {
 	uint2 result;
-	asm("{\n\t"
-		"add.cc.u32 %0,%2,%4; \n\t"
+	asm("add.cc.u32 %0,%2,%4; \n\t"
 		"addc.u32 %1,%3,%5;   \n\t"
-		"}\n\t"
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b), "r"(0));
 	return result;
 }
@@ -560,10 +557,8 @@ static __device__ __forceinline__ uint2 operator+ (uint2 a, uint32_t b)
 static __device__ __forceinline__ uint2 operator- (uint2 a, uint32_t b)
 {
 	uint2 result;
-	asm("{\n\t"
-		"sub.cc.u32 %0,%2,%4; \n\t"
-		"subc.u32 %1,%3,%5;   \n\t"
-		"}\n\t"
+	asm("sub.cc.u32 %0,%2,%4; \n\t"
+		"subc.u32 %1,%3,%5;   \n\t"		
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b), "r"(0));
 	return result;
 }
@@ -572,10 +567,8 @@ static __device__ __forceinline__ uint2 operator- (uint2 a, uint32_t b)
 static __device__ __forceinline__ uint2 operator- (uint2 a, uint2 b)
 {
 	uint2 result;
-	asm("{\n\t"
-		"sub.cc.u32 %0,%2,%4; \n\t"
+	asm("sub.cc.u32 %0,%2,%4; \n\t"
 		"subc.u32 %1,%3,%5;   \n\t"
-		"}\n\t"
 		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
 	return result;
 }
