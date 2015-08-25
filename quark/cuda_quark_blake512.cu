@@ -11,7 +11,7 @@
 // die Message it Padding zur Berechnung auf der GPU
 static uint2* c_PaddedMessage80[MAX_GPUS]; // padded message (80 bytes + padding)
 __constant__ uint2 c_PaddedM[16];
-__constant__ uint2 Hostprecalc[16];
+__constant__ uint28 Hostprecalc[4];
 
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
 
@@ -340,6 +340,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 				{ 0x137e2179UL, 0x5be0cd19UL }
 		};
 
+		
 		/*
 		uint2 v[16] =
 		{
@@ -347,12 +348,19 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 			u512[0], u512[1], u512[2], u512[3], u512[4] ^ 640, u512[5] ^ 640, u512[6], u512[7]
 		};
 		*/
-		uint2 v[16] =
-		{
+
+		uint2 v[16];
+/*		{
 			Hostprecalc[0], Hostprecalc[1], Hostprecalc[2], Hostprecalc[3], Hostprecalc[4], Hostprecalc[5],
 			Hostprecalc[6], Hostprecalc[7], Hostprecalc[8], Hostprecalc[9], Hostprecalc[10], Hostprecalc[11],
 			Hostprecalc[12], Hostprecalc[13], Hostprecalc[14], Hostprecalc[15],
 		};
+*/
+		uint28 *outpt = (uint28*)v;
+		outpt[0] = Hostprecalc[0];
+		outpt[1] = Hostprecalc[1];
+		outpt[2] = Hostprecalc[2];
+		outpt[3] = Hostprecalc[3];
 
 	//		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
 	//		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
@@ -575,14 +583,14 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 			u512[0], u512[1], u512[2], u512[3], u512[4] ^ 640, u512[5] ^ 640, u512[6], u512[7]
 		};
 
-//		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
-//		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
-//		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
-//		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
+		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
+		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
+		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
 
 		Gprecalc(0, 5, 10, 15, 0x9, 0x8)
-//		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
-//		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
+		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
+		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
 		Gprecalc(3, 4, 9, 14, 0xf, 0xe)
 
 		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
