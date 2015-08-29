@@ -881,7 +881,13 @@ static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
 	return a;
 	#endif
 }
-
+static __device__ __forceinline__ uint2 cuda_swap(uint2 v) 
+{ 
+	uint32_t t = cuda_swab32(v.x);
+	v.x = cuda_swab32(v.y);
+	v.y = t;
+	return v;
+}
 static __device__ __forceinline__ uint64_t devectorizeswap(uint2 v) { return MAKE_ULONGLONG(cuda_swab32(v.y), cuda_swab32(v.x)); }
 static __device__ __forceinline__ uint2 vectorizeswap(uint64_t v) {
 	uint2 result;
