@@ -215,6 +215,7 @@ bool autotune = true;
 bool opt_autotune = true;
 
 bool abort_flag = false;
+bool scan_abort_flag = false;
 bool network_fail_flag = false;
 char *jane_params = NULL;
 
@@ -466,35 +467,30 @@ void get_currentalgo(char* buf, int sz)
 /**
  * Exit app
  */
+
+#define CCEXIT_SIG -1
 void proper_exit(int reason)
 {
+	struct thr_info* thr;
+
 	abort_flag = true;
 
+	thr = &thr_info[work_thr_id];
+	tq_freeze(thr->q);
+
+	if (reason != CCEXIT_SIG) {
 #ifdef USE_WRAPNVML
-	#ifndef WIN32
-		if (hnvml)
-			nvml_destroy(hnvml);
- 	#endif
+		#ifndef WIN32
+			if (hnvml)
+				nvml_destroy(hnvml);
+		#endif
 #endif
 
-
-	pthread_mutex_lock(&g_work_lock);	//freeze stratum
-	pthread_mutex_lock(&stats_lock);	//hack. Freeze all the gputhreads when they finnish
-
-	free(opt_syslog_pfx);
-	free(opt_api_allow);
-	hashlog_purge_all();
-	stats_purge_all();
-	cuda_devicereset();
-
-	try
-	{
-		sleep(10);			//make sure that the gpu threads are stopped when updating the stats.
-		exit(0);
-	}
-	catch (...)
-	{
-		int t = 0;
+		free(opt_syslog_pfx);
+		free(opt_api_allow);
+		hashlog_purge_all();
+		stats_purge_all();
+		cuda_devicereset();
 	}
 }
 
@@ -969,7 +965,7 @@ static void *workio_thread(void *userdata)
 		return NULL;
 	}
 
-	while (ok) {
+	while (ok && !abort_flag) {
 		struct workio_cmd *wc;
 
 		/* wait for workio_cmd sent to us, on our queue */
@@ -1264,7 +1260,7 @@ static void *miner_thread(void *userdata)
 		}
 	}
 
-	while (1) 
+	while (!abort_flag)
 	{
 		if (opt_benchmark)
 		{
@@ -1761,6 +1757,8 @@ static void *miner_thread(void *userdata)
 		loopcnt++;
 	}
 
+	return NULL;
+
 out:
 	tq_freeze(mythr->q);
 
@@ -1805,7 +1803,7 @@ static void *longpoll_thread(void *userdata)
 
 	applog(LOG_INFO, "Long-polling activated for %s", lp_url);
 
-	while (1) {
+	while (!abort_flag) {
 		json_t *val, *soval;
 		int err;
 
@@ -1905,7 +1903,7 @@ static void *stratum_thread(void *userdata)
 		goto out;
 	applog(LOG_BLUE, "Starting Stratum on %s", stratum.url);
 
-	while (1) {
+	while (!abort_flag) {
 		int failures = 0;
 
 		if (stratum_need_reset) {
@@ -1914,7 +1912,7 @@ static void *stratum_thread(void *userdata)
 			applog(LOG_DEBUG, "stratum connection reset");
 		}
 
-		while (!stratum.curl) {
+		while (!stratum.curl && !abort_flag) {
 			pthread_mutex_lock(&g_work_lock);
 			g_work_time = 0;
 			pthread_mutex_unlock(&g_work_lock);
@@ -1971,6 +1969,8 @@ static void *stratum_thread(void *userdata)
 			stratum_handle_response(s);
 		free(s);
 	}
+
+	stratum_disconnect(&stratum);
 
 out:
 	return NULL;
@@ -2539,6 +2539,16 @@ static void parse_cmdline(int argc, char *argv[])
 }
 
 #ifndef WIN32
+static void signal_handler2(int sig)
+{
+	switch (sig) {
+	case SIGINT:
+		signal(sig, SIG_IGN);
+		applog(LOG_INFO, "SIGINT received, aborting miner jobs");
+                scan_abort_flag = true;
+		break;
+	}
+}
 static void signal_handler(int sig)
 {
 	switch (sig) {
@@ -2546,13 +2556,14 @@ static void signal_handler(int sig)
 		applog(LOG_INFO, "SIGHUP received");
 		break;
 	case SIGINT:
-		signal(sig, SIG_IGN);
-		applog(LOG_INFO, "SIGINT received, exiting");
-		proper_exit(0);
+		signal(sig, signal_handler2);
+		applog(LOG_INFO, "SIGINT received, exiting once miner jobs complete.  Ctrl+C again to abort miner jobs");
+		proper_exit(CCEXIT_SIG);
 		break;
 	case SIGTERM:
+		scan_abort_flag = true;
 		applog(LOG_INFO, "SIGTERM received, exiting");
-		proper_exit(0);
+		proper_exit(CCEXIT_SIG);
 		break;
 	}
 }
@@ -2560,9 +2571,23 @@ static void signal_handler(int sig)
 BOOL WINAPI ConsoleHandler(DWORD dwType)
 {
 	switch (dwType) {
+	case CTRL_C_EVENT:
+	{
+		static bool called = false;
+		if (!called) {
+			called = true;
+			applog(LOG_INFO, "CTRL_C_EVENT received, exiting once miner jobs complete.  Ctrl+C again to abort miner jobs");
+			proper_exit(CCEXIT_SIG);
+		} else {
+			applog(LOG_INFO, "CTRL_C_EVENT received, aborting miner jobs");
+			scan_abort_flag = true;
+		}
+
+		break;
+	}
 	case CTRL_BREAK_EVENT:
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
-		proper_exit(0);
+		proper_exit(CCEXIT_SIG);
 		break;
 	default:
 		return false;
@@ -2890,6 +2915,9 @@ int main(int argc, char *argv[])
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
+	/* wait for mining threads */
+	for (i = 0; i < opt_n_threads; i++)
+		pthread_join(thr_info[i].pth, NULL);
 #ifdef WIN32
 	timeEndPeriod(1); // be nice and forego high timer precision
 #endif
