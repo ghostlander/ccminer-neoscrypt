@@ -99,7 +99,7 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 		{
 
 #pragma unroll
-			for (uint32_t x = 0; x < 5; x++)
+			for (int x = 0; x < 5; x++)
 				tmpxor[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
 
 			bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
@@ -222,7 +222,7 @@ void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		{
 
 #pragma unroll
-			for (uint32_t x = 0; x < 5; x++)
+			for (int x = 0; x < 5; x++)
 				tmpxor[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
 
 			bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
@@ -1780,7 +1780,7 @@ void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 #undef h7
 }
 
-__global__
+__global__ __launch_bounds__(192, 4)
 void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint2 *g_hash, uint32_t *g_nonceVector, uint32_t *const __restrict__ d_found, uint32_t target)
 {
     const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -1851,7 +1851,7 @@ void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, c
 		{
 
 #pragma unroll
-			for (uint32_t x = 0; x < 5; x++)
+			for (int x = 0; x < 5; x++)
 				tmpxor[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
 
 			bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
