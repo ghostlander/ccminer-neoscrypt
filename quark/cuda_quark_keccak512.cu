@@ -175,9 +175,11 @@ void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		tmpxor[0] = msg[0] ^ msg[5];
 		tmpxor[1] = msg[1] ^ msg[6];
 		tmpxor[2] = msg[2] ^ msg[7];
-		tmpxor[3] = msg[3] ^ make_uint2(0x1, 0x80000000);
+//		tmpxor[3] = msg[3] ^ make_uint2(0x1, 0x80000000);
+		tmpxor[3].x = msg[3].x ^ 0x1;
+		tmpxor[3].y = msg[3].y ^ 0x80000000;
 		tmpxor[4] = msg[4];
-
+		
 		bc[0] = tmpxor[0] ^ ROL2(tmpxor[2], 1);
 		bc[1] = tmpxor[1] ^ ROL2(tmpxor[3], 1);
 		bc[2] = tmpxor[2] ^ ROL2(tmpxor[4], 1);
@@ -217,7 +219,7 @@ void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 		tmp1 = s[20]; tmp2 = s[21]; s[20] = bitselect(s[20] ^ s[22], s[20], s[21]); s[21] = bitselect(s[21] ^ s[23], s[21], s[22]); s[22] = bitselect(s[22] ^ s[24], s[22], s[23]); s[23] = bitselect(s[23] ^ tmp1, s[23], s[24]); s[24] = bitselect(s[24] ^ tmp2, s[24], tmp1);
 		s[0].x ^= 1;
 
-#pragma unroll 2
+#pragma nounroll 
 		for (int i = 1; i < 24; ++i)
 		{
 
@@ -1846,7 +1848,7 @@ void quark_keccak512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, c
 		tmp1 = s[20]; tmp2 = s[21]; s[20] = bitselect(s[20] ^ s[22], s[20], s[21]); s[21] = bitselect(s[21] ^ s[23], s[21], s[22]); s[22] = bitselect(s[22] ^ s[24], s[22], s[23]); s[23] = bitselect(s[23] ^ tmp1, s[23], s[24]); s[24] = bitselect(s[24] ^ tmp2, s[24], tmp1);
 		s[0].x ^= 1;
 
-#pragma unroll 2
+#pragma nounroll
 		for (int i = 1; i < 23; i++)
 		{
 
