@@ -67,7 +67,7 @@ double stats_get_speed(int thr_id, double def_speed)
 
 	const uint64_t keymsk = 0xffULL; // last u8 is the gpu
 	double speed = 0.0;
-	int records = 0;
+	uint32_t records = 0;
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
 	while (i != tlastscans.rend() && records < opt_statsavg) 
