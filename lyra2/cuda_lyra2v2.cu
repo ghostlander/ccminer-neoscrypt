@@ -25,17 +25,6 @@ __device__ __forceinline__ void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &
 
 }
 
-__device__ __forceinline__ void Gfunc_v35(unsigned long long & a, unsigned long long &b, unsigned long long &c, unsigned long long &d)
-{
-
-	a += b; d ^= a; d = ROTR64(d, 32);
-	c += d; b ^= c; b = ROTR64(b, 24);
-	a += b; d ^= a; d = ROTR64(d, 16);
-	c += d; b ^= c; b = ROTR64(b, 63);
-
-}
-
-
 __device__ __forceinline__ void round_lyra_v35(vectype* s)
 {
 

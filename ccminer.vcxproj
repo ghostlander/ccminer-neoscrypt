@@ -174,10 +174,9 @@
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
       <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
-      <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>--ptxas-options="-O3" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
-      <Optimization>O3</Optimization>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>false</GPUDebugInfo>
@@ -250,7 +249,6 @@
     <CudaCompile Include="cuda_bitcoin.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <ClCompile Include="log.c" />
     <ClCompile Include="sph\neoscrypt.c" />
     <ClCompile Include="sph\sha256_Y.c" />
     <ClCompile Include="sph\sph_sha2.c" />
