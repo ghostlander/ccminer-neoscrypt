@@ -28,7 +28,7 @@
  * Executes Lyra2 based on the G function from Blake2b. This version supports salts and passwords
  * whose combined length is smaller than the size of the memory matrix, (i.e., (nRows x nCols x b) bits,
  * where "b" is the underlying sponge's bitrate). In this implementation, the "basil" is composed by all
- * integer parameters (treated as type "unsigned int") in the order they are provided, plus the value
+ * integer parameters (treated as type "uint32_t") in the order they are provided, plus the value
  * of nCols, (i.e., basil = kLen || pwdlen || saltlen || timeCost || nRows || nCols).
  *
  * @param K The derived key to be output by the algorithm
@@ -171,7 +171,7 @@ int LYRA2(void *K, uint64_t kLen, const void *pwd, uint64_t pwdlen, const void *
     	do {
   	    //Selects a pseudorandom index row*
   	    //------------------------------------------------------------------------------------------
-  	    //rowa = ((unsigned int)state[0]) & (nRows-1);	//(USE THIS IF nRows IS A POWER OF 2)
+  	    //rowa = ((uint32_t)state[0]) & (nRows-1);	//(USE THIS IF nRows IS A POWER OF 2)
   	    rowa = ((uint64_t) (state[0])) % nRows; //(USE THIS FOR THE "GENERIC" CASE)
   	    //------------------------------------------------------------------------------------------
 
@@ -339,7 +339,7 @@ int LYRA2_old(void *K, uint64_t kLen, const void *pwd, uint64_t pwdlen, const vo
 		do {
 			//Selects a pseudorandom index row*
 			//------------------------------------------------------------------------------------------
-			//rowa = ((unsigned int)state[0]) & (nRows-1);	//(USE THIS IF nRows IS A POWER OF 2)
+			//rowa = ((uint32_t)state[0]) & (nRows-1);	//(USE THIS IF nRows IS A POWER OF 2)
 			rowa = ((uint64_t)(state[0])) % nRows; //(USE THIS FOR THE "GENERIC" CASE)
 			//------------------------------------------------------------------------------------------
 

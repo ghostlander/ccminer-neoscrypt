@@ -53,7 +53,7 @@ void to_bitslice_quad(uint32_t *const __restrict__ input, uint32_t *const __rest
 	uint32_t t;
 
 	uint32_t perm = (threadIdx.x & 1) ? 0x7362 : 0x5140;
-	const unsigned int n = threadIdx.x & 3;
+	const uint32_t n = threadIdx.x & 3;
 #pragma unroll
 		for (int i = 0; i < 8; i++)
 		{

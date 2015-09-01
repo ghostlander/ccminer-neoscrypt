@@ -193,5 +193,5 @@
 /* Define curl_free() as free() if our version of curl lacks curl_free. */
 /* #undef curl_free */
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `uint32_t' if <sys/types.h> does not define. */
 /* #undef size_t */

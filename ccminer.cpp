@@ -1687,7 +1687,7 @@ static void *miner_thread(void *userdata)
 			{
 #ifdef USE_WRAPNVML
 				if (hnvml != NULL) {
-					unsigned int tempC=0, fanpcnt=0, mwatts=0;
+					uint32_t tempC=0, fanpcnt=0, mwatts=0;
 
 					nvml_get_tempC(hnvml, device_map[thr_id], &tempC);
 					nvml_get_fanpcnt(hnvml, device_map[thr_id], &fanpcnt);

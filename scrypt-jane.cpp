@@ -335,15 +335,15 @@ scrypt_free(scrypt_aligned_alloc *aa) {
 
 
 // yacoin: increasing Nfactor gradually
-unsigned char GetNfactor(unsigned int nTimestamp) {
+unsigned char GetNfactor(uint32_t nTimestamp) {
 	int l = 0;
 
-	unsigned int Nfactor = 0;
+	uint32_t Nfactor = 0;
 
 	// Yacoin defaults
-	unsigned int Ntimestamp = 1367991200;
-	unsigned int minN = 4;
-	unsigned int maxN = 30;
+	uint32_t Ntimestamp = 1367991200;
+	uint32_t minN = 4;
+	uint32_t maxN = 30;
 
 	if (strlen(jane_params) > 0) {
 		if (!strcmp(jane_params, "YAC") || !strcasecmp(jane_params, "Yacoin")) {} // No-Op
@@ -532,7 +532,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 				for(int i=0;i<throughput;++i)
 					scrypt_ROMix_1((scrypt_mix_word_t *)(Xbuf[cur].ptr + 128 * i), (scrypt_mix_word_t *)Ybuf.ptr, (scrypt_mix_word_t *)Vbuf.ptr, N);
 
-				unsigned int err = 0;
+				uint32_t err = 0;
 				for(int i=0;i<throughput;++i) {
 					unsigned char *ref = (Xbuf[cur].ptr + 128 * i);
 					unsigned char *dat = (unsigned char*)(cuda_X[cur] + 32 * i);

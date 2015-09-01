@@ -40,14 +40,14 @@ __constant__ uint32_t groestl_gpu_msg[32];
 #define T3up(x) tex1Dfetch(t3up, x)
 #define T3dn(x) tex1Dfetch(t3dn, x)
 
-texture<unsigned int, 1, cudaReadModeElementType> t0up;
-texture<unsigned int, 1, cudaReadModeElementType> t0dn;
-texture<unsigned int, 1, cudaReadModeElementType> t1up;
-texture<unsigned int, 1, cudaReadModeElementType> t1dn;
-texture<unsigned int, 1, cudaReadModeElementType> t2up;
-texture<unsigned int, 1, cudaReadModeElementType> t2dn;
-texture<unsigned int, 1, cudaReadModeElementType> t3up;
-texture<unsigned int, 1, cudaReadModeElementType> t3dn;
+texture<uint32_t, 1, cudaReadModeElementType> t0up;
+texture<uint32_t, 1, cudaReadModeElementType> t0dn;
+texture<uint32_t, 1, cudaReadModeElementType> t1up;
+texture<uint32_t, 1, cudaReadModeElementType> t1dn;
+texture<uint32_t, 1, cudaReadModeElementType> t2up;
+texture<uint32_t, 1, cudaReadModeElementType> t2dn;
+texture<uint32_t, 1, cudaReadModeElementType> t3up;
+texture<uint32_t, 1, cudaReadModeElementType> t3dn;
 
 uint32_t T0up_cpu[] = {
 	C32e(0xc632f4a5), C32e(0xf86f9784), C32e(0xee5eb099), C32e(0xf67a8c8d),
@@ -731,13 +731,13 @@ template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(uint32_t threads, u
 }
 
 #define texDef(texname, texmem, texsource, texsize) \
-	unsigned int *texmem; \
+	uint32_t *texmem; \
 	cudaMalloc(&texmem, texsize); \
 	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
 	texname.normalized = 0; \
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
-	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
+	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<uint32_t>(); \
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
 
 // Setup-Funktionen

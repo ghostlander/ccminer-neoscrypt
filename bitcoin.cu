@@ -7,7 +7,7 @@ extern void bitcoin_cpu_init(int thr_id);
 extern void bitcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, const uint32_t *const ms, uint32_t merkle, uint32_t time, uint32_t compacttarget, uint32_t *const h_nounce);
 extern void bitcoin_midstate(const uint32_t *data, uint32_t *midstate);
 
-uint32_t rrot(uint32_t x, unsigned int n)
+uint32_t rrot(uint32_t x, uint32_t n)
 {
 	return (x >> n) | (x << (32 - n));
 }

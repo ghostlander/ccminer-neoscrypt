@@ -183,10 +183,10 @@ static size_t upload_data_cb(void *ptr, size_t size, size_t nmemb,
 			     void *user_data)
 {
 	struct upload_buffer *ub = (struct upload_buffer *)user_data;
-	unsigned int len = (unsigned int)(size * nmemb);
+	uint32_t len = (uint32_t)(size * nmemb);
 
 	if (len > ub->len - ub->pos)
-		len = (unsigned int)(ub->len - ub->pos);
+		len = (uint32_t)(ub->len - ub->pos);
 
 	if (len) {
 		memcpy(ptr, (char*)ub->buf + ub->pos, len);
@@ -531,7 +531,7 @@ void aligned_free(void *ptr)
 void cbin2hex(char *out, const char *in, size_t len)
 {
 	if (out) {
-		unsigned int i;
+		uint32_t i;
 		for (i = 0; i < len; i++)
 			sprintf(out + (i * 2), "%02x", (uint8_t)in[i]);
 	}

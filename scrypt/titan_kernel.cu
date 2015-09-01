@@ -527,7 +527,7 @@ void titan_scrypt_core_kernelA(const uint32_t *d_idata, int begin, int end)
 }
 
 template <int ALGO, MemoryAccess SCHEME> __global__
-void titan_scrypt_core_kernelA_LG(const uint32_t *d_idata, int begin, int end, unsigned int LOOKUP_GAP)
+void titan_scrypt_core_kernelA_LG(const uint32_t *d_idata, int begin, int end, uint32_t LOOKUP_GAP)
 {
 	uint4 b, bx;
 
@@ -593,7 +593,7 @@ void titan_scrypt_core_kernelB(uint32_t *d_odata, int begin, int end)
 }
 
 template <int ALGO, MemoryAccess SCHEME> __global__
-void titan_scrypt_core_kernelB_LG(uint32_t *d_odata, int begin, int end, unsigned int LOOKUP_GAP)
+void titan_scrypt_core_kernelB_LG(uint32_t *d_odata, int begin, int end, uint32_t LOOKUP_GAP)
 {
 	uint4 b, bx;
 
@@ -673,7 +673,7 @@ void TitanKernel::set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V)
 }
 
 bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream,
-	uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache)
+	uint32_t* d_idata, uint32_t* d_odata, uint32_t N, uint32_t LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache)
 {
 	bool success = true;
 
@@ -699,7 +699,7 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int t
 
 	int batch = device_batchsize[thr_id];
 
-	unsigned int pos = 0;
+	uint32_t pos = 0;
 	do {
 		if (LOOKUP_GAP == 1) {
 			if (IS_SCRYPT())      titan_scrypt_core_kernelA<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));

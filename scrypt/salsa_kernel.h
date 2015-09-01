@@ -34,7 +34,7 @@ extern int parallel;
 
 extern void get_currentalgo(char* buf, int sz);
 
-typedef unsigned int uint32_t; // define this as 32 bit type derived from int
+typedef uint32_t uint32_t; // define this as 32 bit type derived from int
 
 static char algo[64] = { 0 };
 // scrypt variants
@@ -62,7 +62,7 @@ extern uint32_t *cuda_hashbuffer(int thr_id, int stream);
 
 extern void cuda_scrypt_HtoD(int thr_id, uint32_t *X, int stream);
 extern void cuda_scrypt_serialize(int thr_id, int stream);
-extern void cuda_scrypt_core(int thr_id, int stream, unsigned int N);
+extern void cuda_scrypt_core(int thr_id, int stream, uint32_t N);
 extern void cuda_scrypt_done(int thr_id, int stream);
 extern void cuda_scrypt_DtoH(int thr_id, uint32_t *X, int stream, bool postSHA);
 extern bool cuda_scrypt_sync(int thr_id, int stream);
@@ -96,7 +96,7 @@ class KernelInterface
 {
 public:
 	virtual void set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V) = 0;
-	virtual bool run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache) = 0;
+	virtual bool run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, uint32_t N, uint32_t LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache) = 0;
 	virtual bool bindtexture_1D(uint32_t *d_V, size_t size) { return true; }
 	virtual bool bindtexture_2D(uint32_t *d_V, int width, int height, size_t pitch) { return true; }
 	virtual bool unbindtexture_1D() { return true; }

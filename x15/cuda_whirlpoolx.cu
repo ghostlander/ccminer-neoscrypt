@@ -215,7 +215,7 @@ void precomputeX(uint32_t threads, uint2*const __restrict__ d_xtra, uint64_t*con
 			n[i] = c_PaddedMessage80[i];  // read data
 		}
 		//#pragma unroll 10
-		for (unsigned int r = 0; r < 10; r++) {
+		for (uint32_t r = 0; r < 10; r++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
 			ROUND_WENC(sharedMemory, n, h, tmp);

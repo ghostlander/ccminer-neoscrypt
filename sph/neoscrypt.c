@@ -41,9 +41,9 @@ typedef unsigned long long ulong;
 #else
 typedef unsigned long ulong;
 #endif
-typedef unsigned int  uint;
+typedef uint32_t  uint;
 typedef unsigned char uchar;
-typedef unsigned int  bool;
+typedef uint32_t  bool;
 
 
 #define MIN(a, b) ((a) < (b) ? a : b)
@@ -655,7 +655,7 @@ static void neoscrypt_blake2s(const void *input, const uint input_size, const vo
 
     /* Write back */
     neoscrypt_copy(output, S, output_size);
-//	for (int k = 0; k<4; k++) { printf("cpu blake   %d %08x %08x\n", k, ((unsigned int*)output)[2 * k], ((unsigned int*)output)[2 * k + 1]); }
+//	for (int k = 0; k<4; k++) { printf("cpu blake   %d %08x %08x\n", k, ((uint32_t*)output)[2 * k], ((uint32_t*)output)[2 * k + 1]); }
 
 }
 
@@ -668,7 +668,7 @@ static void neoscrypt_blake2s(const void *input, const uint input_size, const vo
  * prf_output_size must be <= prf_key_size; */
 static void neoscrypt_fastkdf(const uchar *password, uint password_len, const uchar *salt, uint salt_len,
   uint N, uchar *output, uint output_len) {
-//	for (int i = 0; i<10; i++) { printf("cpu password %d %08x %08x\n", i, ((unsigned int*)password)[2 * i], ((unsigned int*)password)[2 * i+1]); }
+//	for (int i = 0; i<10; i++) { printf("cpu password %d %08x %08x\n", i, ((uint32_t*)password)[2 * i], ((uint32_t*)password)[2 * i+1]); }
     const uint stack_align =  0x40; 
 	const uint kdf_buf_size = 256U; //FASTKDF_BUFFER_SIZE
     const uint prf_input_size = 64U; //BLAKE2S_BLOCK_SIZE
@@ -720,9 +720,9 @@ static void neoscrypt_fastkdf(const uchar *password, uint password_len, const uc
 
         /* PRF */
 		
-//		for (int k = 0; k<(prf_input_size/4); k++) { printf("cpu bufptr %08x before blake %d  %d %08x \n",bufptr, i, k, ((unsigned int*)prf_input)[k]); }
+//		for (int k = 0; k<(prf_input_size/4); k++) { printf("cpu bufptr %08x before blake %d  %d %08x \n",bufptr, i, k, ((uint32_t*)prf_input)[k]); }
         neoscrypt_blake2s(prf_input, prf_input_size, prf_key, prf_key_size, prf_output, prf_output_size);
-		//for (int k = 0; k<(prf_output_size/4); k++) { printf("cpu after blake %d  %d %08x \n", i, k, ((unsigned int*)prf_output)[k]); }
+		//for (int k = 0; k<(prf_output_size/4); k++) { printf("cpu after blake %d  %d %08x \n", i, k, ((uint32_t*)prf_output)[k]); }
 
         /* Calculate the next buffer pointer */
         for(j = 0, bufptr = 0; j < prf_output_size; j++)
@@ -756,7 +756,7 @@ static void neoscrypt_fastkdf(const uchar *password, uint password_len, const uc
         neoscrypt_copy(&output[0], &B[bufptr], a);
         neoscrypt_copy(&output[a], &B[0], output_len - a);
     }
-//	for (int i = 0; i<10; i++) { printf("cpu fastkdf %d %08x %08x\n", i, ((unsigned int*)output)[2 * i], ((unsigned int*)output)[2 * i + 1]); }
+//	for (int i = 0; i<10; i++) { printf("cpu fastkdf %d %08x %08x\n", i, ((uint32_t*)output)[2 * i], ((uint32_t*)output)[2 * i + 1]); }
 
 }
 

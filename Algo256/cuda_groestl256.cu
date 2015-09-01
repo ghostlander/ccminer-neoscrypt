@@ -46,14 +46,14 @@ uint32_t *d_GNonce[MAX_GPUS];
 	#define T3dn(x) tex1Dfetch(t3dn2, x)
 #endif
 
-texture<unsigned int, 1, cudaReadModeElementType> t0up2;
-texture<unsigned int, 1, cudaReadModeElementType> t0dn2;
-texture<unsigned int, 1, cudaReadModeElementType> t1up2;
-texture<unsigned int, 1, cudaReadModeElementType> t1dn2;
-texture<unsigned int, 1, cudaReadModeElementType> t2up2;
-texture<unsigned int, 1, cudaReadModeElementType> t2dn2;
-texture<unsigned int, 1, cudaReadModeElementType> t3up2;
-texture<unsigned int, 1, cudaReadModeElementType> t3dn2;
+texture<uint32_t, 1, cudaReadModeElementType> t0up2;
+texture<uint32_t, 1, cudaReadModeElementType> t0dn2;
+texture<uint32_t, 1, cudaReadModeElementType> t1up2;
+texture<uint32_t, 1, cudaReadModeElementType> t1dn2;
+texture<uint32_t, 1, cudaReadModeElementType> t2up2;
+texture<uint32_t, 1, cudaReadModeElementType> t2dn2;
+texture<uint32_t, 1, cudaReadModeElementType> t3up2;
+texture<uint32_t, 1, cudaReadModeElementType> t3dn2;
 
 #define RSTT(d0, d1, a, b0, b1, b2, b3, b4, b5, b6, b7) do { \
 	t[d0] = T0up(B32_0(a[b0])) \
@@ -252,13 +252,13 @@ void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *con
 }
 
 #define texDef(texname, texmem, texsource, texsize) \
-	unsigned int *texmem; \
+	uint32_t *texmem; \
 	cudaMalloc(&texmem, texsize); \
 	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
 	texname.normalized = 0; \
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
-	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
+	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<uint32_t>(); \
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
 
 __host__

@@ -58,7 +58,7 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	unsigned int intensity = 20; // 256*256*8*2;
+	uint32_t intensity = 20; // 256*256*8*2;
 #ifdef WIN32
 	// reduce by one the intensity on windows
 	intensity--;

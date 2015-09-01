@@ -1119,7 +1119,7 @@ NVAPI_INTERFACE NvAPI_GetDisplayDriverVersion(NvDisplayHandle hNvDisplay, NV_DIS
 //!
 //!   \ingroup oglapi
 ///////////////////////////////////////////////////////////////////////////////
-typedef void (* NVAPI_OGLEXPERT_CALLBACK) (unsigned int categoryId, unsigned int messageId, unsigned int detailLevel, int objectId, const char *messageStr);
+typedef void (* NVAPI_OGLEXPERT_CALLBACK) (uint32_t categoryId, uint32_t messageId, uint32_t detailLevel, int objectId, const char *messageStr);
 
 
 

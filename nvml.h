@@ -22,15 +22,15 @@ typedef void * nvmlDevice_t;
 /* our own version of the PCI info struct */
 typedef struct {
 	char bus_id_str[16];             /* string form of bus info */
-	unsigned int domain;
-	unsigned int bus;
-	unsigned int device;
-	unsigned int pci_device_id;      /* combined device and vendor id */
-	unsigned int pci_subsystem_id;
-	unsigned int res0;               /* NVML internal use only */
-	unsigned int res1;
-	unsigned int res2;
-	unsigned int res3;
+	uint32_t domain;
+	uint32_t bus;
+	uint32_t device;
+	uint32_t pci_device_id;      /* combined device and vendor id */
+	uint32_t pci_subsystem_id;
+	uint32_t res0;               /* NVML internal use only */
+	uint32_t res1;
+	uint32_t res2;
+	uint32_t res3;
 } nvmlPciInfo_t;
 
 enum nvmlEnableState_t {
@@ -78,10 +78,10 @@ typedef struct {
 	void *nvml_dll;
 	int nvml_gpucount;
 	int cuda_gpucount;
-	unsigned int *nvml_pci_domain_id;
-	unsigned int *nvml_pci_bus_id;
-	unsigned int *nvml_pci_device_id;
-	unsigned int *nvml_pci_subsys_id;
+	uint32_t *nvml_pci_domain_id;
+	uint32_t *nvml_pci_bus_id;
+	uint32_t *nvml_pci_device_id;
+	uint32_t *nvml_pci_subsys_id;
 	int *nvml_cuda_device_id;          /* map NVML dev to CUDA dev */
 	int *cuda_nvml_device_id;          /* map CUDA dev to NVML dev */
 	nvmlDevice_t *devs;
@@ -91,20 +91,20 @@ typedef struct {
 	nvmlReturn_t (*nvmlDeviceGetHandleByIndex)(int, nvmlDevice_t *);
 	nvmlReturn_t (*nvmlDeviceGetAPIRestriction)(nvmlDevice_t, nvmlRestrictedAPI_t, nvmlEnableState_t *);
 	nvmlReturn_t (*nvmlDeviceSetAPIRestriction)(nvmlDevice_t, nvmlRestrictedAPI_t, nvmlEnableState_t);
-	nvmlReturn_t (*nvmlDeviceGetDefaultApplicationsClock)(nvmlDevice_t, nvmlClockType_t, unsigned int *);
-	nvmlReturn_t (*nvmlDeviceGetApplicationsClock)(nvmlDevice_t, nvmlClockType_t, unsigned int *);
-	nvmlReturn_t (*nvmlDeviceSetApplicationsClocks)(nvmlDevice_t, unsigned int, unsigned int);
-	nvmlReturn_t (*nvmlDeviceGetClockInfo)(nvmlDevice_t, nvmlClockType_t, unsigned int *);
+	nvmlReturn_t (*nvmlDeviceGetDefaultApplicationsClock)(nvmlDevice_t, nvmlClockType_t, uint32_t *);
+	nvmlReturn_t (*nvmlDeviceGetApplicationsClock)(nvmlDevice_t, nvmlClockType_t, uint32_t *);
+	nvmlReturn_t (*nvmlDeviceSetApplicationsClocks)(nvmlDevice_t, uint32_t, uint32_t);
+	nvmlReturn_t (*nvmlDeviceGetClockInfo)(nvmlDevice_t, nvmlClockType_t, uint32_t *);
 	nvmlReturn_t (*nvmlDeviceGetPciInfo)(nvmlDevice_t, nvmlPciInfo_t *);
 	nvmlReturn_t (*nvmlDeviceGetName)(nvmlDevice_t, char *, int);
-	nvmlReturn_t (*nvmlDeviceGetTemperature)(nvmlDevice_t, int, unsigned int *);
-	nvmlReturn_t (*nvmlDeviceGetFanSpeed)(nvmlDevice_t, unsigned int *);
+	nvmlReturn_t (*nvmlDeviceGetTemperature)(nvmlDevice_t, int, uint32_t *);
+	nvmlReturn_t (*nvmlDeviceGetFanSpeed)(nvmlDevice_t, uint32_t *);
 	nvmlReturn_t (*nvmlDeviceGetPerformanceState)(nvmlDevice_t, int *); /* enum */
-	nvmlReturn_t (*nvmlDeviceGetPowerUsage)(nvmlDevice_t, unsigned int *);
-	nvmlReturn_t (*nvmlDeviceGetSerial)(nvmlDevice_t, char *serial, unsigned int len);
-	nvmlReturn_t (*nvmlDeviceGetUUID)(nvmlDevice_t, char *uuid, unsigned int len);
-	nvmlReturn_t (*nvmlDeviceGetVbiosVersion)(nvmlDevice_t, char *version, unsigned int len);
-	nvmlReturn_t (*nvmlSystemGetDriverVersion)(char *version, unsigned int len);
+	nvmlReturn_t (*nvmlDeviceGetPowerUsage)(nvmlDevice_t, uint32_t *);
+	nvmlReturn_t (*nvmlDeviceGetSerial)(nvmlDevice_t, char *serial, uint32_t len);
+	nvmlReturn_t (*nvmlDeviceGetUUID)(nvmlDevice_t, char *uuid, uint32_t len);
+	nvmlReturn_t (*nvmlDeviceGetVbiosVersion)(nvmlDevice_t, char *version, uint32_t len);
+	nvmlReturn_t (*nvmlSystemGetDriverVersion)(char *version, uint32_t len);
 	char* (*nvmlErrorString)(nvmlReturn_t);
 	nvmlReturn_t (*nvmlShutdown)(void);
 } nvml_handle;
@@ -137,13 +137,13 @@ int nvml_get_gpu_name(nvml_handle *nvmlh,
  * Query the current GPU temperature (Celsius), from the CUDA device ID
  */
 int nvml_get_tempC(nvml_handle *nvmlh,
-                        int gpuindex, unsigned int *tempC);
+                        int gpuindex, uint32_t *tempC);
 
 /*
  * Query the current GPU fan speed (percent) from the CUDA device ID
  */
 int nvml_get_fanpcnt(nvml_handle *nvmlh,
-                          int gpuindex, unsigned int *fanpcnt);
+                          int gpuindex, uint32_t *fanpcnt);
 
 /*
  * Query the current GPU power usage in millwatts from the CUDA device ID
@@ -154,15 +154,15 @@ int nvml_get_fanpcnt(nvml_handle *nvmlh,
  */
 int nvml_get_power_usage(nvml_handle *nvmlh,
                               int gpuindex,
-                              unsigned int *milliwatts);
+                              uint32_t *milliwatts);
 
 /* api functions */
 
-unsigned int gpu_fanpercent(struct cgpu_info *gpu);
-unsigned int gpu_fanrpm(struct cgpu_info *gpu);
+uint32_t gpu_fanpercent(struct cgpu_info *gpu);
+uint32_t gpu_fanrpm(struct cgpu_info *gpu);
 float gpu_temp(struct cgpu_info *gpu);
-unsigned int gpu_power(struct cgpu_info *gpu);
-unsigned int gpu_usage(struct cgpu_info *gpu);
+uint32_t gpu_power(struct cgpu_info *gpu);
+uint32_t gpu_usage(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
 

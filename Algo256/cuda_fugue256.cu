@@ -14,10 +14,10 @@ uint32_t *d_resultNonce[MAX_GPUS];
 __constant__ uint32_t GPUstate[30]; // Single GPU
 __constant__ uint32_t pTarget[8]; // Single GPU
 
-texture<unsigned int, 1, cudaReadModeElementType> mixTab0Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab1Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab2Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab3Tex;
+texture<uint32_t, 1, cudaReadModeElementType> mixTab0Tex;
+texture<uint32_t, 1, cudaReadModeElementType> mixTab1Tex;
+texture<uint32_t, 1, cudaReadModeElementType> mixTab2Tex;
+texture<uint32_t, 1, cudaReadModeElementType> mixTab3Tex;
 
 #if USE_SHARED
 #define mixtab0(x) (*((uint32_t*)mixtabs + (    (x))))
@@ -708,13 +708,13 @@ fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outp
 }
 
 #define texDef(texname, texmem, texsource, texsize) \
-	unsigned int *texmem; \
+	uint32_t *texmem; \
 	cudaMalloc(&texmem, texsize); \
 	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
 	texname.normalized = 0; \
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
-	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
+	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<uint32_t>(); \
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
 
 

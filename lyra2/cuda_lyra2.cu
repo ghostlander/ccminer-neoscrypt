@@ -8,11 +8,7 @@
 
 
 
-#if __CUDA_ARCH__ < 500 
-#define vectype ulonglong4
-#define u64type uint64_t
-#define memshift 4
-#elif __CUDA_ARCH__ == 500
+#if __CUDA_ARCH__ == 500
 #define u64type uint2
 #define vectype uint28
 #define memshift 3
@@ -20,7 +16,7 @@
 #define u64type uint2
 #define vectype uint28
 #define memshift 4   
-#endif 
+#endif
 __device__ vectype  *DMatrix;
 
  
@@ -33,17 +29,6 @@ static __device__ __forceinline__ void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, 
 	c += d; b ^= c; b = ROR2(b, 63);
 
 }
-
-static __device__ __forceinline__ void Gfunc_v35(unsigned long long & a, unsigned long long &b, unsigned long long &c, unsigned long long &d)
-{
-
-	a += b; d ^= a; d = ROTR64(d, 32);
-	c += d; b ^= c; b = ROTR64(b, 24);
-	a += b; d ^= a; d = ROTR64(d, 16);
-	c += d; b ^= c; b = ROTR64(b, 63);
-
-}
-
 
 static __device__ __forceinline__ void round_lyra_v35(vectype* s)
 {
@@ -586,9 +571,7 @@ __host__
 void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
 {
 uint32_t tpb;
-	if (device_sm[device_map[thr_id]]<500) 
-      tpb = 48;
-	else if (device_sm[device_map[thr_id]]==500)
+	if (device_sm[device_map[thr_id]]==500)
       tpb = 16; 
     else 
       tpb = TPB;

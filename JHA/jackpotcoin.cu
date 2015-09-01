@@ -39,7 +39,7 @@ static uint32_t *d_branch2Nonces[MAX_GPUS];
 static uint32_t *d_branch3Nonces[MAX_GPUS];
 
 // Original jackpothash Funktion aus einem miner Quelltext
-extern "C" unsigned int jackpothash(void *state, const void *input)
+extern "C" uint32_t jackpothash(void *state, const void *input)
 {
     sph_blake512_context     ctx_blake;
     sph_groestl512_context   ctx_groestl;
@@ -53,7 +53,7 @@ extern "C" unsigned int jackpothash(void *state, const void *input)
     sph_keccak512 (&ctx_keccak, input, 80);
     sph_keccak512_close(&ctx_keccak, hash);
 
-    unsigned int round;
+    uint32_t round;
     for (round = 0; round < 3; round++) {
         if (hash[0] & 0x01) {
            sph_groestl512_init(&ctx_groestl);
@@ -199,7 +199,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id]);
 		if  (foundNonce != 0xffffffff)
 		{
-			unsigned int rounds;
+			uint32_t rounds;
 			uint32_t vhash64[8];
 			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);

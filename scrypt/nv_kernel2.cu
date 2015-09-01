@@ -26,13 +26,13 @@
 #endif
 
 // grab lane ID
-static __device__ __inline__ unsigned int __laneId() { unsigned int laneId; asm( "mov.u32 %0, %%laneid;" : "=r"( laneId ) ); return laneId; }
+static __device__ __inline__ uint32_t __laneId() { uint32_t laneId; asm( "mov.u32 %0, %%laneid;" : "=r"( laneId ) ); return laneId; }
 
 // forward references
 template <int ALGO> __global__ void nv2_scrypt_core_kernelA(uint32_t *g_idata, int begin, int end);
 template <int ALGO> __global__ void nv2_scrypt_core_kernelB(uint32_t *g_odata, int begin, int end);
-template <int ALGO> __global__ void nv2_scrypt_core_kernelA_LG(uint32_t *g_idata, int begin, int end, unsigned int LOOKUP_GAP);
-template <int ALGO> __global__ void nv2_scrypt_core_kernelB_LG(uint32_t *g_odata, int begin, int end, unsigned int LOOKUP_GAP);
+template <int ALGO> __global__ void nv2_scrypt_core_kernelA_LG(uint32_t *g_idata, int begin, int end, uint32_t LOOKUP_GAP);
+template <int ALGO> __global__ void nv2_scrypt_core_kernelB_LG(uint32_t *g_odata, int begin, int end, uint32_t LOOKUP_GAP);
 
 // scratchbuf constants (pointers to scratch buffer for each work unit)
 __constant__ uint32_t* c_V[TOTAL_WARP_LIMIT];
@@ -52,7 +52,7 @@ void NV2Kernel::set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V)
 	checkCudaErrors(cudaMemcpyToSymbol(c_V, h_V, MAXWARPS*sizeof(uint32_t*), 0, cudaMemcpyHostToDevice));
 }
 
-bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache)
+bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, uint32_t N, uint32_t LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache)
 {
 	bool success = true;
 
@@ -72,7 +72,7 @@ bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr
 
 	// First phase: Sequential writes to scratchpad.
 	const int batch = device_batchsize[thr_id];
-	unsigned int pos = 0;
+	uint32_t pos = 0;
 
 	do
 	{
@@ -113,21 +113,21 @@ bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr
 //	return left;
 //}
 
-__device__ __forceinline__ uint4 __shfl(const uint4 val, unsigned int lane, unsigned int width)
+__device__ __forceinline__ uint4 __shfl(const uint4 val, uint32_t lane, uint32_t width)
 {
 	return make_uint4(
-		(unsigned int)__shfl((int)val.x, lane, width),
-		(unsigned int)__shfl((int)val.y, lane, width),
-		(unsigned int)__shfl((int)val.z, lane, width),
-		(unsigned int)__shfl((int)val.w, lane, width));
+		(uint32_t)__shfl((int)val.x, lane, width),
+		(uint32_t)__shfl((int)val.y, lane, width),
+		(uint32_t)__shfl((int)val.z, lane, width),
+		(uint32_t)__shfl((int)val.w, lane, width));
 }
 
 __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[4], uint4 *D, int spacing)
 {
-	unsigned int laneId = __laneId();
+	uint32_t laneId = __laneId();
 
-	unsigned int lane8 = laneId&7;
-	unsigned int tile  = laneId/8;
+	uint32_t lane8 = laneId&7;
+	uint32_t tile  = laneId/8;
 
 	uint4 T1[8], T2[8];
 
@@ -199,10 +199,10 @@ __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[
 
 __device__ __forceinline__ void __transposed_read_BC(const uint4 *S, uint4 (&B)[4], uint4 (&C)[4], int spacing, int row)
 {
-	unsigned int laneId = __laneId();
+	uint32_t laneId = __laneId();
 
-	unsigned int lane8 = laneId & 7;
-	unsigned int tile  = laneId/8;
+	uint32_t lane8 = laneId & 7;
+	uint32_t tile  = laneId/8;
 
 	// Perform the same transposition as in __transposed_write_BC, but in reverse order.
 	// See the illustrations in comments for __transposed_write_BC.
@@ -558,7 +558,7 @@ template <int ALGO> __global__ void nv2_scrypt_core_kernelA(uint32_t *g_idata, i
 	}
 }
 
-template <int ALGO> __global__ void nv2_scrypt_core_kernelA_LG(uint32_t *g_idata, int begin, int end, unsigned int LOOKUP_GAP)
+template <int ALGO> __global__ void nv2_scrypt_core_kernelA_LG(uint32_t *g_idata, int begin, int end, uint32_t LOOKUP_GAP)
 {
 	int offset = blockIdx.x * blockDim.x + threadIdx.x / warpSize * warpSize;
 	g_idata += 32 * offset;
@@ -606,7 +606,7 @@ template <int ALGO> __global__ void nv2_scrypt_core_kernelB(uint32_t *g_odata, i
 	__transposed_write_BC(B, C, (uint4*)(g_odata), 1);
 }
 
-template <int ALGO> __global__ void nv2_scrypt_core_kernelB_LG(uint32_t *g_odata, int begin, int end, unsigned int LOOKUP_GAP)
+template <int ALGO> __global__ void nv2_scrypt_core_kernelB_LG(uint32_t *g_odata, int begin, int end, uint32_t LOOKUP_GAP)
 {
 	int offset = blockIdx.x * blockDim.x + threadIdx.x / warpSize * warpSize;
 	g_odata += 32 * offset;

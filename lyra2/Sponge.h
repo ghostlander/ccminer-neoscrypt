@@ -77,7 +77,7 @@ static __inline uint64_t rotr64( const uint64_t w, const unsigned c ){
  void initState(uint64_t state[/*16*/]);
 
 //---- Squeezes
- void squeeze(uint64_t *state, unsigned char *out, unsigned int len);
+ void squeeze(uint64_t *state, unsigned char *out, uint32_t len);
  void reducedSqueezeRow0(uint64_t* state, uint64_t* row, uint64_t nCols);
 
 //---- Absorbs
@@ -90,7 +90,7 @@ static __inline uint64_t rotr64( const uint64_t w, const unsigned c ){
  void reducedDuplexRow(uint64_t *state, uint64_t *rowIn, uint64_t *rowInOut, uint64_t *rowOut, uint64_t nCols);
 
 //---- Misc
-void printArray(unsigned char *array, unsigned int size, char *name);
+void printArray(unsigned char *array, uint32_t size, char *name);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 

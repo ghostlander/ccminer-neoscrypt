@@ -87,7 +87,7 @@ __inline static void reducedBlake2bLyra(uint64_t *v) {
  * @param out        Array that will receive the data squeezed
  * @param len        The number of bytes to be squeezed into the "out" array
  */
- void squeeze(uint64_t *state, byte *out, unsigned int len) {
+ void squeeze(uint64_t *state, byte *out, uint32_t len) {
     int fullBlocks = len / BLOCK_LEN_BYTES;
     byte *ptr = out;
     int i;
@@ -733,7 +733,7 @@ inline void reducedDuplexRowd(uint64_t *state, uint64_t *rowIn, uint64_t *rowInO
 /**
  Prints an array of unsigned chars
  */
-void printArray(unsigned char *array, unsigned int size, char *name) {
+void printArray(unsigned char *array, uint32_t size, char *name) {
     int i;
     printf("%s: ", name);
     for (i = 0; i < size; i++) {

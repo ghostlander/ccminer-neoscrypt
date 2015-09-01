@@ -124,31 +124,31 @@ nvml_handle * nvml_create()
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetAPIRestriction");
 	nvmlh->nvmlDeviceSetAPIRestriction = (nvmlReturn_t (*)(nvmlDevice_t, nvmlRestrictedAPI_t, nvmlEnableState_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceSetAPIRestriction");
-	nvmlh->nvmlDeviceGetDefaultApplicationsClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, unsigned int *clock))
+	nvmlh->nvmlDeviceGetDefaultApplicationsClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, uint32_t *clock))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetDefaultApplicationsClock");
-	nvmlh->nvmlDeviceGetApplicationsClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, unsigned int *clocks))
+	nvmlh->nvmlDeviceGetApplicationsClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, uint32_t *clocks))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetApplicationsClock");
-	nvmlh->nvmlDeviceSetApplicationsClocks = (nvmlReturn_t (*)(nvmlDevice_t, unsigned int mem, unsigned int gpu))
+	nvmlh->nvmlDeviceSetApplicationsClocks = (nvmlReturn_t (*)(nvmlDevice_t, uint32_t mem, uint32_t gpu))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceSetApplicationsClocks");
-	nvmlh->nvmlDeviceGetClockInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, unsigned int *clock))
+	nvmlh->nvmlDeviceGetClockInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, uint32_t *clock))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetClockInfo");
 	nvmlh->nvmlDeviceGetPciInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlPciInfo_t *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPciInfo");
 	nvmlh->nvmlDeviceGetName = (nvmlReturn_t (*)(nvmlDevice_t, char *, int))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetName");
-	nvmlh->nvmlDeviceGetTemperature = (nvmlReturn_t (*)(nvmlDevice_t, int, unsigned int *))
+	nvmlh->nvmlDeviceGetTemperature = (nvmlReturn_t (*)(nvmlDevice_t, int, uint32_t *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetTemperature");
-	nvmlh->nvmlDeviceGetFanSpeed = (nvmlReturn_t (*)(nvmlDevice_t, unsigned int *))
+	nvmlh->nvmlDeviceGetFanSpeed = (nvmlReturn_t (*)(nvmlDevice_t, uint32_t *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetFanSpeed");
 	nvmlh->nvmlDeviceGetPerformanceState = (nvmlReturn_t (*)(nvmlDevice_t, int *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPowerUsage");
-	nvmlh->nvmlDeviceGetSerial = (nvmlReturn_t (*)(nvmlDevice_t, char *, unsigned int))
+	nvmlh->nvmlDeviceGetSerial = (nvmlReturn_t (*)(nvmlDevice_t, char *, uint32_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetSerial");
-	nvmlh->nvmlDeviceGetUUID = (nvmlReturn_t (*)(nvmlDevice_t, char *, unsigned int))
+	nvmlh->nvmlDeviceGetUUID = (nvmlReturn_t (*)(nvmlDevice_t, char *, uint32_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetUUID");
-	nvmlh->nvmlDeviceGetVbiosVersion = (nvmlReturn_t (*)(nvmlDevice_t, char *, unsigned int))
+	nvmlh->nvmlDeviceGetVbiosVersion = (nvmlReturn_t (*)(nvmlDevice_t, char *, uint32_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetVbiosVersion");
-	nvmlh->nvmlSystemGetDriverVersion = (nvmlReturn_t (*)(char *, unsigned int))
+	nvmlh->nvmlSystemGetDriverVersion = (nvmlReturn_t (*)(char *, uint32_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlSystemGetDriverVersion");
 	nvmlh->nvmlErrorString = (char* (*)(nvmlReturn_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlErrorString");
@@ -188,10 +188,10 @@ nvml_handle * nvml_create()
 	}
 
 	nvmlh->devs = (nvmlDevice_t *) calloc(nvmlh->nvml_gpucount, sizeof(nvmlDevice_t));
-	nvmlh->nvml_pci_domain_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
-	nvmlh->nvml_pci_bus_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
-	nvmlh->nvml_pci_device_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
-	nvmlh->nvml_pci_subsys_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
+	nvmlh->nvml_pci_domain_id = (uint32_t*) calloc(nvmlh->nvml_gpucount, sizeof(uint32_t));
+	nvmlh->nvml_pci_bus_id = (uint32_t*) calloc(nvmlh->nvml_gpucount, sizeof(uint32_t));
+	nvmlh->nvml_pci_device_id = (uint32_t*) calloc(nvmlh->nvml_gpucount, sizeof(uint32_t));
+	nvmlh->nvml_pci_subsys_id = (uint32_t*) calloc(nvmlh->nvml_gpucount, sizeof(uint32_t));
 	nvmlh->nvml_cuda_device_id = (int*) calloc(nvmlh->nvml_gpucount, sizeof(int));
 	nvmlh->cuda_nvml_device_id = (int*) calloc(nvmlh->cuda_gpucount, sizeof(int));
 	nvmlh->app_clocks = (nvmlEnableState_t*) calloc(nvmlh->nvml_gpucount, sizeof(nvmlEnableState_t));
@@ -292,7 +292,7 @@ int nvml_get_gpu_name(nvml_handle *nvmlh, int cudaindex, char *namebuf, int bufs
 }
 
 
-int nvml_get_tempC(nvml_handle *nvmlh, int cudaindex, unsigned int *tempC)
+int nvml_get_tempC(nvml_handle *nvmlh, int cudaindex, uint32_t *tempC)
 {
 	nvmlReturn_t rc;
 	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
@@ -308,7 +308,7 @@ int nvml_get_tempC(nvml_handle *nvmlh, int cudaindex, unsigned int *tempC)
 }
 
 
-int nvml_get_fanpcnt(nvml_handle *nvmlh, int cudaindex, unsigned int *fanpcnt)
+int nvml_get_fanpcnt(nvml_handle *nvmlh, int cudaindex, uint32_t *fanpcnt)
 {
 	nvmlReturn_t rc;
 	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
@@ -324,7 +324,7 @@ int nvml_get_fanpcnt(nvml_handle *nvmlh, int cudaindex, unsigned int *fanpcnt)
 }
 
 /* Not Supported on 750Ti 340.23 */
-int nvml_get_power_usage(nvml_handle *nvmlh, int cudaindex, unsigned int *milliwatts)
+int nvml_get_power_usage(nvml_handle *nvmlh, int cudaindex, uint32_t *milliwatts)
 {
 	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
 	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount)
@@ -456,7 +456,7 @@ static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
 static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvU32 nvapi_dev_cnt = 0;
 
-int nvapi_temperature(unsigned int devNum, unsigned int *temperature)
+int nvapi_temperature(uint32_t devNum, uint32_t *temperature)
 {
 	NvAPI_Status ret;
 
@@ -474,12 +474,12 @@ int nvapi_temperature(unsigned int devNum, unsigned int *temperature)
 		return -1;
 	}
 
-	(*temperature) = (unsigned int) thermal.sensor[0].currentTemp;
+	(*temperature) = (uint32_t) thermal.sensor[0].currentTemp;
 
 	return 0;
 }
 
-int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
+int nvapi_fanspeed(uint32_t devNum, uint32_t *speed)
 {
 	NvAPI_Status ret;
 
@@ -496,12 +496,12 @@ int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
 		return -1;
 	}
 
-	(*speed) = (unsigned int) fanspeed;
+	(*speed) = (uint32_t) fanspeed;
 
 	return 0;
 }
 
-int nvapi_getpstate(unsigned int devNum, unsigned int *power)
+int nvapi_getpstate(uint32_t devNum, uint32_t *power)
 {
 	NvAPI_Status ret;
 
@@ -519,14 +519,14 @@ int nvapi_getpstate(unsigned int devNum, unsigned int *power)
 	}
 	else {
 		// get pstate for the moment... often 0 = P0
-		(*power) = (unsigned int)CurrentPstate;
+		(*power) = (uint32_t)CurrentPstate;
 	}
 
 	return 0;
 }
 
 #define UTIL_DOMAIN_GPU 0
-int nvapi_getusage(unsigned int devNum, unsigned int *pct)
+int nvapi_getusage(uint32_t devNum, uint32_t *pct)
 {
 	NvAPI_Status ret;
 
@@ -551,7 +551,7 @@ int nvapi_getusage(unsigned int devNum, unsigned int *pct)
 	return 0;
 }
 
-int nvapi_getinfo(unsigned int devNum, uint16_t *vid, uint16_t *pid)
+int nvapi_getinfo(uint32_t devNum, uint16_t *vid, uint16_t *pid)
 {
 	NvAPI_Status ret;
 	NvU32 pDeviceId, pSubSystemId, pRevisionId, pExtDeviceId;
@@ -574,7 +574,7 @@ int nvapi_getinfo(unsigned int devNum, uint16_t *vid, uint16_t *pid)
 	return 0;
 }
 
-int nvapi_getserial(unsigned int devNum, char *serial, unsigned int maxlen)
+int nvapi_getserial(uint32_t devNum, char *serial, uint32_t maxlen)
 {
 //	NvAPI_Status ret;
 	if (devNum >= nvapi_dev_cnt)
@@ -598,7 +598,7 @@ int nvapi_getserial(unsigned int devNum, char *serial, unsigned int maxlen)
 	return 0;
 }
 
-int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
+int nvapi_getbios(uint32_t devNum, char *desc, uint32_t maxlen)
 {
 	NvAPI_Status ret;
 	if (devNum >= nvapi_dev_cnt)
@@ -689,17 +689,17 @@ int nvapi_init()
 /* api functions -------------------------------------- */
 
 // assume 2500 rpm as default, auto-updated if more
-static unsigned int fan_speed_max = 2500;
+static uint32_t fan_speed_max = 2500;
 
-unsigned int gpu_fanpercent(struct cgpu_info *gpu)
+uint32_t gpu_fanpercent(struct cgpu_info *gpu)
 {
-	unsigned int pct = 0;
+	uint32_t pct = 0;
 	if (hnvml) {
 		nvml_get_fanpcnt(hnvml, gpu->gpu_id, &pct);
 	}
 #ifdef WIN32
 	else {
-		unsigned int rpm = 0;
+		uint32_t rpm = 0;
 		nvapi_fanspeed(nvapi_dev_map[gpu->gpu_id], &rpm);
 		pct = (rpm * 100) / fan_speed_max;
 		if (pct > 100) {
@@ -711,9 +711,9 @@ unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 	return pct;
 }
 
-unsigned int gpu_fanrpm(struct cgpu_info *gpu)
+uint32_t gpu_fanrpm(struct cgpu_info *gpu)
 {
-	unsigned int rpm = 0;
+	uint32_t rpm = 0;
 #ifdef WIN32
 	nvapi_fanspeed(nvapi_dev_map[gpu->gpu_id], &rpm);
 #endif
@@ -724,7 +724,7 @@ unsigned int gpu_fanrpm(struct cgpu_info *gpu)
 float gpu_temp(struct cgpu_info *gpu)
 {
 	float tc = 0.0;
-	unsigned int tmp = 0;
+	uint32_t tmp = 0;
 	if (hnvml) {
 		nvml_get_tempC(hnvml, gpu->gpu_id, &tmp);
 		tc = (float)tmp;
@@ -747,7 +747,7 @@ int gpu_pstate(struct cgpu_info *gpu)
 	}
 #ifdef WIN32
 	if (support == -1) {
-		unsigned int pst = 0;
+		uint32_t pst = 0;
 		nvapi_getpstate(nvapi_dev_map[gpu->gpu_id], &pst);
 		pstate = (int) pst;
 	}
@@ -771,16 +771,16 @@ int gpu_busid(struct cgpu_info *gpu)
 }
 
 /* not used in api (too much variable) */
-unsigned int gpu_power(struct cgpu_info *gpu)
+uint32_t gpu_power(struct cgpu_info *gpu)
 {
-	unsigned int mw = 0;
+	uint32_t mw = 0;
 	int support = -1;
 	if (hnvml) {
 		support = nvml_get_power_usage(hnvml, gpu->gpu_id, &mw);
 	}
 #ifdef WIN32
 	if (support == -1) {
-		unsigned int pct = 0;
+		uint32_t pct = 0;
 		nvapi_getusage(nvapi_dev_map[gpu->gpu_id], &pct);
 		mw = pct; // to fix
 	}

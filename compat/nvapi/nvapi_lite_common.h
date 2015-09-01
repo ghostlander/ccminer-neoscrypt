@@ -39,7 +39,7 @@ typedef signed int         NvS32; /* -2147483648 to 2147483647 */
 // mac os 32-bit still needs this
 #if ( (defined(macintosh) && defined(__LP64__) && (__NVAPI_RESERVED0__)) || \
       (!defined(macintosh) && defined(__NVAPI_RESERVED0__)) )
-typedef unsigned int       NvU32; /* 0 to 4294967295                         */
+typedef uint32_t       NvU32; /* 0 to 4294967295                         */
 #else
 typedef unsigned long      NvU32; /* 0 to 4294967295                         */
 #endif

@@ -34,9 +34,9 @@ static void combine_hashes(uint32_t *out, const uint32_t *hash1, const uint32_t 
 {
     const uint32_t *hash[4] = { hash1, hash2, hash3, hash4 };
     int bits;
-    unsigned int i;
+    uint32_t i;
     uint32_t mask;
-    unsigned int k;
+    uint32_t k;
 
     /* Transpose first 64 bits of each hash into out */
     memset(out, 0, 32);
