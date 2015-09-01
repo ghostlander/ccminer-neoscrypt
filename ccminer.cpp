@@ -52,7 +52,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		25
+#define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -180,7 +180,7 @@ bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_timeout = 270;
-static int opt_scantime = 25;
+static int opt_scantime = 35;
 static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
@@ -1203,7 +1203,6 @@ static void *miner_thread(void *userdata)
 	bool extrajob = false;
 	char s[16];
 	int rc = 0;
-	scan_abort_flag = false;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
