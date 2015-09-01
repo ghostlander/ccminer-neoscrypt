@@ -1202,6 +1202,7 @@ static void *miner_thread(void *userdata)
 	bool extrajob = false;
 	char s[16];
 	int rc = 0;
+	scan_abort_flag = false;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -1813,7 +1814,8 @@ static void *longpoll_thread(void *userdata)
 				json_decref(val);
 			goto out;
 		}
-		if (likely(val)) {
+		if (likely(val)) 
+		{
 			if (!opt_quiet) applog(LOG_INFO, "LONGPOLL detected new block");
 			soval = json_object_get(json_object_get(val, "result"), "submitold");
 			submit_old = soval ? json_is_true(soval) : false;
