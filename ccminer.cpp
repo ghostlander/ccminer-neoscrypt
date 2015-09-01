@@ -347,7 +347,7 @@ Options:\n\
   -X,  --XIntensity     intensity GPU intensity(default: auto) \n\
 ";
 
-char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C:";
+char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C:D";
 
 struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },

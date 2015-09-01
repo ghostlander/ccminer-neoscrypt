@@ -201,7 +201,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[thr_id][19], foundnonces[thr_id][0]);
 			x11hash(vhash64, endiandata[thr_id]);
 
-			applog(LOG_DEBUG, "vh7(%08x) Htarg(%08x)", vhash64[7], Htarg);
+			if (opt_debug && !opt_quiet) applog(LOG_DEBUG, "vh7(%08x) Htarg(%08x)", vhash64[7], Htarg);
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
