@@ -80,17 +80,17 @@ extern "C" int scanhash_bitcredit(int thr_id, uint32_t *pdata,
 				//	applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, foundNonce);
 
 				pdata[35] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
+				*hashes_done = foundNonce - first_nonce;
 				return 1;
 
 		}
 		if ((uint64_t)pdata[35] + throughput >(uint64_t)0xffffffff) {
                        pdata[35]=0xffffffff; 
-                      *hashes_done = pdata[35] - first_nonce + 1; return 0;
+                      *hashes_done = pdata[35] - first_nonce; return 0;
         } else { 
     
 		pdata[35] += throughput;}
 	} while (pdata[19] < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
-	*hashes_done = pdata[35] - first_nonce + 1;
+	*hashes_done = pdata[35] - first_nonce;
 	return 0;
 }

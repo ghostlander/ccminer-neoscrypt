@@ -116,7 +116,7 @@ extern "C" int scanhash_axiom(int thr_id, uint32_t *pdata, uint32_t *ptarget, ui
 				if (opt_benchmark)
 					applog(LOG_INFO, "GPU #%d Found nounce %08x", thr_id, n);
 
-				*hashes_done = n - first_nonce + 1;
+				*hashes_done = n - first_nonce;
 				pdata[19] = n;
 				return true;
 			}
@@ -127,6 +127,6 @@ extern "C" int scanhash_axiom(int thr_id, uint32_t *pdata, uint32_t *ptarget, ui
 	//	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }

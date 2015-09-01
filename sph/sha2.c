@@ -508,14 +508,14 @@ static inline int scanhash_sha256d_4way(int thr_id, uint32_t *pdata,
 				pdata[19] = data[4 * 3 + i];
 				sha256d_80_swap(hash, pdata);
 				if (fulltest(hash, ptarget)) {
-					*hashes_done = n - first_nonce + 1;
+					*hashes_done = n - first_nonce;
 					return 1;
 				}
 			}
 		}
 	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
 	
-	*hashes_done = n - first_nonce + 1;
+	*hashes_done = n - first_nonce;
 	pdata[19] = n;
 	return 0;
 }
@@ -567,14 +567,14 @@ static inline int scanhash_sha256d_8way(int thr_id, uint32_t *pdata,
 				pdata[19] = data[8 * 3 + i];
 				sha256d_80_swap(hash, pdata);
 				if (fulltest(hash, ptarget)) {
-					*hashes_done = n - first_nonce + 1;
+					*hashes_done = n - first_nonce;
 					return 1;
 				}
 			}
 		}
 	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
 	
-	*hashes_done = n - first_nonce + 1;
+	*hashes_done = n - first_nonce;
 	pdata[19] = n;
 	return 0;
 }
@@ -618,13 +618,13 @@ int scanhash_sha256d(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 			pdata[19] = data[3];
 			sha256d_80_swap(hash, pdata);
 			if (fulltest(hash, ptarget)) {
-				*hashes_done = n - first_nonce + 1;
+				*hashes_done = n - first_nonce;
 				return 1;
 			}
 		}
 	} while (n < max_nonce && !scan_abort_flag && !work_restart[thr_id].restart);
 	
-	*hashes_done = n - first_nonce + 1;
+	*hashes_done = n - first_nonce;
 	pdata[19] = n;
 	return 0;
 }

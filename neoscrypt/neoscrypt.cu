@@ -70,7 +70,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 			if (stratum) be32enc(&endiandata[19], foundNonce);
 			else endiandata[19] = foundNonce;
 			neoscrypt((unsigned char*) endiandata, (unsigned char*)vhash64, 0x80000620);
-			*hashes_done = foundNonce - first_nonce + 1;
+			*hashes_done = foundNonce - first_nonce;
 
 			if (hw_errors > 0) applog(LOG_INFO, "Hardware errors: %u", hw_errors);
 
@@ -85,7 +85,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 		pdata[19] += throughput;
 } while (!scan_abort_flag && !work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
 
