@@ -237,6 +237,7 @@ bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
 struct stratum_ctx stratum = { 0 };
 
+pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
 uint32_t accepted_count = 0L;
 uint32_t rejected_count = 0L;
@@ -2616,6 +2617,8 @@ int main(int argc, char *argv[])
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
 	jane_params = strdup("");
+
+	pthread_mutex_init(&applog_lock, NULL);
 
 	// number of cpus for thread affinity
 #if defined(WIN32)
