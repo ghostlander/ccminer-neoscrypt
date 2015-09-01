@@ -36,36 +36,36 @@ void KEY_EXPAND_ELT(
 __device__ __forceinline__
 static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const __restrict__  state, uint32_t *const __restrict__  msg)
 {
-	uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
-	uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
-	uint32_t x0, x1, x2, x3;
+//	uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
+//	uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
+//	uint32_t x0, x1, x2, x3;
 	uint32_t rk[32];
-	uint32_t i;
+//	uint32_t i;
 	const uint32_t counter = 640;
 
-	p0 = state[0x0];
-	p1 = state[0x1];
-	p2 = state[0x2];
-	p3 = state[0x3];
-	p4 = state[0x4];
-	p5 = state[0x5];
-	p6 = state[0x6];
-	p7 = state[0x7];
-	p8 = state[0x8];
-	p9 = state[0x9];
-	pA = state[0xA];
-	pB = state[0xB];
-	pC = state[0xC];
-	pD = state[0xD];
-	pE = state[0xE];
-	pF = state[0xF];
+	uint32_t p0 = state[0x0];
+	uint32_t p1 = state[0x1];
+	uint32_t p2 = state[0x2];
+	uint32_t p3 = state[0x3];
+	uint32_t p4 = state[0x4];
+	uint32_t p5 = state[0x5];
+	uint32_t p6 = state[0x6];
+	uint32_t p7 = state[0x7];
+	uint32_t p8 = state[0x8];
+	uint32_t p9 = state[0x9];
+	uint32_t pA = state[0xA];
+	uint32_t pB = state[0xB];
+	uint32_t pC = state[0xC];
+	uint32_t pD = state[0xD];
+	uint32_t pE = state[0xE];
+	uint32_t pF = state[0xF];
 
-	x0 = p4;
-	x1 = p5;
-	x2 = p6;
-	x3 = p7;
-#pragma unroll
-	for (i = 0; i<16; i += 4)
+	uint32_t x0 = p4;
+	uint32_t x1 = p5;
+	uint32_t x2 = p6;
+	uint32_t x3 = p7;
+	#pragma nounroll
+	for (int i = 0; i<16; i += 4)
 	{
 		rk[i] = msg[i];
 		x0 ^= msg[i];
@@ -82,24 +82,24 @@ static void c512(const uint32_t*const __restrict__ sharedMemory, uint32_t *const
 	p1 ^= x1;
 	p2 ^= x2;
 	p3 ^= x3;
-		x0 = pC;
-		x1 = pD;
-		x2 = pE;
-		x3 = pF;
+	x0 = pC;
+	x1 = pD;
+	x2 = pE;
+	x3 = pF;
 
-		#pragma unroll 
-		for (i = 16; i<32; i += 4)
-		{
-			rk[i] = msg[i];
-			x0 ^= msg[i];
-			rk[i + 1] = msg[i + 1];
-			x1 ^= msg[i + 1];
-			rk[i + 2] = msg[i + 2];
-			x2 ^= msg[i + 2];
-			rk[i + 3] = msg[i + 3];
-			x3 ^= msg[i + 3];
-			AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-		}
+	#pragma nounroll
+	for (int i = 16; i<32; i += 4)
+	{
+		rk[i] = msg[i];
+		x0 ^= msg[i];
+		rk[i + 1] = msg[i + 1];
+		x1 ^= msg[i + 1];
+		rk[i + 2] = msg[i + 2];
+		x2 ^= msg[i + 2];
+		rk[i + 3] = msg[i + 3];
+		x3 ^= msg[i + 3];
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+	}
 	p8 ^= x0;
 	p9 ^= x1;
 	pA ^= x2;
@@ -1280,9 +1280,6 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 
 		// kopiere init-state
 
-		uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
-		uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
-		uint32_t x0, x1, x2, x3;
 		uint32_t rk[32];
 		uint32_t msg[16];
 //		{
@@ -1303,27 +1300,27 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
 		};
 
-		p0 = state[0x0];
-		p1 = state[0x1];
-		p2 = state[0x2];
-		p3 = state[0x3];
-		p4 = state[0x4];
-		p5 = state[0x5];
-		p6 = state[0x6];
-		p7 = state[0x7];
-		p8 = state[0x8];
-		p9 = state[0x9];
-		pA = state[0xA];
-		pB = state[0xB];
-		pC = state[0xC];
-		pD = state[0xD];
-		pE = state[0xE];
-		pF = state[0xF];
+		uint32_t p0 = state[0x0];
+		uint32_t p1 = state[0x1];
+		uint32_t p2 = state[0x2];
+		uint32_t p3 = state[0x3];
+		uint32_t p4 = state[0x4];
+		uint32_t p5 = state[0x5];
+		uint32_t p6 = state[0x6];
+		uint32_t p7 = state[0x7];
+		uint32_t p8 = state[0x8];
+		uint32_t p9 = state[0x9];
+		uint32_t pA = state[0xA];
+		uint32_t pB = state[0xB];
+		uint32_t pC = state[0xC];
+		uint32_t pD = state[0xD];
+		uint32_t pE = state[0xE];
+		uint32_t pF = state[0xF];
 
-		x0 = p4;
-		x1 = p5;
-		x2 = p6;
-		x3 = p7;
+		uint32_t x0 = p4;
+		uint32_t x1 = p5;
+		uint32_t x2 = p6;
+		uint32_t x3 = p7;
 
 
 		rk[0] = msg[0];
