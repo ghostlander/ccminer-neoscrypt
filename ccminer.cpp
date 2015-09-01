@@ -1677,9 +1677,13 @@ static void *miner_thread(void *userdata)
 
 			}
 			else
-			{
-				hashrate = thr_hashrates[thr_id];
-				writelog = true;
+			{	
+
+				if ((loopcnt & 0xf) == 0x5)
+				{
+					hashrate = thr_hashrates[thr_id];
+					writelog = true;
+				}
 			}
 
 			if (writelog)
