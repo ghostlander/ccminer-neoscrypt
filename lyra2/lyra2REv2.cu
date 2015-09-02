@@ -81,7 +81,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
-	uint32_t first_nonce = pdata[19];
+	const uint32_t first_nonce = pdata[19];
 	uint32_t intensity = 256 * 256 * 8;
 
 	cudaDeviceProp props;
@@ -136,7 +136,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	blake256_cpu_setBlock_80(pdata);
 
 	do {
-		uint32_t foundNonce[MAX_GPUS][2] = { 0 };
+		uint32_t foundNonce[2] = { 0, 0 };
 
 		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
 //		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
@@ -144,26 +144,26 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput,pdata[19], d_hash[thr_id]);
-		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce[thr_id], ptarget[7]);
-		if (foundNonce[thr_id][0] != 0)
+		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ptarget[7]);
+		if (foundNonce[0] != 0)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce[thr_id][0]);
+			be32enc(&endiandata[19], foundNonce[0]);
 			lyra2v2_hash(vhash64, endiandata);
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
 				// check if there was some other ones...
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (foundNonce[thr_id][1] != 0)
+				if (foundNonce[1] != 0)
 				{
-					pdata[21] = foundNonce[thr_id][1];
+					pdata[21] = foundNonce[1];
 					res++;
-					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce[thr_id][1], vhash64[7], Htarg);
+					if (opt_benchmark)  applog(LOG_INFO, "GPU #%d Found second nounce %08x", thr_id, foundNonce[1], vhash64[7], Htarg);
 				}
-				pdata[19] = foundNonce[thr_id][0];
-				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[thr_id][0], vhash64[7], Htarg);
+				pdata[19] = foundNonce[0];
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[0], vhash64[7], Htarg);
 				return res;
 			}
 			else
