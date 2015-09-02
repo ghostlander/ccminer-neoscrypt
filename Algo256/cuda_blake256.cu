@@ -17,7 +17,7 @@ extern "C" {
 //	return MAKE_ULONGLONG(cuda_swab32(_LOWORD(x)), cuda_swab32(_HIWORD(x)));
 //}
 
-__constant__ static uint32_t  c_data[20];
+__constant__ static uint32_t  c_data[3];
 
 //__constant__ static uint8_t sigma[16][16];
 static uint8_t  c_sigma[16][16] = {
@@ -268,7 +268,7 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 
 		uint32_t m[16] =
 		{
-			c_data[16 + 0], c_data[16 + 1], c_data[16 + 2], nonce,
+			c_data[0], c_data[1], c_data[2], nonce,
 			c_Padding[0], c_Padding[1], c_Padding[2], c_Padding[3],
 			c_Padding[4], c_Padding[5], c_Padding[6], c_Padding[7],
 			c_Padding[8], c_Padding[9], c_Padding[10], c_Padding[11]
@@ -490,7 +490,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 
 		uint32_t m[16] =
 		{
-			c_data[16 + 0], c_data[16 + 1], c_data[16 + 2], nonce,
+			c_data[0], c_data[1], c_data[ 2], nonce,
 			c_Padding[0], c_Padding[1], c_Padding[2], c_Padding[3],
 			c_Padding[4], c_Padding[5], c_Padding[6], c_Padding[7],
 			c_Padding[8], c_Padding[9], c_Padding[10], c_Padding[11]
@@ -684,7 +684,7 @@ void blake256_cpu_setBlock_80(uint32_t *pdata)
 	blake256_compress1st(h, pdata, 512);
 
 	cudaMemcpyToSymbol(cpu_h, h, sizeof(h), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_data, data, sizeof(data), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_data, &data[16], 3*4, 0, cudaMemcpyHostToDevice);
 }
 
 __host__
