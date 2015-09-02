@@ -1662,14 +1662,14 @@ static void *miner_thread(void *userdata)
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
 
-		if ((!opt_quiet && (opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt)))
+		if (!opt_quiet && ((opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt)))
 		{
-			double hashrate = 0.0;
 			bool   writelog = false;
+			double hashrate = 0.0;
 
 			if (opt_n_gputhreads != 1)
 			{
-				if (loopcnt%opt_n_gputhreads==0) //Display the hash 1 time per gpu and not opt_n_gputhreads times per gpu
+				if (loopcnt%opt_n_gputhreads == 0 ) //Display the hash 1 time per gpu and not opt_n_gputhreads times per gpu
 				{
 					int index = thr_id / opt_n_gputhreads;
 					for (int i = 0; i < opt_n_gputhreads; i++)
@@ -1678,7 +1678,6 @@ static void *miner_thread(void *userdata)
 					}
 					writelog = true;
 				}
-
 			}
 			else
 			{	
