@@ -52,7 +52,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		60
+#define LP_SCANTIME		25
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -179,8 +179,8 @@ static bool opt_background = false;
 bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
-int opt_timeout = 270;
-static int opt_scantime = 35;
+int opt_timeout = 300;
+static int opt_scantime = 25;
 static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
@@ -659,8 +659,8 @@ static int share_result(int result, const char *reason)
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		if (strncmp(reason, "Duplicate share", 15) == 0 && !check_dups) {
-			applog(LOG_WARNING, "enabling duplicates check feature");
-			check_dups = true;
+//			applog(LOG_WARNING, "enabling duplicates check feature");
+//			check_dups = true;
 		}
 		return 0;
 
@@ -1282,9 +1282,11 @@ static void *miner_thread(void *userdata)
 		int wcmplen = (opt_algo == ALGO_BITC) ? 140 : 76;
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
-		if (have_stratum) {
+		if (have_stratum) 
+		{
 			uint32_t sleeptime = 0;
-			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
+			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) 
+			{
 				usleep(100*1000);
 				if (sleeptime > 4) {
 					extrajob = true;
@@ -1293,8 +1295,10 @@ static void *miner_thread(void *userdata)
 				sleeptime++;
 			}
 			if (sleeptime && opt_debug && !opt_quiet)
-				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime*100);
-			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
+			{
+				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime * 100);
+			}
+				nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
 			if (nonceptr[0] >= end_nonce || extrajob) {
@@ -1302,7 +1306,8 @@ static void *miner_thread(void *userdata)
 				extrajob = false;
 				stratum_gen_work(&stratum, &g_work);
 			}
-		} else {
+		} else 
+		{
 			pthread_mutex_lock(&g_work_lock);
 			if ((time(NULL) - g_work_time) >= scan_time || nonceptr[0] >= (end_nonce - 0x100)) {
 				if (opt_debug && g_work_time && !opt_quiet)
@@ -1373,6 +1378,8 @@ static void *miner_thread(void *userdata)
 
 		/* on start, max64 should not be 0,
 		 *    before hashrate is computed */
+		
+		/*
 		if (max64 < minmax) {
 			switch (opt_algo) {
 			case ALGO_KECCAK:
@@ -1386,6 +1393,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_NEO:
 			case ALGO_QUBIT:
 			case ALGO_QUARK:
+			case ALGO_LYRA2v2:
 				minmax = 0x40000000U;
 				break;
 			case ALGO_DOOM:
@@ -1403,7 +1411,6 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_LYRA2:
 			case ALGO_X15:
-			case ALGO_LYRA2v2:
 				minmax = 0x300000;
 				break;
 			case ALGO_SCRYPT:
@@ -1418,7 +1425,7 @@ static void *miner_thread(void *userdata)
 
 		// we can't scan more than uint capacity
 		max64 = min(UINT32_MAX, max64);
-
+		*/
 		start_nonce = nonceptr[0];
 
 		/* never let small ranges at end */
@@ -1651,18 +1658,18 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		work.scanned_to = start_nonce + hashes_done - 1;
+		work.scanned_to = start_nonce + hashes_done;
 		if (opt_debug && opt_benchmark) 
 		{
 			// to debug nonce ranges
 			applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
-				start_nonce + hashes_done - 1, hashes_done);
+				start_nonce + hashes_done, hashes_done);
 		}
 
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
 
-		if (!opt_quiet && ((opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt)))
+		if (((opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt)))
 		{
 			bool   writelog = false;
 			double hashrate = 0.0;
@@ -1676,15 +1683,15 @@ static void *miner_thread(void *userdata)
 					{
 						hashrate += thr_hashrates[(index*opt_n_gputhreads) + i];
 					}
-					writelog = true;
+					if (!opt_quiet) writelog = true;
 				}
 			}
 			else
 			{	
 
-				if (opt_benchmark || ((loopcnt & 0xf) == 0x5))
+				if ((opt_benchmark || ((loopcnt & 0xf) == 0x5)))
 				{
-					writelog = true;
+					if(!opt_quiet) writelog = true;
 				}
 				hashrate = thr_hashrates[thr_id];
 			}
