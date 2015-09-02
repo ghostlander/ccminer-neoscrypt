@@ -88,15 +88,15 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
 	if (strstr(props.name, "970"))
 	{
-		intensity = 256 * 256 * 26;
+		intensity = 256 * 256 * 16;
 	}
 	else if (strstr(props.name, "980"))
 	{
-		intensity = 256 * 256 * 26;
+		intensity = 256 * 256 * 16;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 16;
+		intensity = 256 * 256 * 8;
 	}
 	else if (strstr(props.name, "750"))
 	{
