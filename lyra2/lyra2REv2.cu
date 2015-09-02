@@ -88,15 +88,15 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
 	if (strstr(props.name, "970"))
 	{
-		intensity = 256 * 256 * 22;
+		intensity = 256 * 256 * 26;
 	}
 	else if (strstr(props.name, "980"))
 	{
-		intensity = 256 * 256 * 22;
+		intensity = 256 * 256 * 26;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 8;
+		intensity = 256 * 256 * 16;
 	}
 	else if (strstr(props.name, "750"))
 	{
@@ -104,7 +104,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "960"))
 	{
-		intensity = 256 * 256 * 8;
+		intensity = 256 * 256 * 16;
 	}
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
@@ -123,13 +123,9 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
 		
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash2[thr_id], 16  * 4 * 4 * sizeof(uint64_t) * throughput));
-
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash2[thr_id], 16  * 4 * 3 * sizeof(uint64_t) * throughput));
         lyra2v2_cpu_init(thr_id, throughput,d_hash2[thr_id]);
-
-
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 8 * sizeof(uint32_t) * throughput));
-
 		init[thr_id] = true; 
 	}
 

@@ -1662,7 +1662,7 @@ static void *miner_thread(void *userdata)
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
 
-		if (!opt_quiet && (opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt))
+		if ((!opt_quiet && (opt_algo == ALGO_BITC) ? (loopcnt % 400 == 0) : (loopcnt)))
 		{
 			double hashrate = 0.0;
 			bool   writelog = false;
@@ -1683,7 +1683,7 @@ static void *miner_thread(void *userdata)
 			else
 			{	
 
-				if ((loopcnt & 0xf) == 0x5)
+				if (opt_benchmark || ((loopcnt & 0xf) == 0x5))
 				{
 					writelog = true;
 				}
