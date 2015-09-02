@@ -119,7 +119,7 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 		throughput = min(throughput, (max_nonce - first_nonce));
 
 		cudaSetDevice(device_map[thr_id]);
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
 		{
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);

@@ -138,7 +138,7 @@ int scanhash_bitcoin(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
 		bitcoin_cpu_init(thr_id);

@@ -51,7 +51,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
 		{
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);

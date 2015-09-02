@@ -40,7 +40,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		cudaDeviceReset();
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 //		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);	
 
 		if (opt_benchmark) applog(LOG_INFO, "GPU #%d init", thr_id);

@@ -190,6 +190,8 @@ int opt_affinity = -1;
 int opt_priority = 0;
 static double opt_difficulty = 1; // CH
 static bool opt_extranonce = true;
+bool opt_cpumining = false;
+
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
@@ -342,12 +344,13 @@ Options:\n\
 		--benchmark       run in offline benchmark mode\n\
       --cputest         debug hashes from cpu algorithms\n\
   -c, --config=FILE     load a JSON-format configuration file\n\
+  -C, --cpu-mining		Enable the cpu to aid the gpu. (warning: uses more power)\n\
   -V, --version         display version information and exit\n\
   -h, --help            display this help text and exit\n\
   -X,  --XIntensity     intensity GPU intensity(default: auto) \n\
 ";
 
-char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C:D";
+char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C";
 
 struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -391,6 +394,7 @@ struct option const options[] = {
 	{ "devices", 1, NULL, 'd' },
 	{ "diff", 1, NULL, 'f' },
 	{ "X", 1, NULL, 'X'},
+	{ "cpu-mining", 0, NULL, 'C'},
 	{ 0, 0, 0, 0 }
 };
 
@@ -1681,9 +1685,9 @@ static void *miner_thread(void *userdata)
 
 				if ((loopcnt & 0xf) == 0x5)
 				{
-					hashrate = thr_hashrates[thr_id];
 					writelog = true;
 				}
+				hashrate = thr_hashrates[thr_id];
 			}
 
 			if (writelog)
@@ -2006,7 +2010,7 @@ static void show_usage_and_exit(int status)
 	{
 		printf(scrypt_usage);	
 	}
-	proper_exit(status);
+	proper_exit(0);
 }
 
 static void parse_arg(int key, char *arg)
@@ -2020,6 +2024,10 @@ static void parse_arg(int key, char *arg)
 	opterr = 1;
 
 	switch(key) {
+	case 'C':
+		opt_cpumining = true;
+		applog(LOG_INFO, "Cpu mining enabled...");
+		break;
 	case 'a':
 		p = strstr(arg, ":"); // optional factor
 		if (p) *p = '\0';
@@ -2425,7 +2433,6 @@ static void parse_arg(int key, char *arg)
 			pch = strtok(NULL, ",");		
 		}
 		break;
-
 	case 'g':
 		v = atoi(arg);
 		if (v < 1 || v > 9999)	/* sanity check */

@@ -57,7 +57,7 @@ extern "C" int scanhash_bitcredit(int thr_id, uint32_t *pdata,
 	{
 		cudaSetDevice(device_map[thr_id]); 
 		cudaDeviceReset();
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id],  8 * sizeof(uint32_t) * throughput));

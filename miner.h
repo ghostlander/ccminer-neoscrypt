@@ -93,7 +93,6 @@ enum {
 #endif
 
 typedef unsigned char uchar;
-
 #undef unlikely
 #undef likely
 #if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
@@ -500,6 +499,7 @@ extern bool opt_protocol;
 extern bool opt_tracegpu;
 extern int opt_n_threads;
 extern int opt_n_gputhreads;
+extern bool opt_cpumining;
 extern int num_cpus;
 extern int active_gpus;
 extern int opt_timeout;
