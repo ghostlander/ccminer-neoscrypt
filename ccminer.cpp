@@ -1820,6 +1820,9 @@ static void *longpoll_thread(void *userdata)
 
 		val = json_rpc_call(curl, lp_url, rpc_userpass, rpc_req,
 				    false, true, &err);
+
+		network_fail_flag = (err != CURLE_OK);
+
 		if (have_stratum) {
 			if (val)
 				json_decref(val);
@@ -1850,7 +1853,6 @@ static void *longpoll_thread(void *userdata)
 				free(lp_url);
 				lp_url = NULL;
 				sleep(opt_fail_pause);
-				network_fail_flag = true;
 			}
 		}
 	}
@@ -1934,6 +1936,8 @@ static void *stratum_thread(void *userdata)
 			    !stratum_subscribe(&stratum) ||
 			    !stratum_authorize(&stratum, rpc_user, rpc_pass,opt_extranonce)) {
 				stratum_disconnect(&stratum);
+				network_fail_flag = true;
+
 				if (opt_retries >= 0 && ++failures > opt_retries) {
 					applog(LOG_ERR, "...terminating workio thread");
 					tq_push(thr_info[work_thr_id].q, NULL);
