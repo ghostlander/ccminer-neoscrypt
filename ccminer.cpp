@@ -701,7 +701,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	}
 	calc_diff(work, 0);
 
-	if (have_stratum) {
+	if (have_stratum) 
+	{
 		uint32_t sent = 0;
 		uint32_t ntime, nonce;
 		uint16_t nvote;
@@ -723,6 +724,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			stratum_need_reset = true;
 			for (int i = 0; i < opt_n_threads; i++)
 				work_restart[i].restart = 1;
+
 			return true;
 		}
 
@@ -1189,7 +1191,6 @@ static void restart_threads(void)
 {
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG,"%s", __FUNCTION__);
-
 	for (int i = 0; i < opt_n_threads; i++)
 		work_restart[i].restart = 1;
 }
@@ -1689,7 +1690,7 @@ static void *miner_thread(void *userdata)
 				if(!opt_quiet) writelog = true;
 				hashrate = thr_hashrates[thr_id];
 			}
-
+			if (hashrate == 0.0) writelog = false;
 			if (writelog)
 			{
 #ifdef USE_WRAPNVML
@@ -1835,6 +1836,7 @@ static void *longpoll_thread(void *userdata)
 				if (opt_debug)
 					applog(LOG_BLUE, "LONGPOLL pushed new work");
 				g_work_time = time(NULL);
+				applog(LOG_BLUE, "Restart threafds");
 				restart_threads();
 			}
 			pthread_mutex_unlock(&g_work_lock);

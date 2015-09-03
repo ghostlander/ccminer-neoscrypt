@@ -110,9 +110,11 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x004f;
+	if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 
 	if (!init[thr_id])
 	{ 
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		cudaSetDevice(device_map[thr_id]);
 		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
@@ -127,6 +129,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
         lyra2v2_cpu_init(thr_id, throughput,d_hash2[thr_id]);
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 8 * sizeof(uint32_t) * throughput));
 		init[thr_id] = true; 
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 	}
 
 	uint32_t endiandata[20];
@@ -138,13 +141,19 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	do {
 		uint32_t foundNonce[2] = { 0, 0 };
 
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
-//		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		cubehash256_cpu_hash_32(thr_id, throughput,pdata[19], d_hash[thr_id]);
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
+		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ptarget[7]);
+		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		if (foundNonce[0] != 0)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -164,6 +173,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 				}
 				pdata[19] = foundNonce[0];
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d Found nounce % 08x", thr_id, foundNonce[0], vhash64[7], Htarg);
+				if (scan_abort_flag || work_restart[thr_id].restart) res = 0;
 				return res;
 			}
 			else
