@@ -1378,7 +1378,6 @@ static void *miner_thread(void *userdata)
 		/* on start, max64 should not be 0,
 		 *    before hashrate is computed */
 		
-		/*
 		if (max64 < minmax) {
 			switch (opt_algo) {
 			case ALGO_KECCAK:
@@ -1424,7 +1423,6 @@ static void *miner_thread(void *userdata)
 
 		// we can't scan more than uint capacity
 		max64 = min(UINT32_MAX, max64);
-		*/
 		start_nonce = nonceptr[0];
 
 		/* never let small ranges at end */
