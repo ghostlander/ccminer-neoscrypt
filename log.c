@@ -48,11 +48,12 @@ void applog(int prio, const char *fmt, ...)
 #endif
 	else {
 		const char* color = "";
+		const char* hdr_fmt = NULL;
 		char* hdr     = NULL;
 		int   hdr_len = 0;
 		struct tm tm;
 		time_t now = time(NULL);
-		int    tid = gettid();
+		int    tid = 0;
 
 		localtime_r(&now, &tm);
 		
@@ -72,9 +73,21 @@ void applog(int prio, const char *fmt, ...)
 		} else if (prio == LOG_BLUE) {
 			prio = LOG_NOTICE;
 		}
-#define HDR_FMT "[%d-%02d-%02d %02d:%02d:%02d] tid(%#010x)%s "
 
-		hdr_len = snprintf(hdr, hdr_len, HDR_FMT,
+#define HDR_TS_FMT	"[%d-%02d-%02d %02d:%02d:%02d] "
+#define HDR_TID_FMT	"tid(%#010x) "
+#define HDR_NO_TID_FMT	"%0.0d"
+#define HDR_COL_FMT	"%s"
+
+		if (opt_debug)
+		{
+			tid	= gettid();
+			hdr_fmt	= HDR_TS_FMT HDR_TID_FMT HDR_COL_FMT;
+		}
+		else
+			hdr_fmt = HDR_TS_FMT HDR_NO_TID_FMT HDR_COL_FMT;
+
+		hdr_len = snprintf(hdr, hdr_len, hdr_fmt,
 			tm.tm_year + 1900,
 			tm.tm_mon + 1,
 			tm.tm_mday,
@@ -104,7 +117,7 @@ void applog(int prio, const char *fmt, ...)
 						if (use_colors)
 							eol = CL_N "\n";
 
-						snprintf(hdr, hdr_len, HDR_FMT,
+						snprintf(hdr, hdr_len, hdr_fmt,
 							tm.tm_year + 1900,
 							tm.tm_mon + 1,
 							tm.tm_mday,
