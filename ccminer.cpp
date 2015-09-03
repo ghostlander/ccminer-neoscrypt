@@ -1686,10 +1686,7 @@ static void *miner_thread(void *userdata)
 			else
 			{	
 
-				if ((opt_benchmark || ((loopcnt & 0xf) == 0x5)))
-				{
-					if(!opt_quiet) writelog = true;
-				}
+				if(!opt_quiet) writelog = true;
 				hashrate = thr_hashrates[thr_id];
 			}
 
