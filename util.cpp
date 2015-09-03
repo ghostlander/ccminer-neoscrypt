@@ -1210,7 +1210,6 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	/* store for api stats */
 	if (diff != global_diff) 
 	{
-		scan_abort_flag = true;
 		global_diff = diff;
 		applog(LOG_WARNING, "Stratum difficulty set to %g", diff);
 	}
