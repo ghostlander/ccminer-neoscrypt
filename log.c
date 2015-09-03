@@ -9,6 +9,10 @@
 #include <stdarg.h>
 #include <pthread.h>
 
+#ifdef WIN32
+#include "compat/winansi.h"
+#endif
+
 extern char* format_hash(char* buf, uchar *hash);
 
 static pthread_mutex_t  applog_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -112,9 +116,9 @@ void applog(int prio, const char *fmt, ...)
 						vsnprintf(msg, msg_len, fmt, ap);
 
 						pthread_mutex_lock(&applog_lock);
-						fwrite(hdr, sizeof(char), hdr_len, stderr);
-						fwrite(msg, sizeof(char), msg_len, stderr);
-						fwrite(eol, sizeof(char), strlen(eol), stderr);
+						fputs(hdr, stderr);
+						fputs(msg, stderr);
+						fputs(eol, stderr);
 						pthread_mutex_unlock(&applog_lock);
 
 						fflush(stderr);
