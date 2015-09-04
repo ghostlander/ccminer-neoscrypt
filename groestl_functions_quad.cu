@@ -486,46 +486,17 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 
 __device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t *const __restrict__ state, uint32_t *const __restrict__ message)
 {
-	state[0] = message[0];
-	state[1] = message[1];
-	state[2] = message[2];
-	state[3] = message[3];
-	state[4] = message[4];
-	state[5] = message[5];
-	state[6] = message[6];
-	state[7] = message[7];
+	((uint8*)state)[0] = ((uint8*)message)[0];
 
-    if ((threadIdx.x & 0x03) == 3) state[ 1] ^= 0x00008000;
-    groestl512_perm_P_quad(state);
-    if ((threadIdx.x & 0x03) == 3) state[ 1] ^= 0x00008000;
-    groestl512_perm_Q_quad(message);
+  if ((threadIdx.x & 0x03) == 3) state[ 1] ^= 0x00008000;
+  groestl512_perm_P_quad(state);
+  if ((threadIdx.x & 0x03) == 3) state[ 1] ^= 0x00008000;
+  groestl512_perm_Q_quad(message);
 
-	state[0] ^= message[0];
-	state[1] ^= message[1];
-	state[2] ^= message[2];
-	state[3] ^= message[3];
-	state[4] ^= message[4];
-	state[5] ^= message[5];
-	state[6] ^= message[6];
-	state[7] ^= message[7];
-
-	message[0] = state[0];
-	message[1] = state[1];
-	message[2] = state[2];
-	message[3] = state[3];
-	message[4] = state[4];
-	message[5] = state[5];
-	message[6] = state[6];
-	message[7] = state[7];
+	((uint8*)state)[0] ^= ((uint8*)message)[0];
+	((uint8*)message)[0] = ((uint8*)state)[0];
 
 	groestl512_perm_P_quad(message);
 		
-	state[0] ^= message[0];
-	state[1] ^= message[1];
-	state[2] ^= message[2];
-	state[3] ^= message[3];
-	state[4] ^= message[4];
-	state[5] ^= message[5];
-	state[6] ^= message[6];
-	state[7] ^= message[7];
+	((uint8*)state)[0] ^= ((uint8*)message)[0];
 }
