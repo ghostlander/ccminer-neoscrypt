@@ -1,4 +1,5 @@
 #include "cuda_helper.h"
+#include "cuda_vector.h"
 
 __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, const int round)
 {
