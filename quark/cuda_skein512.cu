@@ -1923,6 +1923,7 @@ static __device__ __constant__ uint32_t sha256_hashTable[] = {
 
 /* Elementary functions used by SHA256 */
 #define SWAB32(x)     cuda_swab32(x)
+#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 
 #define R(x, n)       ((x) >> (n))
 #define Ch(x, y, z)   ((x & (y ^ z)) ^ z)

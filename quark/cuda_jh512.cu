@@ -251,13 +251,15 @@ static __device__ __forceinline__ void E8(uint32_t x[8][4])
 static __device__ __forceinline__ void F8(uint32_t x[8][4], const uint32_t buffer[16])
 {
 	/*xor the 512-bit message with the fist half of the 1024-bit hash state*/
-	((uint16*)x)[0] ^= ((uint16*)buffer)[0];
+#pragma unroll 16
+	for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
 
 	/*the bijective function E8 */
 	E8(x);
 
 	/*xor the 512-bit message with the second half of the 1024-bit hash state*/
-	((uint16*)x)[1] ^= ((uint16*)buffer)[0];
+#pragma unroll 16
+	for (int i = 0; i < 16; i++)  x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)buffer)[i];
 }
 
 // Die Hash-Funktion
@@ -287,17 +289,34 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 		outpt[0] = phash[0];
 		outpt[1] = phash[1];
 
-		((uint16*)x)[0] ^= ((uint16*)msg)[0];
+#pragma unroll 16
+		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= msg[i];
 		E8(x);
-		((uint16*)x)[1] ^= ((uint16*)msg)[0];
+#pragma unroll 16
+		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= msg[i];
 
 		x[0 >> 2][0 & 3] ^= 0x80;
 		x[15 >> 2][15 & 3] ^= 0x00020000;
 		E8(x);
 		x[(16 + 0) >> 2][(16 + 0) & 3] ^= 0x80;
 		x[(16 + 15) >> 2][(16 + 15) & 3] ^= 0x00020000;
-		
-		((uint16*)Hash)[0] = ((uint16*)x)[1];
+
+		Hash[0] = x[4][0];
+		Hash[1] = x[4][1];
+		Hash[2] = x[4][2];
+		Hash[3] = x[4][3];
+		Hash[4] = x[5][0];
+		Hash[5] = x[5][1];
+		Hash[6] = x[5][2];
+		Hash[7] = x[5][3];
+		Hash[8] = x[6][0];
+		Hash[9] = x[6][1];
+		Hash[10] = x[6][2];
+		Hash[11] = x[6][3];
+		Hash[12] = x[7][0];
+		Hash[13] = x[7][1];
+		Hash[14] = x[7][2];
+		Hash[15] = x[7][3];
 	}
 }
 
