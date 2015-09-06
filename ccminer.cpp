@@ -229,8 +229,8 @@ static char *short_url = NULL;
 char *opt_cert;
 char *opt_proxy = NULL;
 long opt_proxy_type = -1;
-struct thr_info *thr_info;
-static int work_thr_id;
+struct thr_info *thr_info = NULL;
+static int work_thr_id = -1;
 struct thr_api *thr_api;
 int longpoll_thr_id = -1;
 int stratum_thr_id = -1;
@@ -473,12 +473,14 @@ void get_currentalgo(char* buf, int sz)
 #define CCEXIT_SIG -1
 void proper_exit(int reason)
 {
-	struct thr_info* thr;
+	struct thr_info* thr = NULL;
 
 	abort_flag = true;
 
-	thr = &thr_info[work_thr_id];
-	tq_freeze(thr->q);
+        if (thr_info && work_thr_id != -1)
+          thr = &thr_info[work_thr_id];
+        if (thr && thr->q)
+          tq_freeze(thr->q);
 
 	if (reason != CCEXIT_SIG) {
 #ifdef USE_WRAPNVML
