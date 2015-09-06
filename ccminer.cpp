@@ -246,9 +246,8 @@ static double thr_hashrates[MAX_GPUS];
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
 uint32_t opt_statsavg = 25;
-// strdup on char* to allow a common free() if used
-static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
-char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
+static char* opt_syslog_pfx = NULL;
+char *opt_api_allow = NULL;
 int opt_api_listen = 0; /* 0 to disable */
 
 #ifdef HAVE_GETOPT_LONG
@@ -490,7 +489,9 @@ void proper_exit(int reason)
 #endif
 
 		free(opt_syslog_pfx);
+		opt_syslog_pfx = NULL;
 		free(opt_api_allow);
+		opt_api_allow = NULL;
 		hashlog_purge_all();
 		stats_purge_all();
 		cuda_devicereset();
@@ -2619,6 +2620,10 @@ int main(int argc, char *argv[])
 	struct thr_info *thr;
 	long flags;
 	int i;
+	
+	// strdup on char* to allow a common free() if used
+	opt_syslog_pfx = strdup(PROGRAM_NAME);
+	opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by sp-hash@github ***\n");
 #ifdef WIN32
