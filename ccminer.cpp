@@ -194,8 +194,8 @@ bool opt_cpumining = false;
 
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
-int num_cpus;
-int active_gpus;
+int num_cpus = 0;
+int active_gpus = 0;
 char * device_name[MAX_GPUS];
 int device_map[MAX_GPUS] = { 0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 };
 long  device_sm[MAX_GPUS] = { 0 };
@@ -222,16 +222,16 @@ bool network_fail_flag = false;
 char *jane_params = NULL;
 
 char *rpc_user = NULL;
-static char *rpc_url;
-static char *rpc_userpass;
-static char *rpc_pass;
+static char *rpc_url = NULL;
+static char *rpc_userpass = NULL;
+static char *rpc_pass = NULL;
 static char *short_url = NULL;
-char *opt_cert;
-char *opt_proxy;
-long opt_proxy_type;
-struct thr_info *thr_info;
-static int work_thr_id;
-struct thr_api *thr_api;
+char *opt_cert = NULL;
+char *opt_proxy = NULL;
+long opt_proxy_type = -1;
+struct thr_info *thr_info = NULL;
+static int work_thr_id = -1;
+struct thr_api *thr_api = NULL;
 int longpoll_thr_id = -1;
 int stratum_thr_id = -1;
 int api_thr_id = -1;
@@ -239,16 +239,15 @@ bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
 struct stratum_ctx stratum = { 0 };
 
-static pthread_mutex_t stats_lock;
+static pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
 uint32_t accepted_count = 0L;
 uint32_t rejected_count = 0L;
-static double thr_hashrates[MAX_GPUS];
+static double thr_hashrates[MAX_GPUS] = { 0 };
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
 uint32_t opt_statsavg = 25;
-// strdup on char* to allow a common free() if used
-static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
-char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
+static char* opt_syslog_pfx = NULL;
+char *opt_api_allow = NULL;
 int opt_api_listen = 0; /* 0 to disable */
 
 #ifdef HAVE_GETOPT_LONG
@@ -409,7 +408,7 @@ static char const scrypt_usage[] = "\n\
 
 static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
-static pthread_mutex_t g_work_lock;
+static pthread_mutex_t g_work_lock = PTHREAD_MUTEX_INITIALIZER;
 
 
 #ifdef __linux /* Linux specific policy and affinity management */
@@ -474,12 +473,14 @@ void get_currentalgo(char* buf, int sz)
 #define CCEXIT_SIG -1
 void proper_exit(int reason)
 {
-	struct thr_info* thr;
+	struct thr_info* thr = NULL;
 
 	abort_flag = true;
 
-	thr = &thr_info[work_thr_id];
-	tq_freeze(thr->q);
+        if (thr_info && work_thr_id != -1)
+          thr = &thr_info[work_thr_id];
+        if (thr && thr->q)
+          tq_freeze(thr->q);
 
 	if (reason != CCEXIT_SIG) {
 #ifdef USE_WRAPNVML
@@ -490,7 +491,9 @@ void proper_exit(int reason)
 #endif
 
 		free(opt_syslog_pfx);
+		opt_syslog_pfx = NULL;
 		free(opt_api_allow);
+		opt_api_allow = NULL;
 		hashlog_purge_all();
 		stats_purge_all();
 		cuda_devicereset();
@@ -2619,6 +2622,10 @@ int main(int argc, char *argv[])
 	struct thr_info *thr;
 	long flags;
 	int i;
+	
+	// strdup on char* to allow a common free() if used
+	opt_syslog_pfx = strdup(PROGRAM_NAME);
+	opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by sp-hash@github ***\n");
 #ifdef WIN32
@@ -2691,12 +2698,10 @@ int main(int argc, char *argv[])
 	/* init stratum data.. */
 	memset(&stratum.url, 0, sizeof(stratum));
 
-	pthread_mutex_init(&stats_lock, NULL);
-	pthread_mutex_init(&g_work_lock, NULL);
 	pthread_mutex_init(&stratum.sock_lock, NULL);
 	pthread_mutex_init(&stratum.work_lock, NULL);
 
-	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
+	flags = !opt_benchmark && rpc_url && strncmp(rpc_url, "https:", 6)
 	      ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)
 	      : CURL_GLOBAL_ALL;
 	if (curl_global_init(flags)) {
