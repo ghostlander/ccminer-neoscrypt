@@ -222,9 +222,9 @@ bool network_fail_flag = false;
 char *jane_params = NULL;
 
 char *rpc_user = NULL;
-static char *rpc_url;
-static char *rpc_userpass;
-static char *rpc_pass;
+static char *rpc_url = NULL;
+static char *rpc_userpass = NULL;
+static char *rpc_pass = NULL;
 static char *short_url = NULL;
 char *opt_cert;
 char *opt_proxy = NULL;
@@ -2699,7 +2699,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&stratum.sock_lock, NULL);
 	pthread_mutex_init(&stratum.work_lock, NULL);
 
-	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
+	flags = !opt_benchmark && rpc_url && strncmp(rpc_url, "https:", 6)
 	      ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)
 	      : CURL_GLOBAL_ALL;
 	if (curl_global_init(flags)) {
