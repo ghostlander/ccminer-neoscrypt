@@ -581,7 +581,7 @@ __host__ void whirlpoolx_setBlock_80(void *pdata, const void *ptarget)
 	uint64_t PaddedMessage[16];
 	memcpy(PaddedMessage, pdata, 80);
 	memset((uint8_t*)&PaddedMessage + 80, 0, 48);
-	*(uint8_t*)(&PaddedMessage + 80) = 0x80; /* ending */
+	*(((uint8_t*)&PaddedMessage) + 80) = 0x80; /* ending */
 	cudaMemcpyToSymbol(pTarget, ptarget, 1 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
