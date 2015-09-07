@@ -1395,12 +1395,12 @@ static void *miner_thread(void *userdata)
 			case ALGO_NEO:
 			case ALGO_QUBIT:
 			case ALGO_QUARK:
-			case ALGO_LYRA2v2:
 				minmax = 0x40000000U;
 				break;
 			case ALGO_DOOM:
 			case ALGO_JACKPOT:
 			case ALGO_LUFFA_DOOM:
+			case ALGO_LYRA2v2:
 				minmax = 0x2000000;
 				break;
 			case ALGO_X11:
@@ -1411,8 +1411,8 @@ static void *miner_thread(void *userdata)
 			case ALGO_X13:
 				minmax = 0x400000;
 				break;
-			case ALGO_LYRA2:
 			case ALGO_X15:
+			case ALGO_LYRA2:
 				minmax = 0x300000;
 				break;
 			case ALGO_SCRYPT:

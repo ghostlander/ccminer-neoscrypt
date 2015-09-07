@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <memory.h>
 #include "cuda_vector.h"
-#define TPB 16
-//
+#define TPB52 16
+#define TPB50 16
 
  
 #define Nrow 4
@@ -76,6 +76,28 @@ __device__ __forceinline__ void reduceDuplex(vectype state[4], uint32_t thread)
 
 }
 
+__device__ __forceinline__ void reduceDuplex50(vectype state[4], uint32_t thread)
+{
+	uint32_t ps1 = (Nrow * Ncol * memshift * thread);
+	uint32_t ps2 = (memshift * (Ncol - 1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
+
+#pragma unroll 4
+	for (int i = 0; i < Ncol; i++)
+	{
+		uint32_t s1 = ps1 + i*memshift;
+		uint32_t s2 = ps2 - i*memshift;
+
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			state[j] ^= __ldg4(&(DMatrix + s1)[j]);
+		round_lyra_v35(state);
+
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			(DMatrix + s2)[j] = __ldg4(&(DMatrix + s1)[j]) ^ state[j];
+
+	}
+}
 __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOut, vectype state[4], uint32_t thread)
 {
 
@@ -85,38 +107,61 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 		uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
 		uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
 		uint32_t ps3 = (memshift * (Ncol-1) + memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
-
-
-//#pragma unroll 1
 	for (int i = 0; i < Ncol; i++)
 	{
 		uint32_t s1 = ps1 + i*memshift;
 		uint32_t s2 = ps2 + i*memshift;
 		uint32_t s3 = ps3 - i*memshift;
 
-		#pragma unroll
-		for (int j = 0; j < 3; j++)
-			state1[j]= __ldg4(&(DMatrix + s1)[j]);
-		#pragma unroll
-		for (int j = 0; j < 3; j++)
-			state2[j]= __ldg4(&(DMatrix + s2)[j]);
+		#if __CUDA_ARCH__ == 500
 		#pragma unroll
 		for (int j = 0; j < 3; j++)
 		{
-			vectype tmp = state1[j] + state2[j];
-			state[j] ^= tmp;
+			state[j] = state[j] ^ (__ldg4(&(DMatrix + s1)[j]) + __ldg4(&(DMatrix + s2)[j]));
 		}
 		
-
 		round_lyra_v35(state);
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			state1[j] = __ldg4(&(DMatrix + s1)[j]);
 
-		#pragma unroll
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			state2[j] = __ldg4(&(DMatrix + s2)[j]);
+
+#pragma unroll
 		for (int j = 0; j < 3; j++) 
 		{
 			state1[j] ^= state[j];
 			(DMatrix + s3)[j] = state1[j];
 		}
- 
+		#else
+
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			state1[j] = __ldg4(&(DMatrix + s1)[j]);
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			state2[j] = __ldg4(&(DMatrix + s2)[j]);
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+		{
+			vectype tmp = state1[j] + state2[j];
+			state[j] ^= tmp;
+		}
+
+
+		round_lyra_v35(state);
+
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+		{
+			state1[j] ^= state[j];
+			(DMatrix + s3)[j] = state1[j];
+		}
+
+		#endif
+
 		   ((uint2*)state2)[0] ^= ((uint2*)state)[11];
 		   #pragma unroll
 		   for (int j = 0; j < 11; j++)
@@ -126,7 +171,6 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 		#pragma unroll
 		for (int j = 0; j < 3; j++)
 		    (DMatrix + s2)[j] = state2[j];
-		
 	}
 
 
@@ -142,7 +186,6 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 		uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
 		uint32_t ps3 = (memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
 
-//#pragma unroll 1
 	for (i = 0; i < Ncol; i++)
 	{
 		uint32_t s1 = ps1 + i*memshift;
@@ -211,9 +254,9 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 
 
 #if __CUDA_ARCH__ == 500
-__global__	__launch_bounds__(32, 8)
+__global__	__launch_bounds__(TPB50, 1)
 #else
-__global__	__launch_bounds__(TPB, 1)
+__global__	__launch_bounds__(TPB52, 1)
 #endif
 void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
@@ -274,7 +317,13 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 			round_lyra_v35(state);
 		}
 
-		reduceDuplex(state, thread);
+		#if __CUDA_ARCH__ == 500
+			reduceDuplex50(state, thread);
+		#else
+			reduceDuplex(state, thread);
+		#endif
+
+
 
 		reduceDuplexRowSetupV2(1, 0, 2, state,  thread);
 		reduceDuplexRowSetupV2(2, 1, 3, state,  thread);
@@ -322,9 +371,9 @@ void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uin
 {
 	uint32_t tpb;
 	if (device_sm[device_map[thr_id]]==500)
-      tpb = 32; 
+		tpb = TPB50;
     else 
-      tpb = TPB;
+      tpb = TPB52;
 	dim3 grid((threads + tpb - 1) / tpb);
 	dim3 block(tpb);
 
