@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "cuda_vector.h"
-#define TPB52 16
+#define TPB52 9
 #define TPB50 16
 
  
@@ -320,7 +320,7 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 		#if __CUDA_ARCH__ == 500
 			reduceDuplex50(state, thread);
 		#else
-			reduceDuplex(state, thread);
+			reduceDuplex50(state, thread);
 		#endif
 
 
