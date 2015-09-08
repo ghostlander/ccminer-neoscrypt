@@ -26,7 +26,7 @@ extern void skein256_cpu_init(int thr_id, uint32_t threads);
 extern void skeinCube256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
 
 
-extern void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
+extern void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, uint32_t tpb);
 extern void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t* matrix);
 
 extern void bmw256_cpu_init(int thr_id, uint32_t threads);
@@ -83,28 +83,34 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t intensity = 256 * 256 * 8;
+	uint32_t tpb = 8;
 
 	cudaDeviceProp props;
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
 	if (strstr(props.name, "970"))
 	{
 		intensity = 256 * 256 * 18;
+		tpb = 9;
 	}
 	else if (strstr(props.name, "980"))
 	{
 		intensity = 256 * 256 * 18;
+		tpb = 7;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
 		intensity = 256 * 256 * 16;
+		tpb = 16;
 	}
 	else if (strstr(props.name, "750"))
 	{
 		intensity = 256 * 256 * 5;
+		tpb = 7;
 	}
 	else if (strstr(props.name, "960"))
 	{
 		intensity = 256 * 256 * 16;
+		tpb = 7;
 	}
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
@@ -143,7 +149,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 
 		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id],tpb);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ptarget[7]);

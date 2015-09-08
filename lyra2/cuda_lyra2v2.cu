@@ -367,13 +367,8 @@ void lyra2v2_cpu_init(int thr_id, uint32_t threads,uint64_t *hash)
 
 
 __host__ 
-void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
+void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, uint32_t tpb)
 {
-	uint32_t tpb;
-	if (device_sm[device_map[thr_id]]==500)
-		tpb = TPB50;
-    else 
-      tpb = TPB52;
 	dim3 grid((threads + tpb - 1) / tpb);
 	dim3 block(tpb);
 
