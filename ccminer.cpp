@@ -1943,6 +1943,7 @@ static void *stratum_thread(void *userdata)
 				if (opt_retries >= 0 && ++failures > opt_retries) {
 					applog(LOG_ERR, "...terminating workio thread");
 					tq_push(thr_info[work_thr_id].q, NULL);
+					abort_flag = true;
 					goto out;
 				}
 				if (!opt_benchmark)
