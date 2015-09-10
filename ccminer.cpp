@@ -1271,8 +1271,8 @@ static void *miner_thread(void *userdata)
 	{
 		if (opt_benchmark)
 		{
-			work.data[19] = work.data[19] & 0xfffffffU;	//reset Hashcounters
-			work.data[21] = work.data[21] & 0xfffffffU;
+//			work.data[19] = work.data[19] & 0xfffffffU;	//reset Hashcounters
+//			work.data[21] = work.data[21] & 0xfffffffU;
 		}
 
 		struct timeval tv_start, tv_end, diff;
@@ -1429,20 +1429,26 @@ static void *miner_thread(void *userdata)
 		max64 = min(UINT32_MAX, max64);
 		start_nonce = nonceptr[0];
 
-		/* never let small ranges at end */
-		if (end_nonce >= UINT32_MAX - 256)
-			end_nonce = UINT32_MAX;
-
-		if ((max64 + start_nonce) >= end_nonce)
-			max_nonce = end_nonce;
+		if (opt_benchmark)
+		{
+			max_nonce = start_nonce + 0x5000000U;
+		}
 		else
-			max_nonce = (uint32_t) (max64 + start_nonce);
+		{
 
-		// todo: keep it rounded for gpu threads ?
+			/* never let small ranges at end */
+			if (end_nonce >= UINT32_MAX - 256)
+				end_nonce = UINT32_MAX;
 
-		work.scanned_from = start_nonce;
-		nonceptr[0] = start_nonce;
+			if ((max64 + start_nonce) >= end_nonce)
+				max_nonce = end_nonce;
+			else
+				max_nonce = (uint32_t)(max64 + start_nonce);
 
+			// todo: keep it rounded for gpu threads ?
+			work.scanned_from = start_nonce;
+			nonceptr[0] = start_nonce;
+		}
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x range=%08x",
 				device_map[thr_id], start_nonce, max_nonce, (max_nonce-start_nonce));
