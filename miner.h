@@ -517,6 +517,8 @@ extern int device_map[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
 extern uint32_t gpus_intensity[MAX_GPUS];
 
+extern void format_hashrate(double hashrate, char *output);
+extern void applog(int prio, const char *fmt, ...);
 extern json_t *json_rpc_call(CURL *curl, const char *url, const char *userpass,
 	const char *rpc_req, bool, bool, int *);
 extern void cbin2hex(char *out, const char *in, size_t len);

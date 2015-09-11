@@ -70,6 +70,7 @@ nvml_handle *hnvml = NULL;
 enum workio_commands {
 	WC_GET_WORK,
 	WC_SUBMIT_WORK,
+	WC_ABORT,
 };
 
 struct workio_cmd {
@@ -179,6 +180,7 @@ static bool opt_background = false;
 bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
+static int opt_time_limit = 0;
 int opt_timeout = 300;
 static int opt_scantime = 25;
 static json_t *opt_config;
@@ -322,6 +324,7 @@ Options:\n\
   -r, --retries=N       number of times to retry if a network call fails\n\
                           (default: retry indefinitely)\n\
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 30)\n\
+      --time-limit      maximum time [s] to mine before exiting the program.\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 5)\n\
@@ -377,6 +380,7 @@ struct option const options[] = {
 	{ "retry-pause", 1, NULL, 'R' },
 	{ "scantime", 1, NULL, 's' },
 	{ "statsavg", 1, NULL, 'N' },
+	{ "time-limit", 1, NULL, 1008 },
 	{ "threads", 1, NULL, 't' },
 	{ "gputhreads", 1, NULL, 'g' },
 	{ "gpu-engine", 1, NULL, 1070 },
@@ -910,6 +914,23 @@ static void workio_cmd_free(struct workio_cmd *wc)
 	free(wc);
 }
 
+static void workio_abort()
+{
+	struct workio_cmd *wc;
+
+	/* fill out work request message */
+	wc = (struct workio_cmd *)calloc(1, sizeof(*wc));
+	if (!wc)
+		return;
+
+	wc->cmd = WC_ABORT;
+
+	/* send work request to workio thread */
+	if (!tq_push(thr_info[work_thr_id].q, wc)) {
+		workio_cmd_free(wc);
+	}
+}
+
 static bool workio_get_work(struct workio_cmd *wc, CURL *curl)
 {
 	struct work *ret_work;
@@ -991,7 +1012,7 @@ static void *workio_thread(void *userdata)
 		case WC_SUBMIT_WORK:
 			ok = workio_submit_work(wc, curl);
 			break;
-
+		case WC_ABORT:
 		default:		/* should never happen */
 			ok = false;
 			break;
@@ -1206,6 +1227,7 @@ static void *miner_thread(void *userdata)
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - (thr_id + 1);
+	time_t firstwork_time = 0;
 	bool work_done = false;
 	bool extrajob = false;
 	char s[16];
@@ -1376,6 +1398,29 @@ static void *miner_thread(void *userdata)
 			max64 = LP_SCANTIME;
 		else
 			max64 = max(1, scan_time + g_work_time - time(NULL));
+		
+
+		/* time limit */
+		if (opt_time_limit && firstwork_time) {
+			int passed = (int)(time(NULL) - firstwork_time);
+			int remain = (int)(opt_time_limit - passed);
+			if (remain < 0)  {
+				abort_flag = true;
+				if (opt_benchmark) {
+					char rate[32];
+					format_hashrate(global_hashrate, rate);
+	                                applog(LOG_NOTICE, "Benchmark: %s", rate);
+					usleep(200*1000);
+					fprintf(stderr, "%llu\n", (long long unsigned int) global_hashrate);
+				} else {
+					applog(LOG_NOTICE, "Mining timeout of %ds reached, exiting...", opt_time_limit);
+				}
+				workio_abort();
+				break;
+			}
+			if (remain < max64) max64 = remain;
+		}
+
 
 		max64 *= (uint32_t)thr_hashrates[thr_id];
 
@@ -1632,6 +1677,9 @@ static void *miner_thread(void *userdata)
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
+
+		if (firstwork_time == 0)
+			firstwork_time = time(NULL);
 
 		if (rc && opt_debug)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[0], swab32(nonceptr[0])); // data[19]
@@ -2357,11 +2405,14 @@ static void parse_arg(int key, char *arg)
 	case 1007:
 		want_stratum = false;
 		break;
+	case 1008:
+		opt_time_limit = atoi(arg);
+		break;
 	case 1011:
 		allow_gbt = false;
 		break;
 	case 'S':
-	case 1008:
+	case 1018:
 		applog(LOG_INFO, "Now logging to syslog...");
 		use_syslog = true;
 		if (arg && strlen(arg)) {
@@ -2940,8 +2991,8 @@ int main(int argc, char *argv[])
 #ifdef WIN32
 	timeEndPeriod(1); // be nice and forego high timer precision
 #endif
-
-	applog(LOG_INFO, "workio thread dead, exiting.");
+	if (opt_debug)
+		applog(LOG_INFO, "workio thread dead, exiting.");
 
 	proper_exit(0);
 
