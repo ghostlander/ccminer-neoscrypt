@@ -83,23 +83,18 @@ __constant__ uint8_t c_sigma[16][16] = {
 }
 
 __global__ 
-#if __CUDA_ARCH__ > 500
-	__launch_bounds__(256, 1)
-#else
-	__launch_bounds__(256, 2)
-#endif
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 #if USE_SHUFFLE
-	const int warpID = threadIdx.x & 0x0F; // 16 warps
-	const int warpBlockID = (thread + 15)>>4; // aufrunden auf volle Warp-Blöcke
-	const int maxHashPosition = thread<<3;
+//	const int warpID = threadIdx.x & 0x02F; // 16 warps
+	const int warpBlockID = (thread + 15)>>5; // aufrunden auf volle Warp-Blöcke
+//	const int maxHashPosition = thread<<3;
 #endif
 
 #if USE_SHUFFLE
-	if (warpBlockID < ( (threads+15)>>4 ))
+	if (warpBlockID < ( (threads+15)>>5 ))
 #else
 	if (thread < threads)
 #endif
@@ -252,6 +247,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			Gprecalc(2, 7, 8, 13, 0x4, 0x1)
 			Gprecalc(3, 4, 9, 14, 0x5, 0xa)
 
+
+			#if __CUDA_ARCH__ == 500
+
 			Gprecalc(0, 4, 8, 12, 0x2, 0xa)
 			Gprecalc(1, 5, 9, 13, 0x4, 0x8)
 			Gprecalc(2, 6, 10, 14, 0x6, 0x7)
@@ -261,7 +259,6 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			Gprecalc(2, 7, 8, 13, 0xc, 0x3)
 			Gprecalc(3, 4, 9, 14, 0x0, 0xd)
 
-			#if __CUDA_ARCH__ == 500
 			Gprecalc(0, 4, 8, 12, 0x1, 0x0)
 			Gprecalc(1, 5, 9, 13, 0x3, 0x2)
 			Gprecalc(2, 6, 10, 14, 0x5, 0x4)
@@ -318,7 +315,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 			#else
 
-			for (int i = 10; i < 16; i++)
+			for (int i = 9; i < 15; i++)
 			{
 				/* column step */
 				G(0, 4, 8, 12, 0);
@@ -331,6 +328,16 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 				G(2, 7, 8, 13, 12);
 				G(3, 4, 9, 14, 14);
 			}
+
+			Gprecalc(0, 4, 8, 12, 0xc, 0x2)
+			Gprecalc(1, 5, 9, 13, 0xa, 0x6)
+			Gprecalc(2, 6, 10, 14, 0xb, 0x0)
+			Gprecalc(3, 7, 11, 15, 0x3, 0x8)
+			Gprecalc(0, 5, 10, 15, 0xd, 0x4)
+			Gprecalc(1, 6, 11, 12, 0x5, 0x7)
+			Gprecalc(2, 7, 8, 13, 0xe, 0xf)
+			Gprecalc(3, 4, 9, 14, 0x9, 0x1)
+
 			#endif
 
 			v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
@@ -349,12 +356,11 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 	}
 }
 
+//#if __CUDA_ARCH__ > 500
+//__launch_bounds__(256, 4)
+//#endif
+
 __global__
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 4)
-#else
-__launch_bounds__(32, 32)
-#endif
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -725,6 +731,7 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 			Gprecalc(2, 7, 8, 13, 0x6, 0x8)
 			Gprecalc(3, 4, 9, 14, 0xa, 0x2)
 
+			/*
 			Gprecalc(0, 4, 8, 12, 0xf, 0x6)
 			Gprecalc(1, 5, 9, 13, 0x9, 0xe)
 			Gprecalc(2, 6, 10, 14, 0x3, 0xb)
@@ -743,7 +750,6 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 			Gprecalc(2, 7, 8, 13, 0xc, 0x3)
 			Gprecalc(3, 4, 9, 14, 0x0, 0xd)
 
-			/*
 			Gprecalc(0, 4, 8, 12, 0x1, 0x0)
 			Gprecalc(1, 5, 9, 13, 0x3, 0x2)
 			Gprecalc(2, 6, 10, 14, 0x5, 0x4)
@@ -799,7 +805,7 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 			Gprecalc(3, 4, 9, 14, 0x9, 0x1)
 			*/
 
-			for (int i = 10; i < 16; i++)
+			for (int i = 8; i < 14; i++)
 			{
 			/* column step */
 				G(0, 4, 8, 12, 0);
@@ -812,6 +818,23 @@ void quark_blake512_gpu_hash_80_multi(uint32_t threads, uint32_t startNounce, ui
 				G(2, 7, 8, 13, 12);
 				G(3, 4, 9, 14, 14);
 			}
+				Gprecalc(0, 4, 8, 12, 0x0, 0x9)
+				Gprecalc(1, 5, 9, 13, 0x7, 0x5)
+				Gprecalc(2, 6, 10, 14, 0x4, 0x2)
+				Gprecalc(3, 7, 11, 15, 0xf, 0xa)
+				Gprecalc(0, 5, 10, 15, 0x1, 0xe)
+				Gprecalc(1, 6, 11, 12, 0xc, 0xb)
+				Gprecalc(2, 7, 8, 13, 0x8, 0x6)
+				Gprecalc(3, 4, 9, 14, 0xd, 0x3)
+
+				Gprecalc(0, 4, 8, 12, 0xc, 0x2)
+				Gprecalc(1, 5, 9, 13, 0xa, 0x6)
+				Gprecalc(2, 6, 10, 14, 0xb, 0x0)
+				Gprecalc(3, 7, 11, 15, 0x3, 0x8)
+				Gprecalc(0, 5, 10, 15, 0xd, 0x4)
+				Gprecalc(1, 6, 11, 12, 0x5, 0x7)
+				Gprecalc(2, 7, 8, 13, 0xe, 0xf)
+				Gprecalc(3, 4, 9, 14, 0x9, 0x1)
 
 		v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
 		v[1] = cuda_swap(h[1] ^ v[1] ^ v[9]);
