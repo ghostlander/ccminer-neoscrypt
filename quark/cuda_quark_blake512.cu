@@ -29,7 +29,7 @@ __constant__ uint2 c_u512[16] =
 
 #define Gprecalc(a,b,c,d,idx1,idx2) { \
 	v[a] += (block[idx2] ^ u512[idx1]) + v[b]; \
-	v[d] = SWAPDWORDS2( v[d] ^ v[a]); \
+	v[d] = eorswap32( v[d] , v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROR2(v[b] ^ v[c], 25); \
 	v[a] += (block[idx1] ^ u512[idx2]) + v[b]; \
@@ -73,7 +73,7 @@ __constant__ uint8_t c_sigma[16][16] = {
 	uint32_t idx1 = c_sigma[i][x]; \
 	uint32_t idx2 = c_sigma[i][x+1]; \
 	v[a] += (block[idx1] ^ c_u512[idx2]) + v[b]; \
-	v[d] = SWAPDWORDS2(v[d] ^ v[a]); \
+	v[d] = eorswap32(v[d] , v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROR2( v[b] ^ v[c], 25); \
 	v[a] += (block[idx2] ^ c_u512[idx1]) + v[b]; \
