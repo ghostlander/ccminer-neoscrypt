@@ -47,7 +47,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x03;
+		((uint32_t*)ptarget)[7] = 0x01;
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);

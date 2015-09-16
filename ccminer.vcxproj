@@ -430,6 +430,8 @@
     </CudaCompile>
     <CudaCompile Include="quark\cuda_jh512.cu">
       <MaxRegCount>80</MaxRegCount>
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_jh512keccak512.cu" />
     <CudaCompile Include="quark\cuda_quark_blake512.cu">
