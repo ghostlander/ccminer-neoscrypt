@@ -657,7 +657,7 @@ void neoscrypt_gpu_hash_k4(int stratum, uint32_t startNonce, uint32_t *nonceVect
 	}
 	((uintx64 *)Z)[0] ^= __ldg32(&(W + shift)[2064]);
 	
-	if (fastkdf(data, NULL, (uint32_t*)Z) <= pTarget[0]) atomicExch(&nonceVector[0], nonce);	//32
+	if (fastkdf(data, NULL, (uint32_t*)Z) <= pTarget[0]) atomicCAS(&nonceVector[0], 0xffffffff, nonce);	//32
 }
 
 

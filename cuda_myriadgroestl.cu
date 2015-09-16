@@ -273,10 +273,10 @@ __global__ void __launch_bounds__(2048, 1)
         
         if (out_state[7] <= pTarget[7])
 		{
-			uint32_t tmp = atomicExch(resNounce, nounce);
+			uint32_t tmp = atomicCAS(resNounce, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
 				resNounce[1] = tmp;
-		 }
+    	 }
     }
 }
 

@@ -554,7 +554,7 @@ void whirlpoolx(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 
 		if ((devectorize(c_xtra[1] ^ ROUND_ELT2(sharedMemory, tmp, 3, 2, 1, 0, 7, 6, 5, 4) ^ ROUND_ELT2(sharedMemory, tmp, 5, 4, 3, 2, 1, 0, 7, 6))) <= backup)
 		{
-			uint32_t tmp = atomicExch(resNounce, nounce);
+			atomicCAS(resNounce, 0xffffffff, nounce);
 		}
 	} // thread < threads
 	}

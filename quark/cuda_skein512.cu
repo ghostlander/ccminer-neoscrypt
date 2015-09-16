@@ -2471,7 +2471,7 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 		test|= SWAB32(hash[6] + regs[6]);
 		if (test <= target)
 		{
-			uint32_t tmp = atomicExch(&(d_found[0]), startNounce + thread);
+			uint32_t tmp = atomicCAS(d_found, 0xffffffff, startNounce + thread);
 			if (tmp != 0xffffffff)
 				d_found[1] = tmp;
 		}

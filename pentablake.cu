@@ -406,8 +406,8 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 
 		if (cuda_hashisbelowtarget(inpHash, c_Target))
 		{
-			uint32_t tmp = atomicExch(resNounce, nounce);
-			if (tmp != 0xffffffffu)
+			uint32_t tmp = atomicCAS(resNounce, 0xffffffff, nounce);
+			if (tmp != 0xffffffff)
 				resNounce[1] = tmp;
 		}
 	}

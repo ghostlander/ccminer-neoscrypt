@@ -66,7 +66,7 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
 
 			if (out_state[7] <= target) 
 			{
-				atomicExch(&(resNounce[0]), nounce);
+				atomicCAS(resNounce, 0xffffffff, nounce);
 //				if (resNounce[0] > nounce)
 //					resNounce[0] = nounce;
 			}
