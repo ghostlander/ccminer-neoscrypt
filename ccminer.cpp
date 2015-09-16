@@ -52,7 +52,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		25
+#define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -1438,12 +1438,12 @@ static void *miner_thread(void *userdata)
 			case ALGO_NEO:
 			case ALGO_QUBIT:
 			case ALGO_QUARK:
+			case ALGO_LYRA2v2:
 				minmax = 0x40000000U;
 				break;
 			case ALGO_DOOM:
 			case ALGO_JACKPOT:
 			case ALGO_LUFFA_DOOM:
-			case ALGO_LYRA2v2:
 				minmax = 0x2000000;
 				break;
 			case ALGO_X11:
