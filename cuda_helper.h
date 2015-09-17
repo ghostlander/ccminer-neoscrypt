@@ -528,6 +528,15 @@ static __device__ __forceinline__ uint2 vectorizehigh(uint32_t v) {
 	return result;
 }
 
+static __device__ __forceinline__ uint2 eorswap32(uint2 u, uint2 v)
+{
+	uint2 result;
+	result.y = u.x ^ v.x;
+	result.x = u.y ^ v.y;
+	return result;
+}
+
+
 static __device__ __forceinline__ uint2 operator^ (uint2 a, uint32_t b) { return make_uint2(a.x^ b, a.y); }
 static __device__ __forceinline__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }
 static __device__ __forceinline__ uint2 operator& (uint2 a, uint2 b) { return make_uint2(a.x & b.x, a.y & b.y); }
@@ -654,7 +663,7 @@ __device__ __inline__ uint2 ROR8(const uint2 a)
 {
 	uint2 result;
 	result.x = __byte_perm(a.y, a.x, 0x0765);
-	result.y = __byte_perm(a.y, a.x, 0x4321);
+	result.y = __byte_perm(a.x, a.y, 0x0765);
 
 	return result;
 }
@@ -663,7 +672,7 @@ __device__ __inline__ uint2 ROR16(const uint2 a)
 {
 	uint2 result;
 	result.x = __byte_perm(a.y, a.x, 0x1076);
-	result.y = __byte_perm(a.y, a.x, 0x5432);
+	result.y = __byte_perm(a.x, a.y, 0x1076);
 
 	return result;
 }
@@ -672,7 +681,7 @@ __device__ __inline__ uint2 ROR24(const uint2 a)
 {
 	uint2 result;
 	result.x = __byte_perm(a.y, a.x, 0x2107);
-	result.y = __byte_perm(a.y, a.x, 0x6543);
+	result.y = __byte_perm(a.x, a.y, 0x2107);
 
 	return result;
 }
@@ -680,7 +689,7 @@ __device__ __inline__ uint2 ROR24(const uint2 a)
 __device__ __inline__ uint2 ROL8(const uint2 a)
 {
 	uint2 result;
-	result.x = __byte_perm(a.y, a.x, 0x6543);
+	result.x = __byte_perm(a.x, a.y, 0x2107);
 	result.y = __byte_perm(a.y, a.x, 0x2107);
 
 	return result;
@@ -689,7 +698,7 @@ __device__ __inline__ uint2 ROL8(const uint2 a)
 __device__ __inline__ uint2 ROL16(const uint2 a)
 {
 	uint2 result;
-	result.x = __byte_perm(a.y, a.x, 0x5432);
+	result.x = __byte_perm(a.x, a.y, 0x1076);
 	result.y = __byte_perm(a.y, a.x, 0x1076);
 
 	return result;
@@ -698,7 +707,7 @@ __device__ __inline__ uint2 ROL16(const uint2 a)
 __device__ __inline__ uint2 ROL24(const uint2 a)
 {
 	uint2 result;
-	result.x = __byte_perm(a.y, a.x, 0x4321);
+	result.x = __byte_perm(a.x, a.y, 0x0765);
 	result.y = __byte_perm(a.y, a.x, 0x0765);
 
 	return result;
@@ -814,7 +823,17 @@ uint4 SWAPDWORDS2(uint4 value)
 	return make_uint4(value.y, value.x, value.w ,value.z);
 }
 
-static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
+__device__ __inline__ uint2 SHL8(const uint2 a)
+{
+	uint2 result;
+	result.y = __byte_perm(a.y, a.x, 0x2107);
+	result.x = __byte_perm(a.x, 0, 0x2107);
+
+	return result;
+}
+
+
+static __forceinline__ __device__ uint2 SHL2(uint2 a, const int offset)
 {
 #if __CUDA_ARCH__ > 300
 	uint2 result;
@@ -848,7 +867,7 @@ static __forceinline__ __device__ uint2 SHL2(uint2 a, int offset)
 	return a;
 #endif
 }
-static __forceinline__ __device__ uint2 SHR2(uint2 a, int offset)
+static __forceinline__ __device__ uint2 SHR2(uint2 a, const int offset)
 {
 	#if __CUDA_ARCH__ > 300
 	uint2 result;
