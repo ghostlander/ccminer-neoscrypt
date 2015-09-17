@@ -10,6 +10,7 @@
 #undef ROTL64
 #define ROTL64 ROL2
 
+
 #define CONST_EXP2(i)    q[i+0] + ROTL64(q[i+1], 5)  + q[i+2] + ROTL64(q[i+3], 11) + \
                     q[i+4] + ROTL64(q[i+5], 27) + q[i+6] + SWAPDWORDS2(q[i+7]) + \
                     q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
@@ -178,14 +179,14 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
     uint2 XL64 = q[16]^q[17]^q[18]^q[19]^q[20]^q[21]^q[22]^q[23];
 	uint2 XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
-    hash[0] = (SHL(XH64, 5) ^ SHR(q[16],5) ^ msg[ 0]) + (    XL64    ^ q[24] ^ q[ 0]);
-	hash[1] = (SHR(XH64, 7) ^ SHL8(q[17]) ^ msg[1]) + (XL64    ^ q[25] ^ q[1]);
-    hash[2] = (SHR(XH64, 5) ^ SHL(q[18],5) ^ msg[ 2]) + (    XL64    ^ q[26] ^ q[ 2]);
-    hash[3] = (SHR(XH64, 1) ^ SHL(q[19],5) ^ msg[ 3]) + (    XL64    ^ q[27] ^ q[ 3]);
-    hash[4] = (SHR(XH64, 3) ^     q[20]    ^ msg[ 4]) + (    XL64    ^ q[28] ^ q[ 4]);
-    hash[5] = (SHL(XH64, 6) ^ SHR(q[21],6) ^ msg[ 5]) + (    XL64    ^ q[29] ^ q[ 5]);
-    hash[6] = (SHR(XH64, 4) ^ SHL(q[22],6) ^ msg[ 6]) + (    XL64    ^ q[30] ^ q[ 6]);
-    hash[7] = (SHR(XH64,11) ^ SHL(q[23],2) ^ msg[ 7]) + (    XL64    ^ q[31] ^ q[ 7]);
+    hash[0] =                       (SHL(XH64, 5) ^ SHR(q[16],5) ^ msg[ 0]) + (    XL64    ^ q[24] ^ q[ 0]);
+    hash[1] =                       (SHR(XH64, 7) ^ SHL(q[17],8) ^ msg[ 1]) + (    XL64    ^ q[25] ^ q[ 1]);
+    hash[2] =                       (SHR(XH64, 5) ^ SHL(q[18],5) ^ msg[ 2]) + (    XL64    ^ q[26] ^ q[ 2]);
+    hash[3] =                       (SHR(XH64, 1) ^ SHL(q[19],5) ^ msg[ 3]) + (    XL64    ^ q[27] ^ q[ 3]);
+    hash[4] =                       (SHR(XH64, 3) ^     q[20]    ^ msg[ 4]) + (    XL64    ^ q[28] ^ q[ 4]);
+    hash[5] =                       (SHL(XH64, 6) ^ SHR(q[21],6) ^ msg[ 5]) + (    XL64    ^ q[29] ^ q[ 5]);
+    hash[6] =                       (SHR(XH64, 4) ^ SHL(q[22],6) ^ msg[ 6]) + (    XL64    ^ q[30] ^ q[ 6]);
+    hash[7] =                       (SHR(XH64,11) ^ SHL(q[23],2) ^ msg[ 7]) + (    XL64    ^ q[31] ^ q[ 7]);
 
     hash[ 8] = ROTL64(hash[4], 9) + (    XH64     ^     q[24]    ^ msg[ 8]) + (SHL(XL64,8) ^ q[23] ^ q[ 8]);
     hash[ 9] = ROTL64(hash[5],10) + (    XH64     ^     q[25]    ^ msg[ 9]) + (SHR(XL64,6) ^ q[16] ^ q[ 9]);
@@ -196,8 +197,6 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
     hash[14] = ROTL64(hash[2],15) + (    XH64     ^     q[30]    ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
 	hash[15] = ROL16(hash[3]) + (XH64     ^     q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
-
-
 __global__ __launch_bounds__(32, 16)
 void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
@@ -435,7 +434,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		uint2 XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
 		h[0] = (SHL(XH64, 5) ^ SHR(q[16], 5) ^ msg2[0]) + (XL64    ^ q[24] ^ q[0]);
-		h[1] = (SHR(XH64, 7) ^ SHL8(q[17]) ^ msg2[1]) + (XL64    ^ q[25] ^ q[1]);
+		h[1] = (SHR(XH64, 7) ^ SHL(q[17], 8) ^ msg2[1]) + (XL64    ^ q[25] ^ q[1]);
 		h[2] = (SHR(XH64, 5) ^ SHL(q[18], 5) ^ msg2[2]) + (XL64    ^ q[26] ^ q[2]);
 		h[3] = (SHR(XH64, 1) ^ SHL(q[19], 5) ^ msg2[3]) + (XL64    ^ q[27] ^ q[3]);
 		h[4] = (SHR(XH64, 3) ^ q[20] ^ msg2[4]) + (XL64    ^ q[28] ^ q[4]);
@@ -443,7 +442,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		h[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ msg2[6]) + (XL64    ^ q[30] ^ q[6]);
 		h[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ msg2[7]) + (XL64    ^ q[31] ^ q[7]);
 
-		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ 0x80) + (SHL8(XL64) ^ q[23] ^ q[8]);
+		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ 0x80) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
 		h[9] = ROTL64(h[5], 10) + (XH64     ^     q[25]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
 		h[10] = ROTL64(h[6], 11) + (XH64     ^     q[26]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
 		h[11] = ROTL64(h[7], 12) + (XH64     ^     q[27]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
@@ -654,14 +653,14 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 		XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
 		msg2[0] = (SHL(XH64, 5) ^ SHR(q[16], 5) ^ h[0]) + (XL64    ^ q[24] ^ q[0]);
-		msg2[1] = (SHR(XH64, 7) ^ SHL8(q[17]) ^ h[1]) + (XL64    ^ q[25] ^ q[1]);
+		msg2[1] = (SHR(XH64, 7) ^ SHL(q[17], 8) ^ h[1]) + (XL64    ^ q[25] ^ q[1]);
 		msg2[2] = (SHR(XH64, 5) ^ SHL(q[18], 5) ^ h[2]) + (XL64    ^ q[26] ^ q[2]);
 		msg2[3] = (SHR(XH64, 1) ^ SHL(q[19], 5) ^ h[3]) + (XL64    ^ q[27] ^ q[3]);
 		msg2[4] = (SHR(XH64, 3) ^ q[20] ^ h[4]) + (XL64    ^ q[28] ^ q[4]);
 		msg2[5] = (SHL(XH64, 6) ^ SHR(q[21], 6) ^ h[5]) + (XL64    ^ q[29] ^ q[5]);
 		msg2[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ h[6]) + (XL64    ^ q[30] ^ q[6]);
 		msg2[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ h[7]) + (XL64    ^ q[31] ^ q[7]);
-		msg2[8] = ROTL64(msg2[4], 9) + (XH64     ^     q[24] ^ h[8]) + (SHL8(XL64) ^ q[23] ^ q[8]);
+		msg2[8] = ROTL64(msg2[4], 9) + (XH64     ^     q[24] ^ h[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
 
 		msg2[9] = ROTL64(msg2[5], 10) + (XH64     ^     q[25] ^ h[9]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
 		msg2[10] = ROTL64(msg2[6], 11) + (XH64     ^     q[26] ^ h[10]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
@@ -681,12 +680,12 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 }
 
 __global__ __launch_bounds__(32, 16)
-void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
+void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint32_t nounce = (startNounce + thread);
+		const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		const int hashPosition = nounce - startNounce;
 		uint64_t *const inpHash = &g_hash[8 * hashPosition];
@@ -916,7 +915,7 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		uint2 XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
 		h[0] = (SHL(XH64, 5) ^ SHR(q[16], 5) ^ msg2[0]) + (XL64    ^ q[24] ^ q[0]);
-		h[1] = (SHR(XH64, 7) ^ SHL8(q[17]) ^ msg2[1]) + (XL64    ^ q[25] ^ q[1]);
+		h[1] = (SHR(XH64, 7) ^ SHL(q[17], 8) ^ msg2[1]) + (XL64    ^ q[25] ^ q[1]);
 		h[2] = (SHR(XH64, 5) ^ SHL(q[18], 5) ^ msg2[2]) + (XL64    ^ q[26] ^ q[2]);
 		h[3] = (SHR(XH64, 1) ^ SHL(q[19], 5) ^ msg2[3]) + (XL64    ^ q[27] ^ q[3]);
 		h[4] = (SHR(XH64, 3) ^ q[20] ^ msg2[4]) + (XL64    ^ q[28] ^ q[4]);
@@ -924,7 +923,7 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		h[6] = (SHR(XH64, 4) ^ SHL(q[22], 6) ^ msg2[6]) + (XL64    ^ q[30] ^ q[6]);
 		h[7] = (SHR(XH64, 11) ^ SHL(q[23], 2) ^ msg2[7]) + (XL64    ^ q[31] ^ q[7]);
 
-		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ 0x80) + (SHL8(XL64) ^ q[23] ^ q[8]);
+		h[8] = ROTL64(h[4], 9) + (XH64     ^     q[24] ^ 0x80) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
 		h[9] = ROTL64(h[5], 10) + (XH64     ^     q[25]) + (SHR(XL64, 6) ^ q[16] ^ q[9]);
 		h[10] = ROTL64(h[6], 11) + (XH64     ^     q[26]) + (SHL(XL64, 6) ^ q[17] ^ q[10]);
 		h[11] = ROTL64(h[7], 12) + (XH64     ^     q[27]) + (SHL(XL64, 4) ^ q[18] ^ q[11]);
@@ -1135,14 +1134,14 @@ void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint
 		XH64 = XL64^q[24] ^ q[25] ^ q[26] ^ q[27] ^ q[28] ^ q[29] ^ q[30] ^ q[31];
 
 		msg2[4] = (SHR(XH64, 3) ^ q[20] ^ h[4]) + (XL64    ^ q[28] ^ q[4]);
-		msg2[8] = ROTL64(msg2[4], 9) + (XH64     ^     q[24] ^ h[8]) + (SHL8(XL64) ^ q[23] ^ q[8]);
+		msg2[8] = ROTL64(msg2[4], 9) + (XH64     ^     q[24] ^ h[8]) + (SHL(XL64, 8) ^ q[23] ^ q[8]);
 
 		inpHash[0] = devectorize(msg2[8]);
 
 		if (((msg2[8].x) & 0x8)) return;
 
 		msg2[0] = (SHL(XH64, 5) ^ SHR(q[16], 5) ^ h[0]) + (XL64    ^ q[24] ^ q[0]);
-		msg2[1] = (SHR(XH64, 7) ^ SHL8(q[17]) ^ h[1]) + (XL64    ^ q[25] ^ q[1]);
+		msg2[1] = (SHR(XH64, 7) ^ SHL(q[17], 8) ^ h[1]) + (XL64    ^ q[25] ^ q[1]);
 		msg2[2] = (SHR(XH64, 5) ^ SHL(q[18], 5) ^ h[2]) + (XL64    ^ q[26] ^ q[2]);
 		msg2[3] = (SHR(XH64, 1) ^ SHL(q[19], 5) ^ h[3]) + (XL64    ^ q[27] ^ q[3]);
 		msg2[5] = (SHL(XH64, 6) ^ SHR(q[21], 6) ^ h[5]) + (XL64    ^ q[29] ^ q[5]);
@@ -1175,7 +1174,7 @@ __host__ void quark_bmw512_cpu_hash_64(uint32_t threads, uint32_t startNounce, u
 
     quark_bmw512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }
-__host__ void quark_bmw512_cpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+__host__ void quark_bmw512_cpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 32;
 
@@ -1183,5 +1182,5 @@ __host__ void quark_bmw512_cpu_hash_64_quark(uint32_t threads, uint32_t startNou
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	quark_bmw512_gpu_hash_64_quark << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash);
+	quark_bmw512_gpu_hash_64_quark << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 }

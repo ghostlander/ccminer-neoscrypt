@@ -18,7 +18,7 @@ __device__ vectype  *DMatrix;
 __device__ __forceinline__ void Gfunc_v35(uint2 & a, uint2 &b, uint2 &c, uint2 &d)
 {
 
-	a += b; d = eorswap32 (a, d);
+	a += b; d ^= a; d = SWAPDWORDS2(d);
 	c += d; b ^= c; b = ROR24(b);
 	a += b; d ^= a; d = ROR16(d);
 	c += d; b ^= c; b = ROR2(b, 63);
