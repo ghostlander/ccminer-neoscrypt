@@ -682,7 +682,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 		{
 			uint32_t tmp = atomicCAS(d_found, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
-				d_found[1] = tmp;
+				d_found[1] = nounce;
 		}
 	}
 }

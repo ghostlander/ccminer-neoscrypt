@@ -408,7 +408,7 @@ void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t 
 		{
 			uint32_t tmp = atomicCAS(resNounce, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
-				resNounce[1] = tmp;
+				resNounce[1] = nounce;
 		}
 	}
 }

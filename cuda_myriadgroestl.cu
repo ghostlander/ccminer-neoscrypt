@@ -275,7 +275,7 @@ __global__ void __launch_bounds__(2048, 1)
 		{
 			uint32_t tmp = atomicCAS(resNounce, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
-				resNounce[1] = tmp;
+				resNounce[1] = nounce;
     	 }
     }
 }

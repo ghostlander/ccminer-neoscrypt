@@ -761,7 +761,7 @@ void x13_fugue512_gpu_hash_64_final(const uint32_t threads, const uint32_t start
 		{
 			uint32_t tmp = atomicCAS(d_nonce, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
-				d_nonce[1] = tmp;
+				d_nonce[1] = nounce;
 		}
 	}
 }

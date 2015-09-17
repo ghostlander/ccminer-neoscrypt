@@ -246,7 +246,7 @@ void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *con
 		{
 			uint32_t tmp = atomicCAS(nonceVector, 0xffffffff, startNounce + thread);
 			if (tmp != 0xffffffff)
-				nonceVector[1] = tmp;
+				nonceVector[1] = startNounce + thread;
 		}
 	}
 }

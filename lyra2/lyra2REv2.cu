@@ -153,7 +153,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ptarget[7]);
-		if (foundNonce[0] != 0)
+		if (foundNonce[0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
@@ -164,7 +164,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 				int res = 1;
 				// check if there was some other ones...
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (foundNonce[1] != 0)
+				if (foundNonce[1] != 0xffffffff)
 				{
 					pdata[21] = foundNonce[1];
 					res++;

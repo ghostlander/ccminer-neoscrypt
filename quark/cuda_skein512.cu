@@ -2207,7 +2207,7 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 		{
 			uint32_t tmp = atomicExch(&(d_found[0]), startNounce + thread);
 			if (tmp != 0xffffffff)
-				d_found[1] = tmp;
+				d_found[1] = startNounce + thread;
 		}
 	}
 }
@@ -2473,7 +2473,7 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 		{
 			uint32_t tmp = atomicCAS(d_found, 0xffffffff, startNounce + thread);
 			if (tmp != 0xffffffff)
-				d_found[1] = tmp;
+				d_found[1] = startNounce + thread;
 		}
 	}
 }
