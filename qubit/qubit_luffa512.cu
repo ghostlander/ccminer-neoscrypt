@@ -919,7 +919,7 @@ __host__
 uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 	uint32_t result = UINT32_MAX;
-	cudaMemset(d_resNounce[thr_id], 0xff, NBN * sizeof(uint32_t));
+	cudaMemset(d_resNounce[thr_id], 0xffffffff, NBN * sizeof(uint32_t));
 	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

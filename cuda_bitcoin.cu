@@ -637,7 +637,7 @@ void bitcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, const 
 {
 	uint32_t b2, c2, d2, f2, g2, h2, t1, w16, w17, t1c, t2c, w16rot, w17rot;
 
-	cudaMemset(d_result[thr_id], 0xff, 2 * sizeof(uint32_t));
+	cudaMemset(d_result[thr_id], 0xffffffff, 2 * sizeof(uint32_t));
 
 	t1 = ms[7] + (rrot(ms[4], 6) ^ rrot(ms[4], 11) ^ rrot(ms[4], 25)) + (ms[6] ^ (ms[4] & (ms[5] ^ ms[6]))) + 0x428a2f98U + merkle;
 	d2 = ms[3] + t1;

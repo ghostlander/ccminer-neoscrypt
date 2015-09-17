@@ -802,7 +802,7 @@ __host__ void x13_fugue512_cpu_hash_64_final(int thr_id, uint32_t threads, uint3
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cudaMemset(d_nonce[thr_id], 0xff, 2*sizeof(uint32_t));
+	cudaMemset(d_nonce[thr_id], 0xffffffff, 2 * sizeof(uint32_t));
 
 	x13_fugue512_gpu_hash_64_final << <grid, block>> >(threads, startNounce, d_hash, d_nonce[thr_id]);
 	cudaMemcpy(res, d_nonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);

@@ -379,7 +379,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		{
 			uint32_t tmp = atomicCAS(d_found, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
-				d_found[1] = nounce;
+				d_found[1] = tmp;
 		}
 	}
 }

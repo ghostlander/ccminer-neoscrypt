@@ -343,8 +343,8 @@ void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash, u
 
 		if (message[7].y <= backup)
 		{
-			uint32_t tmp = atomicCAS(nonceVector, 0xffffffff, startNounce + thread);
-			if (tmp != 0xffffffff)
+			uint32_t tmp = atomicCAS(nonceVector, 0, startNounce + thread);
+			if (tmp != 0)
 				nonceVector[1] = tmp;
 		}
 	}
@@ -354,7 +354,7 @@ void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash, u
 __host__
 void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resultnonces, uint32_t Target)
 {
-	cudaMemset(d_GNonce[thr_id], 0x0, 2 * sizeof(uint32_t));
+	cudaMemset(d_GNonce[thr_id], 0, 2 * sizeof(uint32_t));
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + TPB - 1) / TPB);

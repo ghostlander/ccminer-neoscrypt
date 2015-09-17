@@ -521,7 +521,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 	dim3 grid((threads + TPB-1)/TPB);
 	dim3 block(TPB);
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
-	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
+	if (cudaMemset(d_resNonce[thr_id], 0xffffffff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
 	blake256_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
@@ -657,7 +657,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	dim3 block(TPB);
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
-	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
+	if (cudaMemset(d_resNonce[thr_id], 0xffffffff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 	if (rounds == 8)
 	{

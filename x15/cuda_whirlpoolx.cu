@@ -601,7 +601,7 @@ __host__ void cpu_whirlpoolx(int thr_id, uint32_t threads, uint32_t startNounce,
 	dim3 grid((threads + TPB*NONCES_PER_THREAD - 1) / TPB / NONCES_PER_THREAD);
 	dim3 block(TPB);
 
-	cudaMemset(d_WXNonce[thr_id], 0xff, sizeof(uint32_t));
+	cudaMemset(d_WXNonce[thr_id], 0xffffffff, sizeof(uint32_t));
 	whirlpoolx <<<grid, block >>>(threads, startNounce, d_WXNonce[thr_id]);
 
 	cudaMemcpy(h_wxnounce[thr_id], d_WXNonce[thr_id], 1 * sizeof(uint32_t), cudaMemcpyDeviceToHost);

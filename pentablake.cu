@@ -382,7 +382,7 @@ uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 block(TPB);
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
-	if (cudaMemset(d_resNounce[thr_id], 0xff, 2*sizeof(uint32_t)) != cudaSuccess)
+	if (cudaMemset(d_resNounce[thr_id], 0xffffffff, 2*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
 	pentablake_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_resNounce[thr_id]);
