@@ -144,6 +144,11 @@ int nvml_get_tempC(nvml_handle *nvmlh,
  */
 int nvml_get_fanpcnt(nvml_handle *nvmlh,
                           int gpuindex, uint32_t *fanpcnt);
+                          
+/*
+ * Query the current graphics and memory clocks from the CUDA device ID
+ */
+int nvml_get_current_clocks(nvml_handle *nvmlh, int cudaindex, uint32_t *graphics_clock, uint32_t *mem_clock);
 
 /*
  * Query the current GPU power usage in millwatts from the CUDA device ID
