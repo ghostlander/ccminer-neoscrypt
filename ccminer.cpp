@@ -351,7 +351,7 @@ Options:\n\
   -X,  --XIntensity     intensity GPU intensity(default: auto) \n\
 ";
 
-char const short_options[] = "X:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C";
+char const short_options[] = "SX:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C";
 
 struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -378,6 +378,8 @@ struct option const options[] = {
 	{ "quiet", 0, NULL, 'q' },
 	{ "retries", 1, NULL, 'r' },
 	{ "retry-pause", 1, NULL, 'R' },
+	{ "syslog", 0, NULL, 'S' },
+	{ "syslog-prefix", 1, NULL, 1008 },
 	{ "scantime", 1, NULL, 's' },
 	{ "statsavg", 1, NULL, 'N' },
 	{ "time-limit", 1, NULL, 1008 },
