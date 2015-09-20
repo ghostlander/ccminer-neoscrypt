@@ -323,6 +323,22 @@ int nvml_get_fanpcnt(nvml_handle *nvmlh, int cudaindex, uint32_t *fanpcnt)
 	return 0;
 }
 
+
+int nvml_get_current_clocks(nvml_handle *nvmlh, int cudaindex, uint32_t *graphics_clock, uint32_t *mem_clock)
+{
+	nvmlReturn_t rc;
+	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
+	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount) return -1;
+
+	rc = nvmlh->nvmlDeviceGetClockInfo(nvmlh->devs[gpuindex], NVML_CLOCK_GRAPHICS, graphics_clock);
+	if (rc != NVML_SUCCESS) return -1;
+	rc = nvmlh->nvmlDeviceGetClockInfo(nvmlh->devs[gpuindex], NVML_CLOCK_MEM, mem_clock);
+	if (rc != NVML_SUCCESS) return -1;
+
+	return 0;
+}
+
+
 /* Not Supported on 750Ti 340.23 */
 int nvml_get_power_usage(nvml_handle *nvmlh, int cudaindex, uint32_t *milliwatts)
 {
