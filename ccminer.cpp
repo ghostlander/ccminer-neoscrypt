@@ -678,7 +678,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 {
 	json_t *val, *res, *reason;
 	bool stale_work = false;
-	char s[384];
+	char s[4096];
 
 	/* discard if a newer bloc was received */
 	/*
