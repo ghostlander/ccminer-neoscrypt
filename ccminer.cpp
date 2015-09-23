@@ -770,7 +770,21 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build hex string */
 		char *str = NULL;
-		int data_size = ((opt_algo == ALGO_NEO) ) ? 80 : sizeof(work->data);
+		int data_size;
+
+		switch (opt_algo)
+		{
+		case ALGO_NEO:
+			data_size = 80;
+			break;
+		case ALGO_BITC:
+			data_size = 168;
+			break;
+		default:
+			data_size = 128;
+			break;
+		}
+
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
 			for (int i = 0; i < (data_size >> 2); i++)
 				le32enc(work->data + i, work->data[i]);
