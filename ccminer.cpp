@@ -1387,7 +1387,7 @@ static void *miner_thread(void *userdata)
 		pthread_mutex_unlock(&g_work_lock);
 
 		/* prevent gpu scans before a job is received */
-		if ((have_stratum && work.data[0] == 0 || network_fail_flag) && !opt_benchmark)
+		if (have_stratum && work.data[0] == 0 && !opt_benchmark)
 		{
 			sleep(1);
 			continue;	
