@@ -145,7 +145,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	uint32_t intensity = 256*256*57;
-//	intensity = intensity + ((1 << 22)*9/10);
+	intensity = intensity + ((1 << 22));
 	if (device_sm[device_map[thr_id]] > 500) intensity= 1 << 24;
 
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 256*4096
