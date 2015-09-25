@@ -164,6 +164,7 @@ static const char *algo_names[] = {
 	""
 };
 
+bool opt_broken_neo_wallet = false; // HACK: Drop this flag once neoscrypt wallets are fixed to send 80byte data
 bool opt_debug = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
@@ -349,6 +350,7 @@ Options:\n\
   -V, --version         display version information and exit\n\
   -h, --help            display this help text and exit\n\
   -X,  --XIntensity     intensity GPU intensity(default: auto) \n\
+      --broken-neo-wallet	Use 84byte data for broken neoscrypt wallets.\n\
 ";
 
 char const short_options[] = "SX:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C";
@@ -399,6 +401,7 @@ struct option const options[] = {
 	{ "diff", 1, NULL, 'f' },
 	{ "X", 1, NULL, 'X'},
 	{ "cpu-mining", 0, NULL, 'C'},
+	{ "broken-neo-wallet", 0, NULL, 1030},
 	{ 0, 0, 0, 0 }
 };
 
@@ -532,7 +535,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	int data_size, midstate_size;
 	switch (opt_algo) {
 	case ALGO_NEO:
-		data_size = 80;
+		data_size = opt_broken_neo_wallet ? 84 : 80;
 		break;
 	case ALGO_BITC:
 		data_size = 168;
@@ -775,7 +778,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		switch (opt_algo)
 		{
 		case ALGO_NEO:
-			data_size = 80;
+			data_size = opt_broken_neo_wallet ? 84 : 80;
 			break;
 		case ALGO_BITC:
 			data_size = 168;
@@ -2527,6 +2530,9 @@ static void parse_arg(int key, char *arg)
 		opt_n_threads = active_gpus*opt_n_gputhreads;
 		active_gpus= opt_n_threads;
 		opt_extranonce = false;
+		break;
+	case 1030:
+		opt_broken_neo_wallet = true;
 		break;
 	case 'D':
 		opt_debug = true;
