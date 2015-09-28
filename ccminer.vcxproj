@@ -366,7 +366,9 @@
     </CudaCompile>
     <CudaCompile Include="cuda_nist5.cu">
     </CudaCompile>
-    <CudaCompile Include="lyra2\cuda_lyra2v2.cu" />
+    <CudaCompile Include="lyra2\cuda_lyra2v2.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">64</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="lyra2\lyra2REv2.cu" />
     <CudaCompile Include="scrypt\blake.cu" />
     <CudaCompile Include="scrypt\keccak.cu" />

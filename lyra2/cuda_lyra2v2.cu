@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "cuda_vector.h"
-#define TPB52 9
+#define TPB52 7
 #define TPB50 16
 
  
@@ -256,7 +256,8 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 #if __CUDA_ARCH__ == 500
 __global__	__launch_bounds__(TPB50, 1)
 #else
-__global__	__launch_bounds__(TPB52, 1)
+__global__	
+__launch_bounds__(TPB52, 1)
 #endif
 void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
