@@ -89,7 +89,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
 	if (strstr(props.name, "970"))
 	{
-		intensity = 256 * 256 * 16;
+		intensity = 256 * 256 * 20;
 		tpb = 7;
 	}
 	else if (strstr(props.name, "980"))
@@ -116,11 +116,8 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x002f;
-	if (scan_abort_flag || work_restart[thr_id].restart) return 0;
-
 	if (!init[thr_id])
 	{ 
-		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 		cudaSetDevice(device_map[thr_id]);
 		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
@@ -135,7 +132,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
         lyra2v2_cpu_init(thr_id, throughput,d_hash2[thr_id]);
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 8 * sizeof(uint32_t) * throughput));
 		init[thr_id] = true; 
-		if (scan_abort_flag || work_restart[thr_id].restart) return 0;
 	}
 
 	uint32_t endiandata[20];

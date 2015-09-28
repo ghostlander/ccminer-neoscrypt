@@ -52,7 +52,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		25
+#define LP_SCANTIME		30
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -183,7 +183,7 @@ static int opt_retries = -1;
 static int opt_fail_pause = 30;
 static int opt_time_limit = 0;
 int opt_timeout = 300;
-static int opt_scantime = 25;
+static int opt_scantime = 30;
 static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
@@ -248,7 +248,7 @@ uint32_t rejected_count = 0L;
 static double thr_hashrates[MAX_GPUS] = { 0 };
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
-uint32_t opt_statsavg = 25;
+uint32_t opt_statsavg = 30;
 static char* opt_syslog_pfx = NULL;
 char *opt_api_allow = NULL;
 int opt_api_listen = 0; /* 0 to disable */
@@ -681,7 +681,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 {
 	json_t *val, *res, *reason;
 	bool stale_work = false;
-	char s[4096];
+	char s[384];
 
 	/* discard if a newer bloc was received */
 	/*
@@ -1255,13 +1255,14 @@ static void *miner_thread(void *userdata)
 	/* Set worker threads to nice 19 and then preferentially to SCHED_IDLE
 	 * and if that fails, then SCHED_BATCH. No need for this to be an
 	 * error if it fails */
-	if (!opt_benchmark && opt_priority == 0) {
+	if (!opt_benchmark && opt_priority == 0) 
+	{
 		setpriority(PRIO_PROCESS, 0, 18);
 		drop_policy();
 	} else {
 		int prio = 0;
 #ifndef WIN32
-		prio = 18;
+		prio = -15;
 		// note: different behavior on linux (-19 to 19)
 		switch (opt_priority) {
 			case 1:
