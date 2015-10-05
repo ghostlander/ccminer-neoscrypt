@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "cuda_vector.h"
-#define TPB52 7
+#define TPB52 84
 #define TPB50 16
 
  
@@ -42,19 +42,19 @@ __device__ __forceinline__ void round_lyra_v35(vectype* s)
 
 
  
-__device__ __forceinline__ void reduceDuplex(vectype state[4], uint32_t thread)
+__device__ __forceinline__ void reduceDuplex(vectype state[4], const uint32_t thread)
 {
 
 
 	    vectype state1[3]; 
-		uint32_t ps1 = (Nrow * Ncol * memshift * thread);
-		uint32_t ps2 = (memshift * (Ncol-1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
+		const uint32_t ps1 = (Nrow * Ncol * memshift * thread);
+		const uint32_t ps2 = (memshift * (Ncol-1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
 
 #pragma unroll 4
 	for (int i = 0; i < Ncol; i++)
 	{
-        uint32_t s1 = ps1 + i*memshift;
-        uint32_t s2 = ps2 - i*memshift;  
+        const uint32_t s1 = ps1 + i*memshift;
+        const uint32_t s2 = ps2 - i*memshift;  
 		
 		#pragma unroll
 		for (int j = 0; j < 3; j++)
@@ -78,14 +78,14 @@ __device__ __forceinline__ void reduceDuplex(vectype state[4], uint32_t thread)
 
 __device__ __forceinline__ void reduceDuplex50(vectype state[4], uint32_t thread)
 {
-	uint32_t ps1 = (Nrow * Ncol * memshift * thread);
-	uint32_t ps2 = (memshift * (Ncol - 1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
+	const uint32_t ps1 = (Nrow * Ncol * memshift * thread);
+	const uint32_t ps2 = (memshift * (Ncol - 1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
 
 #pragma unroll 4
 	for (int i = 0; i < Ncol; i++)
 	{
-		uint32_t s1 = ps1 + i*memshift;
-		uint32_t s2 = ps2 - i*memshift;
+		const uint32_t s1 = ps1 + i*memshift;
+		const uint32_t s2 = ps2 - i*memshift;
 
 #pragma unroll
 		for (int j = 0; j < 3; j++)
@@ -104,14 +104,14 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 
 		vectype state2[3],state1[3];
 
-		uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
-		uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
-		uint32_t ps3 = (memshift * (Ncol-1) + memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
+		const uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
+		const uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
+		const uint32_t ps3 = (memshift * (Ncol-1) + memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
 	for (int i = 0; i < Ncol; i++)
 	{
-		uint32_t s1 = ps1 + i*memshift;
-		uint32_t s2 = ps2 + i*memshift;
-		uint32_t s3 = ps3 - i*memshift;
+		const uint32_t s1 = ps1 + i*memshift;
+		const uint32_t s2 = ps2 + i*memshift;
+		const uint32_t s3 = ps3 - i*memshift;
 
 		#if __CUDA_ARCH__ == 500
 		#pragma unroll
@@ -182,15 +182,15 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 {
 	int i,j;
 		vectype state1[3],state2[3];
-		uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
-		uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
-		uint32_t ps3 = (memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
+		const uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
+		const uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
+		const uint32_t ps3 = (memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
 
 	for (i = 0; i < Ncol; i++)
 	{
-		uint32_t s1 = ps1 + i*memshift;
-		uint32_t s2 = ps2 + i*memshift;
-		uint32_t s3 = ps3 + i*memshift;
+		const uint32_t s1 = ps1 + i*memshift;
+		const uint32_t s2 = ps2 + i*memshift;
+		const uint32_t s3 = ps3 + i*memshift;
 
 		#pragma unroll 
 		for (j = 0; j < 3; j++)
@@ -307,7 +307,7 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 		 for (int i = 0; i<12; i++)
 			 round_lyra_v35(state);
 
-		uint32_t ps1 = (memshift * (Ncol - 1) + Nrow * Ncol * memshift * thread);
+		const uint32_t ps1 = (memshift * (Ncol - 1) + Nrow * Ncol * memshift * thread);
 
 		for (int i = 0; i < Ncol; i++)
 		{
@@ -318,13 +318,7 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 			round_lyra_v35(state);
 		}
 
-		#if __CUDA_ARCH__ == 500
-			reduceDuplex50(state, thread);
-		#else
-			reduceDuplex50(state, thread);
-		#endif
-
-
+		reduceDuplex50(state, thread);
 
 		reduceDuplexRowSetupV2(1, 0, 2, state,  thread);
 		reduceDuplexRowSetupV2(2, 1, 3, state,  thread);
