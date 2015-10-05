@@ -28,12 +28,12 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 	if (!init[thr_id]) {
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, device_map[thr_id]);
-		
-		if      (strstr(props.name, "970"))    intensity = (256 * 64 * 4);
+		intensity = (256 * 16 * 5);
+		if (strstr(props.name, "970"))    intensity = (256 * 64 * 4);
 		else if (strstr(props.name, "980"))    intensity = (256 * 64 * 4);
-		else if (strstr(props.name, "750 Ti")) intensity = (256 * 32 * 7);
-		else if (strstr(props.name, "750"))    intensity = (256 * 32 * 7 / 2);
-		else if (strstr(props.name, "960"))    intensity = (256 * 32 * 7);
+		else if (strstr(props.name, "750 Ti")) intensity = (256 * 16 * 6);
+		else if (strstr(props.name, "750"))    intensity = (256 * 16 * 6);
+		else if (strstr(props.name, "960"))    intensity = (256 * 16 * 5);
 
 		throughput = device_intensity(device_map[thr_id], __func__, intensity);
 		throughput = min(throughput, (max_nonce - first_nonce));
@@ -41,9 +41,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		cudaDeviceReset();
 		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-//		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);	
-
-		if (opt_benchmark) applog(LOG_INFO, "GPU #%d init", thr_id);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);	
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 32 * 130 * sizeof(uint64_t) * throughput));
 		neoscrypt_cpu_init(thr_id, d_hash[thr_id]);

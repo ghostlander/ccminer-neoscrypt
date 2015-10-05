@@ -90,38 +90,24 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	if (strstr(props.name, "970"))
 	{
 		intensity = 256 * 256 * 20;
-		tpb = 7;
 	}
 	else if (strstr(props.name, "980"))
 	{
 		intensity = 256 * 256 * 16;
-		tpb = 7;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 10;
+		intensity = 256 * 256 * 5;
 		tpb = 16;
 	}
 	else if (strstr(props.name, "750"))
 	{
-		intensity = 256 * 256 * 8;
+		intensity = 256 * 256 * 5;
 		tpb = 16;
 	}
 	else if (strstr(props.name, "960"))
 	{
-		intensity = 256 * 256 * 10;
-		tpb = 7;
-	}
-	else if (strstr(props.name, "950"))
-	{
-		intensity = 256 * 256 * 10;
-		tpb = 7;
-	}
-
-	else if (strstr(props.name, "980 Ti"))
-	{
-		intensity = 256 * 256 * 30;
-		tpb = 7;
+		intensity = 256 * 256 * 6;
 	}
 
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
