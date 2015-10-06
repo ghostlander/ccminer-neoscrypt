@@ -17,7 +17,8 @@ extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 
 extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
 extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-extern uint32_t* whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce,  uint32_t *d_hash);
+//extern uint32_t* whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce,  uint32_t *d_hash);
+extern void whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t *foundnonce);
 
 
 // CPU Hash function
@@ -58,19 +59,18 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1U << 20); // 19=256*256*8;
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 20); // 19=256*256*8;
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		ptarget[7] = 0x0000ff;
+		ptarget[7] = 0x000f;
 
-	if (!init[thr_id]) 
-	{
+	if (!init[thr_id]) {
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		CUDA_SAFE_CALL(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
 
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 		x15_whirlpool_cpu_init(thr_id, throughput, 1 /* old whirlpool */);
 
 		init[thr_id] = true;
@@ -83,13 +83,13 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 	whirlpool512_setBlock_80((void*)endiandata, ptarget);
 
 	do {
-		uint32_t* foundNonce;
+		uint32_t foundNonce[2] = { 0, 0 };;
 
 		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 
-		foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19],  d_hash[thr_id]);
+		whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], d_hash[thr_id], &foundNonce[0]);
 		if (foundNonce[0] != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -100,7 +100,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 			{
 				int res = 1;
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (foundNonce[1] != UINT32_MAX)
+				/*if (foundNonce[1] != UINT32_MAX)
 				{
 					be32enc(&endiandata[19], foundNonce[1]);
 					wcoinhash(vhash64, endiandata);
@@ -117,6 +117,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 							applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce[1]);
 					}
 				}
+				*/
 				pdata[19] = foundNonce[0];
 				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: found nounce %08x", thr_id, foundNonce[0]);
 
@@ -129,7 +130,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 			}
 		}
 		pdata[19] += throughput;
-	} while (!scan_abort_flag && !work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
+	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;
