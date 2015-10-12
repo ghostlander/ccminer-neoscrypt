@@ -350,9 +350,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 
 __global__
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 4)
-#endif
+__launch_bounds__(128, 8)
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -370,7 +368,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 		block[6] = c_PaddedM[6];
 		block[7] = c_PaddedM[7];
 		block[8] = c_PaddedM[8];
-		block[9] = c_PaddedM[9];
+		block[9].y = c_PaddedM[9].y;
 		block[10] = vectorizehigh(0x80000000);
 		block[11] = vectorizelow(0);
 		block[12] = vectorizelow(0);
@@ -391,51 +389,60 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 		};
 
 		const uint2 h[8] = {
-				{ 0xf3bcc908UL, 0x6a09e667UL },
-				{ 0x84caa73bUL, 0xbb67ae85UL },
-				{ 0xfe94f82bUL, 0x3c6ef372UL },
-				{ 0x5f1d36f1UL, 0xa54ff53aUL },
-				{ 0xade682d1UL, 0x510e527fUL },
-				{ 0x2b3e6c1fUL, 0x9b05688cUL },
-				{ 0xfb41bd6bUL, 0x1f83d9abUL },
-				{ 0x137e2179UL, 0x5be0cd19UL }
+			{ 0xf3bcc908UL, 0x6a09e667UL },
+			{ 0x84caa73bUL, 0xbb67ae85UL },
+			{ 0xfe94f82bUL, 0x3c6ef372UL },
+			{ 0x5f1d36f1UL, 0xa54ff53aUL },
+			{ 0xade682d1UL, 0x510e527fUL },
+			{ 0x2b3e6c1fUL, 0x9b05688cUL },
+			{ 0xfb41bd6bUL, 0x1f83d9abUL },
+			{ 0x137e2179UL, 0x5be0cd19UL }
 		};
-
-		
-		/*
-		uint2 v[16] =
-		{
-			h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
-			u512[0], u512[1], u512[2], u512[3], u512[4] ^ 640, u512[5] ^ 640, u512[6], u512[7]
-		};
-		*/
-
 		uint2 v[16];
-/*		{
-			Hostprecalc[0], Hostprecalc[1], Hostprecalc[2], Hostprecalc[3], Hostprecalc[4], Hostprecalc[5],
-			Hostprecalc[6], Hostprecalc[7], Hostprecalc[8], Hostprecalc[9], Hostprecalc[10], Hostprecalc[11],
-			Hostprecalc[12], Hostprecalc[13], Hostprecalc[14], Hostprecalc[15],
-		};
-*/
 		uint28 *outpt = (uint28*)v;
 		outpt[0] = Hostprecalc[0];
 		outpt[1] = Hostprecalc[1];
 		outpt[2] = Hostprecalc[2];
 		outpt[3] = Hostprecalc[3];
 
-	//		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
-	//		Gprecalc(1, 5, 9, 13, 0x3, 0x2)
-	//		Gprecalc(2, 6, 10, 14, 0x5, 0x4)
-	//		Gprecalc(3, 7, 11, 15, 0x7, 0x6)
-			Gprecalc(0, 5, 10, 15, 0x9, 0x8)
-	//		Gprecalc(1, 6, 11, 12, 0xb, 0xa)
-	//		Gprecalc(2, 7, 8, 13, 0xd, 0xc)
-			Gprecalc(3, 4, 9, 14, 0xf, 0xe)
+		v[0] += (block[9] ^ u512[8]);
+		v[15] = ROR16(v[15] ^ v[0]);
+		v[10] += v[15];
+		v[5] = ROR2(v[5] ^ v[10], 11);
 
-			Gprecalc(0, 4, 8, 12, 0xa, 0xe)
-			Gprecalc(1, 5, 9, 13, 0x8, 0x4)
-			Gprecalc(2, 6, 10, 14, 0xf, 0x9)
-			Gprecalc(3, 7, 11, 15, 0x6, 0xd)
+		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
+
+//		Gprecalc(1, 5, 9, 13, 0x8, 0x4)
+		v[1] += v[5];
+		v[13] = eorswap32(v[13], v[1]);
+		v[9] += v[13];
+
+		v[5] = ROR2(v[5] ^ v[9], 25);
+		v[1] += (block[8] ^ u512[4]) + v[5];
+		v[13] = ROR16(v[13] ^ v[1]);
+		v[9] += v[13];
+		v[5] = ROR2(v[5] ^ v[9], 11); 
+
+//		Gprecalc(2, 6, 10, 14, 0xf, 0x9)
+		v[2] += (block[9] ^ u512[0xf]);
+		v[14] = eorswap32(v[14], v[2]);
+		v[10] += v[14];
+		v[6] = ROR2(v[6] ^ v[10], 25);
+		v[2] += (block[0xf] ^ u512[9]) + v[6];
+		v[14] = ROR16(v[14] ^ v[2]);
+		v[10] += v[14];
+		v[6] = ROR2(v[6] ^ v[10], 11);
+				
+//		Gprecalc(3, 7, 11, 15, 0x6, 0xd)
+		v[15] = eorswap32( v[15] , v[3]);
+		v[11] += v[15];
+		v[7] = ROR2(v[7] ^ v[11], 25);
+		v[3] += (block[6] ^ u512[0xd]) + v[7];
+		v[15] = ROR16(v[15] ^ v[3]);
+		v[11] += v[15];
+		v[7] = ROR2(v[7] ^ v[11], 11);
+
+
 			Gprecalc(0, 5, 10, 15, 0xc, 0x1)
 			Gprecalc(1, 6, 11, 12, 0x2, 0x0)
 			Gprecalc(2, 7, 8, 13, 0x7, 0xb)
@@ -566,7 +573,6 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 			Gprecalc(1, 6, 11, 12, 0x5, 0x7)
 			Gprecalc(2, 7, 8, 13, 0xe, 0xf)
 			Gprecalc(3, 4, 9, 14, 0x9, 0x1)
-
 
 		v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
 		v[1] = cuda_swap(h[1] ^ v[1] ^ v[9]);
@@ -886,7 +892,7 @@ __host__ void quark_blake512_cpu_setBlock_80(uint64_t *pdata)
 	block[12] = 0;
 	block[13] = 1;
 	block[14] = 0;
-	block[15] = 280;
+	block[15] = 0x280;
 
 	const uint64_t u512[16] =
 	{
@@ -925,6 +931,19 @@ __host__ void quark_blake512_cpu_setBlock_80(uint64_t *pdata)
 	GprecalcHost(1, 6, 11, 12, 0xb, 0xa)
 	GprecalcHost(2, 7, 8, 13, 0xd, 0xc)
 
+	v[0] += (block[8] ^ u512[9]) + v[5];
+	v[15] = ROTR64(v[15] ^ v[0], 32); \
+	v[10] += v[15];
+	v[5] = ROTR64(v[5] ^ v[10], 25);
+	v[0] += v[5];
+
+	GprecalcHost(3, 4, 9, 14, 0xf, 0xe);
+
+	v[1] += (block[0x4] ^ u512[0x8]);
+	v[2] += v[6];
+
+	v[3] += (block[0xd] ^ u512[6]) + v[7];
+
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(Hostprecalc, v, 16 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 
 }
@@ -952,7 +971,7 @@ __host__ void quark_blake512_cpu_hash_80_multi(int thr_id, uint32_t threads, uin
 __host__ void quark_blake512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 
-	const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 64;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
