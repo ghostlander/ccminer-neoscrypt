@@ -97,7 +97,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 8;
+		intensity = 256 * 256 * 5;
 		tpb = 16;
 	}
 	else if (strstr(props.name, "750"))
@@ -147,6 +147,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ptarget[7]);
+//		foundNonce[0] = 0xffffffff;
 		if (foundNonce[0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];

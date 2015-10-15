@@ -2,18 +2,14 @@
 
 #define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
 #define CUBEHASH_BLOCKBYTES 32 /* this is b for CubeHashr/b */
-#define TPB 1024
-#if __CUDA_ARCH__ < 350
-#define LROT(x,bits) ((x << bits) | (x >> (32 - bits)))
-#else
+#define TPB 64
 #define LROT(x, bits) __funnelshift_l(x, x, bits)
-#endif
 
 #define ROTATEUPWARDS7(a)  LROT(a,7)
 #define ROTATEUPWARDS11(a) LROT(a,11)
 
-//#define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
-#define SWAP(a,b) { a ^= b; b ^=a; a ^=b;}
+#define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
+//#define SWAP(a,b) { a ^= b; b ^=a; a ^=b;}
 __device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
 {
 	int r;
@@ -186,12 +182,7 @@ void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], uint32_t *hashv
 	hash_fromx(hashval, x);
 }
 
-
-#if __CUDA_ARCH__ <500
-__global__	__launch_bounds__(TPB, 1)
-#else 
-__global__	__launch_bounds__(TPB, 1)
-#endif
+__global__ __launch_bounds__(TPB, 16)
 void cubehash256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);

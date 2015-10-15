@@ -218,7 +218,7 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 
 
 #if __CUDA_ARCH__ == 500
-__global__	__launch_bounds__(TPB50, 1)
+__global__	__launch_bounds__(TPB50)
 #else
 __global__	
 __launch_bounds__(TPB52, 1)

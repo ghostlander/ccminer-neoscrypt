@@ -322,8 +322,8 @@ __forceinline__ __device__ void Compression256_2(uint32_t *  M32)
 
 }
 
-#define TPB 512
-__global__	__launch_bounds__(TPB,2)
+#define TPB 32
+__global__	__launch_bounds__(TPB,32)
 void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash, uint32_t *const __restrict__ nonceVector, uint32_t Target)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
