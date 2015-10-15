@@ -97,7 +97,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 5;
+		intensity = 256 * 256 * 8;
 		tpb = 16;
 	}
 	else if (strstr(props.name, "750"))

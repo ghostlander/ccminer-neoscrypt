@@ -253,6 +253,7 @@ static void blake256_compress1st(uint32_t *h, const uint32_t *block, const uint3
 #define bitselect(a, b, c) ((a) ^ ((c) & ((b) ^ (a))))
 
 __global__
+__launch_bounds__(256)
 void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t * Hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
