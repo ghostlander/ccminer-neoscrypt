@@ -253,7 +253,9 @@ static void blake256_compress1st(uint32_t *h, const uint32_t *block, const uint3
 #define bitselect(a, b, c) ((a) ^ ((c) & ((b) ^ (a))))
 
 __global__
-__launch_bounds__(256)
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(128,6)
+#endif
 void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t * Hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -265,12 +267,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		for (int i = 0; i < 8; i++) { h[i] = cpu_h[i]; }
 
 		uint32_t v[16];
-
-		const uint32_t c_Padding[12] = {
-			0x80000000, 0, 0, 0,
-			0, 0, 0, 0,
-			0, 1, 0, 640
-		};
 
 		const uint32_t  u256[16] =
 		{
@@ -287,11 +283,11 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		uint32_t m[16] =
 		{
 			c_data[0], c_data[1], c_data[2], nonce,
-			c_Padding[0], c_Padding[1], c_Padding[2], c_Padding[3],
-			c_Padding[4], c_Padding[5], c_Padding[6], c_Padding[7],
-			c_Padding[8], c_Padding[9], c_Padding[10], c_Padding[11]
+			0x80000000, 0, 0, 0,
+			0, 0, 0, 0,
+			0, 1, 0, 640
 		};
-	
+
 		uint28 *outpt = (uint28*)v;
 		outpt[0] = Hostprecalc[0];
 		outpt[1] = Hostprecalc[1];
@@ -309,7 +305,7 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		v[0xf] = __byte_perm(v[0xf] ^ v[0],0, 0x1032); 
 		v[0xa] += v[0xf]; 
 		v[5] = SPH_ROTR32(v[5] ^ v[0xa], 12); 
-		v[0] += (m[9] ^ u256[8]) + v[5]; 
+		v[0] += (u256[8]) + v[5]; 
 		v[0xf] = __byte_perm(v[0xf] ^ v[0],0, 0x0321); 
 		v[0xa] += v[0xf]; 
 		v[5] = SPH_ROTR32(v[5] ^ v[0xa], 7); 
@@ -748,12 +744,6 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 
 		uint32_t v[16];
 
-		const uint32_t c_Padding[12] = {
-			0x80000000, 0, 0, 0,
-			0, 0, 0, 0,
-			0, 1, 0, 640
-		};
-
 		const uint32_t  u256[16] =
 		{
 			0x243F6A88, 0x85A308D3,
@@ -769,9 +759,9 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 		uint32_t m[16] =
 		{
 			c_data[0], c_data[1], c_data[ 2], nonce,
-			c_Padding[0], c_Padding[1], c_Padding[2], c_Padding[3],
-			c_Padding[4], c_Padding[5], c_Padding[6], c_Padding[7],
-			c_Padding[8], c_Padding[9], c_Padding[10], c_Padding[11]
+			0x80000000, 0, 0, 0,
+			0, 0, 0, 0,
+			0, 1, 0, 640
 		};
 
 #pragma unroll 8
@@ -969,7 +959,7 @@ void blake256_cpu_setBlock_80(uint32_t *pdata)
 __host__
 void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 64;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
