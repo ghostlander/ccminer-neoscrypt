@@ -319,5 +319,6 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     myriadgroestl_gpu_hash_quad2<<<grid2, block, 0, gpustream[thr_id]>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
 
-    CUDA_SAFE_CALL(cudaMemcpyAsync(nounce, d_resultNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost, gpustream[thr_id])); cudaStreamSynchronize(gpustream[thr_id]);
+    CUDA_SAFE_CALL(cudaMemcpyAsync(nounce, d_resultNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost, gpustream[thr_id])); 
+	cudaStreamSynchronize(gpustream[thr_id]);
 }
