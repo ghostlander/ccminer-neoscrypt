@@ -2706,9 +2706,16 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 
 		state[3] = state[3] ^ n[3];
 
-		bool rc = devectorize(state[3]) <= target;
-		if (rc && resNounce[0] > nounce)
-			resNounce[0] = nounce;
+	//	bool rc = devectorize(state[3]) <= target;
+	//	if (rc && resNounce[0] > nounce)
+	//		resNounce[0] = nounce;
+		if (devectorize(state[3]) <= target)
+		{
+			uint32_t tmp = atomicCAS(resNounce, 0xffffffff, nounce);
+			if (tmp != 0xffffffff)
+				resNounce[1] = nounce;
+		}
+
 	}
 }
 
@@ -2740,8 +2747,8 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
 #endif
-		cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t));
-		cudaMallocHost(&d_wnounce[thr_id], sizeof(uint32_t));
+		cudaMalloc(&d_WNonce[thr_id], 2*sizeof(uint32_t));
+		cudaMallocHost(&d_wnounce[thr_id], 2*sizeof(uint32_t));
 		break;
 	}
 }
@@ -2771,14 +2778,16 @@ void whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startN
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cudaMemset(d_WNonce[thr_id], UINT32_MAX, sizeof(uint32_t));
+	cudaMemset(d_WNonce[thr_id], UINT32_MAX, 2*sizeof(uint32_t));
 
 	oldwhirlpool_gpu_finalhash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash,d_WNonce[thr_id]);
 	//MyStreamSynchronize(NULL, order, thr_id);
 
-	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	result = *d_wnounce[thr_id];
+	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	result = d_wnounce[thr_id][0];
 	foundnonce[0] = result;
+	foundnonce[1] = d_wnounce[thr_id][1];
+
 }
 
 __host__
