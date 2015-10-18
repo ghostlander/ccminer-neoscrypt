@@ -287,7 +287,7 @@ __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 	if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 	// Speicher für Gewinner-Nonce belegen
-    cudaMalloc(&d_resultNonce[thr_id], 4*sizeof(uint32_t)); 
+    cudaMalloc(&d_resultNonce[thr_id], 2*sizeof(uint32_t)); 
 
     // Speicher für temporäreHashes
 	CUDA_SAFE_CALL(cudaMalloc(&d_outputHashes[thr_id], 16 * sizeof(uint32_t)*threads));
@@ -297,7 +297,7 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
 {
 	cudaMemcpyToSymbolAsync(myriadgroestl_gpu_msg, data, 80, 0, cudaMemcpyHostToDevice, gpustream[thr_id]);
 
-	cudaMemsetAsync(d_resultNonce[thr_id], 0xFF, 4 * sizeof(uint32_t), gpustream[thr_id]);
+	cudaMemsetAsync(d_resultNonce[thr_id], 0xFFFFFFFF, 2 * sizeof(uint32_t), gpustream[thr_id]);
 	cudaMemcpyToSymbolAsync(pTarget, pTargetIn, sizeof(uint32_t) * 8, 0, cudaMemcpyHostToDevice, gpustream[thr_id]);
 }
 
@@ -309,7 +309,7 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
     const int factor=4;
 
-	cudaMemsetAsync(d_resultNonce[thr_id], 0xFF, 4 * sizeof(uint32_t), gpustream[thr_id]);
+	cudaMemsetAsync(d_resultNonce[thr_id], 0xFFFFFFFF, 2 * sizeof(uint32_t), gpustream[thr_id]);
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
@@ -319,5 +319,5 @@ __host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t star
     myriadgroestl_gpu_hash_quad2<<<grid2, block, 0, gpustream[thr_id]>>>(threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
 
-    CUDA_SAFE_CALL(cudaMemcpyAsync(nounce, d_resultNonce[thr_id], 4*sizeof(uint32_t), cudaMemcpyDeviceToHost, gpustream[thr_id])); cudaStreamSynchronize(gpustream[thr_id]);
+    CUDA_SAFE_CALL(cudaMemcpyAsync(nounce, d_resultNonce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost, gpustream[thr_id])); cudaStreamSynchronize(gpustream[thr_id]);
 }
