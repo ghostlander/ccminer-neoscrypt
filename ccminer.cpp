@@ -1462,7 +1462,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_SKEIN:
 			case ALGO_BITCOIN:
 			case ALGO_WHCX:
-			case ALGO_NEO:
 			case ALGO_QUBIT:
 			case ALGO_QUARK:
 			case ALGO_LYRA2v2:
@@ -1478,18 +1477,17 @@ static void *miner_thread(void *userdata)
 				minmax = 0x800000;
 				break;
 			case ALGO_S3:
-			case ALGO_X13:
 				minmax = 0x400000;
 				break;
+			case ALGO_X13:
 			case ALGO_X15:
 			case ALGO_LYRA2:
+			case ALGO_NEO:
 				minmax = 0x300000;
 				break;
 			case ALGO_SCRYPT:
-				minmax = 0x100000;
-				break;
 			case ALGO_SCRYPT_JANE:
-				minmax = 0x80000;
+				minmax = 0x100000;
 				break;
 			}
 			max64 = max(minmax-1, max64);
@@ -1810,7 +1808,7 @@ static void *miner_thread(void *userdata)
 				for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 					hashrate += stats_get_speed(i, thr_hashrates[i]);
 				pthread_mutex_unlock(&stats_lock);
-				if (opt_benchmark && loopcnt > 2) {
+				if (opt_benchmark && loopcnt >1) {
 					format_hashrate(hashrate, s);
 					applog(LOG_NOTICE, "Total: %s", s);
 				}
