@@ -59,7 +59,9 @@ BOOL WINAPI ConsoleHandler(DWORD);
 // from cuda.cpp
 int cuda_num_devices();
 void cuda_devicenames();
+void cuda_devicenames();
 void cuda_devicereset();
+void cuda_print_devices();
 int cuda_finddevice(char *name);
 
 #include "nvml.h"
@@ -329,6 +331,7 @@ Options:\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 5)\n\
+  -n, --ndevs           list cuda devices\n\
   -N, --statsavg        number of samples used to display hashrate (default: 30)\n\
       --no-gbt          disable getblocktemplate support (height check in solo)\n\
       --no-longpoll     disable X-Long-Polling support\n\
@@ -353,7 +356,7 @@ Options:\n\
       --broken-neo-wallet	Use 84byte data for broken neoscrypt wallets.\n\
 ";
 
-char const short_options[] = "SX:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:g:l:L:e:M:C";
+char const short_options[] = "SX:a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:n:b:g:l:L:e:M:C";
 
 struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -367,6 +370,7 @@ struct option const options[] = {
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
+	{ "ndevs", 0, NULL, 'n' },
 	{ "no-color", 0, NULL, 1002 },
 	{ "no-gbt", 0, NULL, 1011 },
 	{ "no-longpoll", 0, NULL, 1003 },
@@ -2247,6 +2251,10 @@ static void parse_arg(int key, char *arg)
 			while (n < MAX_GPUS)
 				gpus_intensity[n++] = last;
 		}
+		break;
+	case 'n': /* --ndevs */
+		cuda_print_devices();
+		proper_exit(0);
 		break;
 	case 'N':
 		v = atoi(arg);

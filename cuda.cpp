@@ -78,6 +78,21 @@ void cuda_devicereset()
 	cudaDeviceReset();
 }
 
+
+void cuda_print_devices()
+{
+	int ngpus = cuda_num_devices();
+	cuda_devicenames();
+	for (int n = 0; n < ngpus; n++) {
+		int m = device_map[n % MAX_GPUS];
+		cudaDeviceProp props;
+		cudaGetDeviceProperties(&props, m);
+		if (!opt_n_threads || n < opt_n_threads) {
+			fprintf(stderr, "GPU #%d: SM %d.%d %s\n", m, props.major, props.minor, device_name[n]);
+		}
+	}
+}
+
 static bool substringsearch(const char *haystack, const char *needle, int &match)
 {
 	int hlen = (int) strlen(haystack);
