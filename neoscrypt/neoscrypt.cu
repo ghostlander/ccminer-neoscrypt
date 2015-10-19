@@ -21,7 +21,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 	static bool init[MAX_GPUS] = { 0 };
 
 	if (opt_benchmark) {
-		((uint32_t*)ptarget)[7] = 0x05ff;
+		((uint32_t*)ptarget)[7] = 0x0fff;
 		stratum = 0;
 	}
 	
