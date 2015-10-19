@@ -1805,21 +1805,18 @@ static void *miner_thread(void *userdata)
 			pthread_mutex_unlock(&stats_lock);
 			if (opt_benchmark) 
 			{
-				switch (opt_algo) {
-				case ALGO_AXIOM:
-					applog(LOG_INFO, "CPU #%d: %.2f H/s", thr_id, thr_hashrates[thr_id]);
-					break;
-				default:
-					sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
-						thr_hashrates[thr_id] / 1e3);
-					applog(LOG_INFO, "CPU #%d: %s kH/s", thr_id, s);
-					break;
+				double hashrate = 0.;
+				pthread_mutex_lock(&stats_lock);
+				for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
+					hashrate += stats_get_speed(i, thr_hashrates[i]);
+				pthread_mutex_unlock(&stats_lock);
+				if (opt_benchmark && loopcnt > 2) {
+					format_hashrate(hashrate, s);
+					applog(LOG_NOTICE, "Total: %s", s);
 				}
-	
+				// X-Mining-Hashrate
+				global_hashrate = llround(hashrate);	
 			}
-
-			// X-Mining-Hashrate
-			global_hashrate = llround(hashrate);
 		}
 
 		/* if nonce found, submit work */
@@ -1901,6 +1898,7 @@ static void *longpoll_thread(void *userdata)
 
 		val = json_rpc_call(curl, lp_url, rpc_userpass, rpc_req,
 				    false, true, &err);
+
 
 		network_fail_flag = (err != CURLE_OK);
 
