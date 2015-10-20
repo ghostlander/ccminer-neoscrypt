@@ -1475,6 +1475,7 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_X11:
 			case ALGO_C11:
+			case ALGO_SCRYPT_JANE:
 				minmax = 0x800000;
 				break;
 			case ALGO_S3:
@@ -1486,7 +1487,6 @@ static void *miner_thread(void *userdata)
 				minmax = 0x300000;
 				break;
 			case ALGO_SCRYPT:
-			case ALGO_SCRYPT_JANE:
 				minmax = 0x100000;
 				break;
 			}

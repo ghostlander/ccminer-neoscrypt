@@ -25,7 +25,6 @@ extern void quark_blake512_cpu_setBlock_80(uint64_t *pdata);
 extern void quark_blake512_cpu_setBlock_80_multi(uint32_t thr_id, uint64_t *pdata);
 
 extern void quark_blake512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-extern void quark_blake512_cpu_hash_80_multi(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 extern void quark_blake512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
 
 extern void quark_bmw512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash);
@@ -197,14 +196,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		uint32_t nrm1 = 0, nrm2 = 0, nrm3 = 0;
 
-		if (opt_n_gputhreads > 1)
-		{
-			quark_blake512_cpu_hash_80_multi(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		}
-		else
-		{
-			quark_blake512_cpu_hash_80( throughput, pdata[19], d_hash[thr_id]);
-		}
+		quark_blake512_cpu_hash_80( throughput, pdata[19], d_hash[thr_id]);
 		quark_bmw512_cpu_hash_64_quark(throughput, pdata[19],d_hash[thr_id]);
 
 		quark_compactTest_single_false_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
