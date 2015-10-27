@@ -230,6 +230,9 @@
       <Filter>Source Files\sph</Filter>
     </ClCompile>
     <ClCompile Include="log.c" />
+    <ClCompile Include="sph\hefty1.cpp">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -576,12 +579,6 @@
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
     <CudaCompile Include="neoscrypt\neoscrypt.cu" />
     <CudaCompile Include="x11\c11.cu" />
-    <CudaCompile Include="x15\axiom.cu">
-      <Filter>Source Files\CUDA\x15</Filter>
-    </CudaCompile>
-    <CudaCompile Include="x15\cuda_axiom.cu">
-      <Filter>Source Files\CUDA\x15</Filter>
-    </CudaCompile>
     <CudaCompile Include="Algo256\cuda_bmw256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
@@ -599,6 +596,12 @@
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2REv2.cu">
       <Filter>Source Files\CUDA\Lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\bastion.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\cuda_bastion.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

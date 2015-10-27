@@ -84,7 +84,7 @@ struct workio_cmd {
 };
 
 enum sha_algos {
-	ALGO_AXIOM,
+	ALGO_BASTION,
 	ALGO_BITC,
 	ALGO_BITCOIN,
 	ALGO_BLAKE,
@@ -126,7 +126,7 @@ enum sha_algos {
 };
 
 static const char *algo_names[] = {
-	"axiom",
+	"bastion",
 	"credit",
 	"bitcoin",
 	"blake",
@@ -270,7 +270,7 @@ static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
-			axiom		Axiomcoin\n\
+			bastion		bastioncoin\n\
 			bitcoin     Bitcoin\n\
 			blake       Blake 256 (SFR/NEOS)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
@@ -655,7 +655,7 @@ static int share_result(int result, const char *reason)
 		sres = (result ? "(yes!!!)" : "(nooooo)");
 
 	switch (opt_algo) {
-	case ALGO_AXIOM:
+	case ALGO_BASTION:
 		sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate);
 		applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s H/s %s",
 			accepted_count, accepted_count + rejected_count,
@@ -1603,8 +1603,8 @@ static void *miner_thread(void *userdata)
 				max_nonce, (uint32_t*)&hashes_done);
 						break;
 
-		case ALGO_AXIOM:
-			rc = scanhash_axiom(thr_id, work.data, work.target,
+		case ALGO_BASTION:
+			rc = scanhash_bastion(thr_id, work.data, work.target,
 				max_nonce, &hashes_done);
 			break;
 

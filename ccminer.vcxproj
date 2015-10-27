@@ -253,6 +253,7 @@
       <FileType>CppCode</FileType>
     </CudaCompile>
     <ClCompile Include="log.c" />
+    <ClCompile Include="sph\hefty1.cpp" />
     <ClCompile Include="sph\neoscrypt.c" />
     <ClCompile Include="sph\sha256_Y.c" />
     <ClCompile Include="sph\sph_sha2.c" />
@@ -499,8 +500,8 @@
     </CudaCompile>
     <CudaCompile Include="x13\x13.cu">
     </CudaCompile>
-    <CudaCompile Include="x15\axiom.cu" />
-    <CudaCompile Include="x15\cuda_axiom.cu" />
+    <CudaCompile Include="x15\bastion.cu" />
+    <CudaCompile Include="x15\cuda_bastion.cu" />
     <CudaCompile Include="x15\cuda_whirlpoolx.cu" />
     <CudaCompile Include="x15\cuda_x14_shabal512.cu">
     </CudaCompile>
