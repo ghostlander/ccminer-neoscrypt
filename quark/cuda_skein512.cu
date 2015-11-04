@@ -16,7 +16,7 @@ static uint32_t *d_found[MAX_GPUS];
 #define SHL(x, n)			((x) << (n))
 #define SHR(x, n)			((x) >> (n))
 
-static uint32_t *d_nonce[MAX_GPUS];
+uint32_t *d_nonce[MAX_GPUS];
 
 /*
  * M9_ ## s ## _ ## i  evaluates to s+i mod 9 (0 <= s <= 18, 0 <= i <= 7).
@@ -1955,6 +1955,9 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 		uint2 t0, t1, t2;
 		uint2 p[8];
 
+		uint32_t nonce = (startNounce + thread);
+
+
 		h0 = precalcvalues[0];
 		h1 = precalcvalues[1];
 		h2 = precalcvalues[2];
@@ -2205,9 +2208,9 @@ void skein512_gpu_hash_80_52(uint32_t threads, uint32_t startNounce, uint32_t *c
 		test |= SWAB32(hash[6] + regs[6]);
 		if (test <= target)
 		{
-			uint32_t tmp = atomicExch(&(d_found[0]), startNounce + thread);
+			uint32_t tmp = atomicExch(&(d_found[0]), nonce);
 			if (tmp != 0xffffffff)
-				d_found[1] = startNounce + thread;
+				d_found[1] = nonce;
 		}
 	}
 }
@@ -2220,6 +2223,8 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 		uint2 h0, h1, h2, h3, h4, h5, h6, h7, h8;
 		uint2 t0, t1, t2;
 		uint2 p[8];
+
+		uint32_t nounce = (startNounce + thread);
 
 		h0 = precalcvalues[0];
 		h1 = precalcvalues[1];
@@ -2471,9 +2476,9 @@ void skein512_gpu_hash_80_50(uint32_t threads, uint32_t startNounce, uint32_t *c
 		test|= SWAB32(hash[6] + regs[6]);
 		if (test <= target)
 		{
-			uint32_t tmp = atomicCAS(d_found, 0xffffffff, startNounce + thread);
+			uint32_t tmp = atomicCAS(d_found, 0xffffffff, nounce);
 			if (tmp != 0xffffffff)
-				d_found[1] = startNounce + thread;
+				d_found[1] = nounce;
 		}
 	}
 }

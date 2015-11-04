@@ -97,28 +97,22 @@ int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 			if (test <= ((uint64_t*)ptarget)[3] && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
-				*hashes_done = pdata[19] - first_nonce + throughput;
 
 				if (opt_debug || opt_benchmark)
 					applog(LOG_INFO, "GPU #%d: found nonce $%08X", thr_id, foundnonces[thr_id][0]);
 				if (foundnonces[thr_id][1] != 0xffffffff)
 				{
-					endiandata[19] = swab32_if(foundnonces[thr_id][1], swap);
-					skeincoinhash(vhash64, endiandata);
-					uint64_t test2 = ((uint64_t*)vhash64)[3];
-					if (test2 <= ((uint64_t*)ptarget)[3] && fulltest(vhash64, ptarget))
+					if (foundnonces[thr_id][1] == foundnonces[thr_id][0]) applog(LOG_WARNING, "Duplicate nonce: #%d", test);
+					else
 					{
 						if (opt_debug || opt_benchmark)
 							applog(LOG_INFO, "GPU #%d: found second nonce $%08X", thr_id, foundnonces[thr_id][1]);
 						pdata[21] = swab32_if(foundnonces[thr_id][1], !swap);
 						res++;
 					}
-					else
-					{
-						if (test2 != ((uint64_t*)ptarget)[3]) applog(LOG_WARNING, "GPU #%d: result for second nonce $%08X does not validate on CPU!", thr_id, foundnonces[thr_id][1]);
-					}
 				}
 				pdata[19] = swab32_if(foundnonces[thr_id][0], !swap);
+				*hashes_done = pdata[19] - first_nonce + throughput;
 				return res;
 			}
 			else 

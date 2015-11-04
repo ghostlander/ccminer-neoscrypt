@@ -331,6 +331,8 @@ void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash, u
 	{
 		uint32_t backup = Target;
 		uint2 message[8]={0};
+		uint32_t nonce = (startNounce + thread);
+
 
 		message[0] = __ldg(&g_hash[thread]);
 		message[1] = __ldg(&g_hash[thread + 1 * threads]);
@@ -343,9 +345,9 @@ void bmw256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash, u
 
 		if (message[7].y <= backup)
 		{
-			uint32_t tmp = atomicCAS(nonceVector, 0xffffffff, startNounce + thread);
+			uint32_t tmp = atomicCAS(nonceVector, 0xffffffff, nonce);
 			if (tmp != 0xffffffff)
-				nonceVector[1] = startNounce + thread;
+				nonceVector[1] = nonce;
 		}
 	}
 }
