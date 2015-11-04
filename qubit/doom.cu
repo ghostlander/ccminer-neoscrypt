@@ -40,11 +40,11 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1U << 22); // 256*256*8*8
+	uint32_t throughput = device_intensity(device_map[thr_id], __func__, (1 << 27));
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000f;
+		((uint32_t*)ptarget)[7] = 0x00005;
 
 	if (!init[thr_id])
 	{
@@ -55,7 +55,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		}
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+//		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		qubit_luffa512_cpu_init(thr_id, (int) throughput);
 
@@ -80,6 +80,9 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				*hashes_done = min(max_nonce - first_nonce, (uint64_t) pdata[19] - first_nonce + throughput);
 				pdata[19] = foundNonce;
+
+				if (opt_benchmark) applog(LOG_INFO, "GPU #%d: Found nonce $%08X", thr_id, foundNonce);
+
 				return 1;
 			}
 			else {

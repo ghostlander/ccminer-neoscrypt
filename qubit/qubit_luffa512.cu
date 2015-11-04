@@ -28,7 +28,7 @@
 #endif
 
 static unsigned char PaddedMessage[128];
-__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
+__constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + padding)
 __constant__ uint32_t c_Target[8];
 __constant__ uint32_t statebufferpre[8];
 __constant__ uint32_t statechainvpre[40];
@@ -777,11 +777,24 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 	{
 		int i, j;
 		const uint32_t nounce = startNounce + thread;
-		uint64_t buff[16];
+		uint64_t buff[16] = {0};
 
-#pragma unroll
-		for (int i=8; i < 16; ++i)
-			buff[i] = c_PaddedMessage80[i];
+//#pragma unroll
+//		for (int i=8; i < 16; ++i)
+		buff[8] = c_PaddedMessage80[8];
+		buff[9] = c_PaddedMessage80[9];
+		((char*)buff)[80] = 0x80;
+		((char*)buff)[111] = 0x1;
+		((char*)buff)[126] = 0x02;
+		((char*)buff)[127] = 0x80;
+
+		/*	memset(PaddedMessage+80, 0, 48);
+		PaddedMessage[80] = 0x80;
+		PaddedMessage[111] = 1;
+		PaddedMessage[126] = 0x02;
+		PaddedMessage[127] = 0x80;
+		*/
+
 
 		// die Nounce durch die thread-spezifische ersetzen
 		buff[9] = REPLACE_HIWORD(buff[9], cuda_swab32(nounce));
@@ -792,6 +805,7 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 #pragma unroll 4
 		for (int i = 0; i<4; i++)
 			statebuffer[i] = BYTES_SWAP32(((uint32_t*)buff)[i + 16]);
+
 #pragma unroll 4
 		for (int i = 4; i<8; i++)
 			statebuffer[i] = statebufferpre[i];
@@ -836,7 +850,7 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t
 	}
 }
 
-__global__  __launch_bounds__(256,4)
+__global__ __launch_bounds__(512,2)
 void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -850,8 +864,14 @@ void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, voi
 		uint32_t Hash[16];
 
 		#pragma unroll 16
-		for (int i=0; i < 16; ++i)
+		for (int i=0; i < 10; ++i)
 			buff.buf64[i] = c_PaddedMessage80[i];
+
+		((char*)buff.buf64)[80] = 0x80;
+		((char*)buff.buf64)[111] = 0x1;
+		((char*)buff.buf64)[126] = 0x02;
+		((char*)buff.buf64)[127] = 0x80;
+
 
 		// Tested nonce
 		buff.buf64[9] = REPLACE_HIWORD(buff.buf64[9], cuda_swab32(nounce));
@@ -874,37 +894,12 @@ void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, voi
 		Update512(statebuffer, statechainv, buff.buf32);
 		finalization512(statebuffer, statechainv, Hash);
 
-		/* dont ask me why not a simple if (Hash[i] > c_Target[i]) return;
-		 * we lose 20% in perfs without the position test */
-		int position = -1;
-		#pragma unroll 8
-		for (int i = 7; i >= 0; i--) {
-			if (Hash[i] > c_Target[i]) {
-				if (position < i) {
-					return;
-				}
-			}
-			if (Hash[i] < c_Target[i]) {
-				if (position < i) {
-					position = i;
-					//break; /* impact perfs, unroll ? */
-				}
-			}
+		if (Hash[7] <= c_Target[7])
+		{
+			uint32_t tmp = atomicCAS(resNounce, 0xffffffff, nounce);
+//			if (tmp != 0xffffffff)
+//				resNounce[1] = nounce;
 		}
-
-#if NBN == 1
-		if (resNounce[0] > nounce) {
-			resNounce[0] = nounce;
-		}
-#else
-		/* keep the smallest nounce, + extra one if found */
-		if (resNounce[0] > nounce) {
-			resNounce[1] = resNounce[0];
-			resNounce[0] = nounce;
-		} else {
-			resNounce[1] = nounce;
-		}
-#endif
 	}
 }
 
@@ -920,7 +915,7 @@ uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t 
 {
 	uint32_t result = UINT32_MAX;
 	cudaMemset(d_resNounce[thr_id], 0xffffffff, NBN * sizeof(uint32_t));
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 512;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -1033,13 +1028,13 @@ __host__
 void qubit_luffa512_cpu_setBlock_80(void *pdata)
 {
 	memcpy(PaddedMessage, pdata, 80);
-	memset(PaddedMessage+80, 0, 48);
+/*	memset(PaddedMessage+80, 0, 48);
 	PaddedMessage[80] = 0x80;
 	PaddedMessage[111] = 1;
 	PaddedMessage[126] = 0x02;
 	PaddedMessage[127] = 0x80;
-
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+*/
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 10*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 	qubit_cpu_precalc();
 }
 
@@ -1056,5 +1051,5 @@ void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget)
 	PaddedMessage[127] = 0x80;
 
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 10*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 }
