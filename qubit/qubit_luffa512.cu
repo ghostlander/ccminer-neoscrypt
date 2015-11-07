@@ -151,6 +151,188 @@ static uint32_t h_CNS[80] = {
 
 
 __device__ __forceinline__
+void rnd512_qubit(uint32_t *statebuffer, uint32_t *statechainv)
+{
+	int i, j;
+	uint32_t t[40];
+	uint32_t chainv[8];
+	uint32_t tmp;
+
+#pragma unroll 8
+	for (i = 0; i<8; i++)
+	{
+		t[i] = statechainv[i];
+#pragma unroll
+		for (j = 1; j<5; j++)
+		{
+			t[i] ^= statechainv[i + 8 * j];
+		}
+	}
+
+	MULT2(t, 0);
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			statechainv[i + 8 * j] ^= t[i];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			t[i + 8 * j] = statechainv[i + 8 * j];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			statechainv[8 * j + i] ^= t[8 * ((j + 1) % 5) + i];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			t[i + 8 * j] = statechainv[i + 8 * j];
+		}
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+		MULT2(statechainv, j);
+	}
+
+#pragma unroll 5
+	for (j = 0; j<5; j++) {
+#pragma unroll 8
+		for (i = 0; i<8; i++) {
+			statechainv[8 * j + i] ^= t[8 * ((j + 4) % 5) + i];
+		}
+	}
+
+	statechainv[0 + 8 * 0] ^= statebuffer[0];
+	statechainv[1 + 8 * 0] ^= statebuffer[1];
+	statechainv[2 + 8 * 0] ^= statebuffer[2];
+	statechainv[3 + 8 * 0] ^= statebuffer[3];
+	statechainv[4 + 8 * 0] ^= statebuffer[4];
+
+
+	statechainv[1 + 8 * 1] ^= statebuffer[0];
+	statechainv[2 + 8 * 1] ^= statebuffer[1];
+	statechainv[3 + 8 * 1] ^= statebuffer[2];
+	statechainv[4 + 8 * 1] ^= statebuffer[3];
+	statechainv[5 + 8 * 1] ^= statebuffer[4];
+
+
+	statechainv[2 + 8 * 2] ^= statebuffer[0];
+	statechainv[3 + 8 * 2] ^= statebuffer[1];
+	statechainv[4 + 8 * 2] ^= statebuffer[2];
+	statechainv[5 + 8 * 2] ^= statebuffer[3];
+	statechainv[6 + 8 * 2] ^= statebuffer[4];
+
+
+	statechainv[3 + 8 * 3] ^= statebuffer[0];
+	statechainv[4 + 8 * 3] ^= statebuffer[1];
+	statechainv[5 + 8 * 3] ^= statebuffer[2];
+	statechainv[6 + 8 * 3] ^= statebuffer[3];
+	statechainv[7 + 8 * 3] ^= statebuffer[4];
+
+	statechainv[4 + 8 * 4] ^= statebuffer[0] ^ statebuffer[4];
+	statechainv[5 + 8 * 4] ^= statebuffer[1];
+	statechainv[6 + 8 * 4] ^= statebuffer[2];
+	statechainv[7 + 8 * 4] ^= statebuffer[3];
+	statechainv[0 + 8 * 4] ^= statebuffer[4];
+
+	statechainv[1 + 8 * 4] = (statechainv[1 + 8 * 4] ^ statebuffer[4]);
+	statechainv[3 + 8 * 4] = (statechainv[3 + 8 * 4] ^ statebuffer[4]);
+
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		chainv[i] = statechainv[i];
+	}
+	#pragma unroll 1
+	for (i = 0; i<8; i++)
+	{
+		STEP(c_CNS[(2 * i)], c_CNS[(2 * i) + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) 
+	{
+		statechainv[i] = chainv[i];
+		chainv[i] = statechainv[i + 8];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) 
+	{
+		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 8] = chainv[i];
+		chainv[i] = statechainv[i + 16];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) 
+	{
+		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 16] = chainv[i];
+		chainv[i] = statechainv[i + 24];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) 
+	{
+		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) 
+	{
+		statechainv[i + 24] = chainv[i];
+		chainv[i] = statechainv[i + 32];
+	}
+
+	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
+
+#pragma unroll 8
+	for (i = 0; i<8; i++)
+	{
+		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
+	}
+
+#pragma unroll 8
+	for (i = 0; i<8; i++) {
+		statechainv[i + 32] = chainv[i];
+	}
+}
+
+__device__ __forceinline__
 void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 {
 	int i, j;
@@ -221,11 +403,13 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 		}
 	}
 
-#pragma unroll 5
-	for (j = 0; j<5; j++) {
-#pragma unroll 8
+
+	#pragma unroll 5
+	for (j = 0; j<5; j++)
+	{
+		#pragma unroll 8
 		for (i = 0; i<8; i++) {
-			statechainv[i + 8 * j] ^= statebuffer[i];
+		statechainv[i + 8 * j] ^= statebuffer[i];
 		}
 		MULT2(statebuffer, 0);
 	}
@@ -236,13 +420,13 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 	}
 
 #pragma unroll 1
-	for (i = 0; i<8; i++) 
+	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i)], c_CNS[(2 * i) + 1]);
 	}
 
 #pragma unroll 8
-	for (i = 0; i<8; i++) 
+	for (i = 0; i<8; i++)
 	{
 		statechainv[i] = chainv[i];
 		chainv[i] = statechainv[i + 8];
@@ -251,7 +435,7 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
 #pragma unroll 1
-	for (i = 0; i<8; i++) 
+	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
 	}
@@ -265,7 +449,7 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
 #pragma unroll 1
-	for (i = 0; i<8; i++) 
+	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
 	}
@@ -279,13 +463,13 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
 #pragma unroll 1
-	for (i = 0; i<8; i++) 
+	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
 	}
 
 #pragma unroll 8
-	for (i = 0; i<8; i++) 
+	for (i = 0; i<8; i++)
 	{
 		statechainv[i + 24] = chainv[i];
 		chainv[i] = statechainv[i + 32];
@@ -304,6 +488,7 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 		statechainv[i + 32] = chainv[i];
 	}
 }
+
 
 
 __device__ __forceinline__
@@ -732,10 +917,11 @@ void finalization512(uint32_t *const __restrict__ statebuffer, uint32_t *const _
 	int i,j;
 
 	statebuffer[4] = 0x80000000;
-#pragma unroll 3
+/*#pragma unroll 3
 	for(int i=5;i<8;i++)
 		statebuffer[i] = 0;
-	rnd512(statebuffer, statechainv);
+*/
+	rnd512_qubit(statebuffer, statechainv);
 
 	rnd512_nullhash(statechainv);
 
@@ -766,10 +952,12 @@ void finalization512(uint32_t *const __restrict__ statebuffer, uint32_t *const _
 
 /***************************************************/
 // Die Hash-Funktion
+//#if __CUDA_ARCH__ == 500
+//__launch_bounds__(256, 4)
+//#endif
+
+
 __global__
-#if __CUDA_ARCH__ == 500
-__launch_bounds__(256, 4)
-#endif
 void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
