@@ -1239,5 +1239,7 @@ void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget)
 	PaddedMessage[127] = 0x80;
 
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 10*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+	qubit_cpu_precalc();
+
 }
