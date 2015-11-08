@@ -85,16 +85,14 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 
 				return 1;
 			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+			else 
+			{
+				if (vhash64[7] != Htarg) applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-
 		pdata[19] += throughput;
-		MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	} while (!scan_abort_flag && !work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
 
 	*hashes_done = pdata[19] - first_nonce;
-	MyStreamSynchronize(NULL, NULL, device_map[thr_id]);
 	return 0;
 }
