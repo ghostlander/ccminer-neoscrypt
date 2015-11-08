@@ -28,7 +28,7 @@
 #endif
 
 static unsigned char PaddedMessage[128];
-__constant__ uint64_t c_PaddedMessage80[10]; // padded message (80 bytes + padding)
+__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t c_Target[8];
 __constant__ uint32_t statebufferpre[8];
 __constant__ uint32_t statechainvpre[40];
@@ -1232,14 +1232,14 @@ void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget)
 //	unsigned char PaddedMessage[128];
 
 	memcpy(PaddedMessage, pdata, 80);
-/*	memset(PaddedMessage+80, 0, 48);
+	memset(PaddedMessage+80, 0, 48);
 	PaddedMessage[80] = 0x80;
 	PaddedMessage[111] = 1;
 	PaddedMessage[126] = 0x02;
 	PaddedMessage[127] = 0x80;
-*/
+
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
-	qubit_cpu_precalc();
+	qubit_cpu_precalc(); 
 
 }

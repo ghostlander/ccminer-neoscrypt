@@ -44,7 +44,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00005;
+		((uint32_t*)ptarget)[7] = 0x000f;
 
 	if (!init[thr_id])
 	{
