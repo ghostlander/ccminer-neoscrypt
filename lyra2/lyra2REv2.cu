@@ -83,7 +83,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t intensity = 256 * 256 * 8;
-	uint32_t tpb = 7;
+	uint32_t tpb = 8;
 
 	cudaDeviceProp props;
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
