@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <memory.h>
 #include "cuda_vector.h"
-#define TPB52 84
-#define TPB50 16
+#define TPB52 256
+#define TPB50 64
 
  
 #define Nrow 4
@@ -145,11 +145,11 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int rowInOut, const int rowOut, vectype* state, uint32_t thread)
 {
 	int i,j;
-		vectype state1[3],state2[3];
+		vectype state2[3];
 		const uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
 		const uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
 		const uint32_t ps3 = (memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
-
+	
 	for (i = 0; i < Ncol; i++)
 	{
 		const uint32_t s1 = ps1 + i*memshift;
@@ -158,20 +158,11 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 
 		#pragma unroll 
 		for (j = 0; j < 3; j++)
-			state1[j] = __ldg4(&(DMatrix + s1)[j]);
-
-
-		#pragma unroll 
-		for (j = 0; j < 3; j++)
 			state2[j] = __ldg4(&(DMatrix + s2)[j]);
 
 		#pragma unroll 
 		for (j = 0; j < 3; j++)
-			          state1[j] += state2[j];
-
-		#pragma unroll 
-		for (j = 0; j < 3; j++)
-			          state[j] ^= state1[j];
+			state[j] ^= __ldg4(&(DMatrix + s1)[j]) + state2[j];
 
 		round_lyra_v35(state);
 
