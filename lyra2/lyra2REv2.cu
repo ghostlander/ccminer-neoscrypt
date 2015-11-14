@@ -98,7 +98,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "980"))
 	{
-		intensity = 256 * 256 * 12;
+		intensity = 256 * 256 * 18;
 		tpb = 8;
 	}
 	else if (strstr(props.name, "750 Ti"))
@@ -114,7 +114,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	else if (strstr(props.name, "960"))
 	{
 		tpb = 8;
-		intensity = 256 * 256 * 12;
+		intensity = 256 * 256 * 18;
 	}
 	else if (strstr(props.name, "950"))
 	{
