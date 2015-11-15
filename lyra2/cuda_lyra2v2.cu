@@ -299,10 +299,10 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
         	round_lyra_v35(state);
 		
 		round_lyra_v35(state);
-		outputHash[thread + 3 * threads] = ((uint2*)state)[3];
-		outputHash[thread + 2 * threads] = ((uint2*)state)[2];
+		outputHash[thread] = ((uint2*)state)[0];
 		outputHash[thread + threads] = ((uint2*)state)[1];
-		outputHash[thread]=            ((uint2*)state)[0];
+		outputHash[thread + 2 * threads] = ((uint2*)state)[2];
+		outputHash[thread + 3 * threads] = ((uint2*)state)[3];
 //		((vectype*)outputHash)[thread] = state[0];
 
 	} //thread
