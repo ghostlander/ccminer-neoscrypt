@@ -103,7 +103,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
-		intensity = 256 * 256 * 5;
+		intensity = 256 * 256 * 10;
 		tpb = 16;
 	}
 	else if (strstr(props.name, "750"))
@@ -125,7 +125,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x002f;
+		((uint32_t*)ptarget)[7] = 0x00ff;
 	if (!init[thr_id])
 	{ 
 		cudaSetDevice(device_map[thr_id]);
