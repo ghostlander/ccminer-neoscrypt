@@ -380,7 +380,7 @@ __host__ void x11_echo512_cpu_free(int32_t thr_id)
 	cudaFreeHost(&d_nonce[thr_id]);
 }
 
-
+/*
 __constant__ uint32_t P[48] = {
 	0xe7e9f5f5,
 	0xf5e7e9f5,
@@ -446,12 +446,76 @@ __constant__ uint32_t P[48] = {
 	0xb3dbe7af
 	//58-61
 };
-
+*/
 __global__
-__launch_bounds__(256, 2)
+__launch_bounds__(256,2)
 void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
 {
+		uint32_t P[48] = {
+			0xe7e9f5f5,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
 
+			0xa4213d7e,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+			//8-12
+			0x01425eb8,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+
+			0x65978b09,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+
+			//21-25
+			0x2cb6b661,
+			0x6b23b3b3,
+			0xcf93a7cf,
+			0x9d9d3751,
+
+			0x9ac2dea3,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+
+			//34-38
+			0x579f9f33,
+			0xfbfbfbfb,
+			0xfbfbfbfb,
+			0xefefd3c7,
+
+			0xdbfde1dd,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+
+			0x34514d9e,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+
+
+			0xb134347e,
+			0xea6f7e7e,
+			0xbd7731bd,
+			0x8a8a1968,
+
+			0x14b8a457,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af,
+
+			0x265f4382,
+			0xf5e7e9f5,
+			0xb3b36b23,
+			0xb3dbe7af
+			//58-61
+		};
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{

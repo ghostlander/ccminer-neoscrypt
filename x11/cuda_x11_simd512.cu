@@ -15,7 +15,7 @@ uint4 *d_temp4[MAX_GPUS];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 //texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
-
+#if __CUDA_ARCH__ != 500
 __constant__ uint8_t c_perm0[8] = { 2, 3, 6, 7, 0, 1, 4, 5 };
 __constant__ uint8_t c_perm1[8] = { 6, 7, 2, 3, 4, 5, 0, 1 };
 __constant__ uint8_t c_perm2[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
@@ -24,14 +24,8 @@ __constant__ uint8_t c_perm4[8] = { 0, 1, 4, 5, 6, 7, 2, 3 };
 __constant__ uint8_t c_perm5[8] = { 6, 7, 2, 3, 0, 1, 4, 5 };
 __constant__ uint8_t c_perm6[8] = { 6, 7, 0, 1, 4, 5, 2, 3 };
 __constant__ uint8_t c_perm7[8] = { 4, 5, 2, 3, 6, 7, 0, 1 };
+#endif
 
-
-__constant__ uint32_t c_IV_512[32] = {
-	0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558,
-	0xac506643, 0xa90635a5, 0xe25b878b, 0xaab7878f, 0x88817f7a, 0x0a02892b, 0x559a7550, 0x598f657e,
-	0x7eef60a1, 0x6b70e3e8, 0x9c1714d1, 0xb958e2a8, 0xab02675e, 0xed1c014f, 0xcd8d65bb, 0xfdb7a257,
-	0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22
-};
 
 __constant__ short c_FFT128_8_16_Twiddle[128] = {
 	1,   1,   1,   1,   1,    1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
@@ -525,6 +519,9 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 //  0   8   4  12   2  10   6  14      16  24  20  28  18  26  22  30         4 4 4 4 4 4 4 4     4 4 4 4 4 4 4 4
 
 	// 2 6 0 4
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm0[8] = { 2, 3, 6, 7, 0, 1, 4, 5 };
+#endif
 
 	P1 = expanded[ 0]; P2 = __shfl(expanded[ 2], (threadIdx.x-1)&7, 8); P = even ? P1 : P2;
 	Q1 = expanded[16]; Q2 = __shfl(expanded[18], (threadIdx.x-1)&7, 8); Q = even ? Q1 : Q2;
@@ -546,6 +543,10 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 //  1   9   5  13   3  11   7  15      17  25  21  29  19  27  23  31         0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
 
 	// 6 2 4 0
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm1[8] = { 6, 7, 2, 3, 4, 5, 0, 1 };
+#endif
+
 
 	P1 = expanded[ 1]; P2 = __shfl(expanded[ 3], (threadIdx.x-1)&7, 8); P = even ? P1 : P2;
 	Q1 = expanded[17]; Q2 = __shfl(expanded[19], (threadIdx.x-1)&7, 8); Q = even ? Q1 : Q2;
@@ -567,6 +568,9 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 //  0   8   4  12   2  10   6  14      16  24  20  28  18  26  22  30         1 1 1 1 1 1 1 1     1 1 1 1 1 1 1 1
 
 	// 7 5 3 1
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm2[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+#endif
 
 	bool hi = (threadIdx.x&7)>=4;
 
@@ -590,6 +594,9 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 //  0   8   4  12   2  10   6  14      16  24  20  28  18  26  22  30         7 7 7 7 7 7 7 7     7 7 7 7 7 7 7 7
 
   // 1 3 5 7
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm3[8] = { 1, 0, 3, 2, 5, 4, 7, 6 };
+#endif
 
 	bool lo = (threadIdx.x&7)<4;
 
@@ -618,6 +625,10 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 //{ 2, 66, 34, 98, 18, 82, 50, 114 },    { 3, 67, 35, 99, 19, 83, 51, 115 },
 
 	bool sel = ((threadIdx.x+2)&7) >= 4;  // 2,3,4,5
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm4[8] = { 0, 1, 4, 5, 6, 7, 2, 3 };
+#endif
+
 
 	P1 = sel?expanded[0]:expanded[1]; Q1 = __shfl(P1, threadIdx.x^1, 8);
 	Q2 = sel?expanded[2]:expanded[3]; P2 = __shfl(Q2, threadIdx.x^1, 8);
@@ -642,6 +653,9 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 //  1   9   5  13   3  11   7  15       1   9   5  13   3  11   7  15         2 2 2 2 2 2 2 2     3 3 3 3 3 3 3 3
 //  0   8   4  12   2  10   6  14       0   8   4  12   2  10   6  14         0 0 0 0 0 0 0 0     1 1 1 1 1 1 1 1
 //  1   9   5  13   3  11   7  15       1   9   5  13   3  11   7  15         4 4 4 4 4 4 4 4     5 5 5 5 5 5 5 5
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm5[8] = { 6, 7, 2, 3, 0, 1, 4, 5 };
+#endif
 
 	P1 = sel?expanded[1]:expanded[0]; Q1 = __shfl(P1, threadIdx.x^1, 8);
 	Q2 = sel?expanded[3]:expanded[2]; P2 = __shfl(Q2, threadIdx.x^1, 8);
@@ -668,6 +682,9 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 // 17  25  21  29  19  27  23  31      17  25  21  29  19  27  23  31         6 6 6 6 6 6 6 6     7 7 7 7 7 7 7 7
 
 	// sel markiert threads 2,3,4,5
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm6[8] = { 6, 7, 0, 1, 4, 5, 2, 3 };
+#endif
 
 	int t;
 	t = __shfl(expanded[17],(threadIdx.x+4)&7,8); P1 = sel?t:expanded[16]; Q1 = __shfl(P1, threadIdx.x^1, 8);
@@ -695,6 +712,9 @@ void Expansion(const uint32_t *const __restrict__ data, uint4 *const __restrict_
 // 16  24  20  28  18  26  22  30      16  24  20  28  18  26  22  30         4 4 4 4 4 4 4 4     5 5 5 5 5 5 5 5
 
 	// sel markiert threads 2,3,4,5
+#if __CUDA_ARCH__ == 500 
+	const uint8_t c_perm7[8] = { 4, 5, 2, 3, 6, 7, 0, 1 };
+#endif
 
 	t = __shfl(expanded[16],(threadIdx.x+4)&7,8); P1 = sel?expanded[17]:t; Q1 = __shfl(P1, threadIdx.x^1, 8);
 	t = __shfl(expanded[18],(threadIdx.x+4)&7,8); Q2 = sel?expanded[19]:t; P2 = __shfl(Q2, threadIdx.x^1, 8);
