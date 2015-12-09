@@ -1,8 +1,12 @@
 #include "cuda_helper.h"
 #include <memory.h> // memcpy()
 #include "cuda_vector.h"
-#define TPB 320
 
+#if __CUDA_ARCH__ == 500
+#define TPB 384
+#else
+#define TPB 320
+#endif
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
 #include "cuda_x11_aes.cu"
