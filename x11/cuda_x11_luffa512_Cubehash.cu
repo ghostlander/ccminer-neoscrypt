@@ -919,11 +919,6 @@ void finalization512(uint32_t *statechainv, uint32_t *b)
 			ROUND_ODD;}
 
 __global__
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 4)
-#else
-__launch_bounds__(256, 3)
-#endif
 void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -1204,9 +1199,9 @@ void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, ui
 	}
 }
 
-__host__ void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+__host__ void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash, const uint32_t luffacubethreads)
 {
-    const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = luffacubethreads;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);

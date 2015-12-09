@@ -17,7 +17,7 @@ static uint32_t *h_found[MAX_GPUS];
 
 extern void x11_shavite512_setBlock_80(void *pdata);
 extern void x11_shavite512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-extern void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t shavitethreads);
 
 extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, const uint32_t simdthreads);
@@ -80,6 +80,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1 << 19);
 	throughput = min(throughput, (max_nonce - first_nonce));
 	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 384 : 320;
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;
@@ -118,7 +119,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 
 		x11_shavite512_cpu_hash_80(throughput, pdata[19], d_hash[thr_id]);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], simdthreads);
-		x11_shavite512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
+		x11_shavite512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id], shavitethreads);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], simdthreads);
 		x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], d_hash[thr_id], ptarget[7], h_found[thr_id]);
 

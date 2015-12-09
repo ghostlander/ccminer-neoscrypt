@@ -44,9 +44,9 @@ extern void cuda_jh512Keccak512_cpu_hash_64( uint32_t threads, uint32_t startNou
 
 
 
-extern void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void x11_luffaCubehash512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t luffacubehashthreads);
 
-extern void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t shavitethreads);
 
 extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, const uint32_t simdthreads);
@@ -159,6 +159,8 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 26 : 256 * 256 * 13;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 384 : 320;
+	uint32_t luffacubehashthreads = (device_sm[device_map[thr_id]] == 500) ? 512 : 256;
 
 	throughput = min(throughput, (max_nonce - first_nonce));
 
@@ -207,8 +209,8 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		quark_groestl512_cpu_hash_64(throughput, pdata[19], NULL, d_hash[thr_id]);
 		quark_skein512_cpu_hash_64(throughput, pdata[19], NULL, d_hash[thr_id]);
 		cuda_jh512Keccak512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
-		x11_luffaCubehash512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
-		x11_shavite512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id]);
+		x11_luffaCubehash512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id], luffacubehashthreads);
+		x11_shavite512_cpu_hash_64(throughput, pdata[19], d_hash[thr_id], shavitethreads);
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id],simdthreads);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		x13_hamsi512_cpu_hash_64(throughput, pdata[19],  d_hash[thr_id]);

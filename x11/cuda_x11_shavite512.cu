@@ -2521,7 +2521,7 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 }
 
 
-__global__ __launch_bounds__(TPB, 2)
+__global__ __launch_bounds__(TPB, 1)
 void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -2569,11 +2569,11 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 	} //thread < threads
 }
 
-__host__ void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+__host__ void x11_shavite512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_hash, uint32_t shavitethreads)
 {
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + TPB-1)/TPB);
-	dim3 block(TPB);
+	dim3 grid((threads + shavitethreads - 1) / shavitethreads);
+	dim3 block(shavitethreads);
 
 	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 }
@@ -2582,7 +2582,7 @@ __host__ void x11_shavite512_cpu_hash_80(uint32_t threads, uint32_t startNounce,
 {
 
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + TPB-1)/TPB);
+	dim3 grid((threads + TPB - 1) / TPB);
 	dim3 block(TPB);
 
 	x11_shavite512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
