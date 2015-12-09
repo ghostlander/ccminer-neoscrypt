@@ -419,7 +419,9 @@
       <MaxRegCount>92</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="Algo256\cuda_skein256.cu" />
-    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
+    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">150</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="neoscrypt\neoscrypt.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
