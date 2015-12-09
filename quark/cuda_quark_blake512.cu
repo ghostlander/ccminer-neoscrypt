@@ -73,9 +73,6 @@ __constant__ uint8_t c_sigma[6][16] = {
 }
 
 __global__
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(256, 1)
-#endif
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -239,9 +236,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			Gprecalc(2, 7, 8, 13, 0xc, 0x3)
 			Gprecalc(3, 4, 9, 14, 0x0, 0xd)
 
-			#if __CUDA_ARCH__ == 500
+//			#if __CUDA_ARCH__ == 500
 
-			Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+/*			Gprecalc(0, 4, 8, 12, 0x1, 0x0)
 			Gprecalc(1, 5, 9, 13, 0x3, 0x2)
 			Gprecalc(2, 6, 10, 14, 0x5, 0x4)
 			Gprecalc(3, 7, 11, 15, 0x7, 0x6)
@@ -294,8 +291,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			Gprecalc(1, 6, 11, 12, 0x5, 0x7)
 			Gprecalc(2, 7, 8, 13, 0xe, 0xf)
 			Gprecalc(3, 4, 9, 14, 0x9, 0x1)
+*/
 
-			#else
+//			#else
 
 			for (int i = 0; i < 6; i++)
 			{
@@ -310,7 +308,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 				G(2, 7, 8, 13, 12);
 				G(3, 4, 9, 14, 14);
 			}
-			#endif
+//			#endif
 
 			v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
 			v[1] = cuda_swap(h[1] ^ v[1] ^ v[9]);
@@ -330,7 +328,6 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 
 
 __global__
-__launch_bounds__(128, 8)
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -674,7 +671,7 @@ __host__ void quark_blake512_cpu_setBlock_80(uint64_t *pdata)
 
 __host__ void quark_blake512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash)
 {
-	const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 64;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

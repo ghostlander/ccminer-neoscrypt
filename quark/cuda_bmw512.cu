@@ -198,7 +198,7 @@ __device__ __forceinline__ void Compression512(const uint2 *msg, uint2 *hash)
 }
 
 
-__global__ __launch_bounds__(32, 16)
+__global__ __launch_bounds__(32, 12)
 void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
     const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -680,7 +680,7 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 	}
 }
 
-__global__ __launch_bounds__(32, 16)
+__global__ __launch_bounds__(32, 15)
 void quark_bmw512_gpu_hash_64_quark(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
