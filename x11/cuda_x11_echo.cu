@@ -341,7 +341,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 	}
 }
 
-__global__ __launch_bounds__(256, 4)
+__global__ __launch_bounds__(256, 2)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	__shared__ __align__(128) uint32_t sharedMemory[1024];
@@ -448,6 +448,7 @@ __constant__ uint32_t P[48] = {
 };
 
 __global__
+__launch_bounds__(256, 2)
 void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 
