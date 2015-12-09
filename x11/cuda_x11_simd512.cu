@@ -744,11 +744,7 @@ x11_simd512_gpu_expand_64(uint32_t threads, uint32_t startNounce, const uint64_t
 }
 
 __global__
-#if __CUDA_ARCH__ > 500
 __launch_bounds__(TPB, 2)
-#else
-__launch_bounds__(32, 32)
-#endif
 void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint4 *g_fft4)
 {
 
