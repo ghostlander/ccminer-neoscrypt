@@ -79,8 +79,8 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, 1 << 19);
 	throughput = min(throughput, (max_nonce - first_nonce));
-	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
-	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 384 : 320;
+	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 64 : 32;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 256 : 320;
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;

@@ -135,8 +135,8 @@ extern "C" int scanhash_c11(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 256 * 256 * 21 : 256 * 256 * 10;
-	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
-	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 384 : 320;
+	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 64 : 32;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 256 : 320;
 	uint32_t luffacubehashthreads = (device_sm[device_map[thr_id]] == 500) ? 512 : 256;
 
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);

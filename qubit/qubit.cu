@@ -83,8 +83,8 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	uint32_t intensity = 256 * 256 * 10;
-	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
-	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 384 : 320;
+	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 64 : 32;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 256 : 256;
 	static uint32_t throughput;
 
 	if (opt_benchmark)
@@ -112,6 +112,10 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 			intensity = 256 * 256 * 10;
 		}
 		else if (strstr(props.name, "960"))
+		{
+			intensity = 256 * 256 * 23;
+		}
+		else if (strstr(props.name, "950"))
 		{
 			intensity = 256 * 256 * 23;
 		}

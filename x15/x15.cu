@@ -171,8 +171,8 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	if (device_sm[device_map[thr_id]] == 520)  intensity = 256 * 256 * 22;
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity); // 19=256*256*8;
 	throughput = min(throughput, (max_nonce - first_nonce));
-	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 256 : 32;
-	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 384 : 320;
+	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 64 : 32;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 256 : 320;
 	uint32_t luffacubehashthreads = (device_sm[device_map[thr_id]] == 500) ? 512 : 256;
 
 	if (opt_benchmark)
