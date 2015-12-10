@@ -2384,7 +2384,9 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			outHash[i] = hash.h4[i];
 	} // thread < threads
 }
-__global__ __launch_bounds__(256,2)
+
+//__launch_bounds__(256, 2)
+__global__ 
 void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 #if USE_ALL_TABLES
@@ -2434,7 +2436,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		for (i = 0; i<8; i++)
 			n[i] = hash[i] = vectorize(g_hash[hashPosition + i]);
 
-#pragma unroll 10
+//#pragma unroll 10
 		for (i = 0; i < 10; i++)
 		{
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
@@ -2489,7 +2491,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		n[6] = state[6];
 		n[7] = vectorize(0x2000000000000)^ state[7];
 
-#pragma unroll 10
+//#pragma unroll 10
 		for (i = 0; i < 10; i++) 
 		{
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
@@ -2605,7 +2607,7 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 			h[i] = vectorizelow(0);
 		}
 
-		#pragma unroll 10
+//		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			tmp0 = ROUND_ELT(sharedMemory, h, 0, 7, 6, 5, 4, 3, 2, 1)^ InitVector_RC[r];
@@ -2661,7 +2663,7 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 		n[6] = state[6];
 		n[7] = vectorize(0x2000000000000)^state[7];
 
-		#pragma unroll 9
+//		#pragma unroll 9
 		for (unsigned r=0; r < 9; r++) 
 		{
 			uint2 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
