@@ -78,6 +78,76 @@ void aes_gpu_init(uint32_t *const sharedMemory)
 	}
 }
 
+#define xor4_32(a,b,c,d) ((a ^ b) ^ (c ^ d));
+
+__device__
+static void aes_round(
+const uint32_t *sharedMemory,
+uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t k0,
+uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
+{
+	y0 = xor4_32(
+		sharedMemory[x0&0xff],
+		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x2, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x3, 0, 0x4443) + 768]);
+
+	y1 = xor4_32(
+		sharedMemory[x1 & 0xff],
+		sharedMemory[__byte_perm(x2, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x3, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x0, 0, 0x4443) + 768]);
+
+	y2 = xor4_32(
+		sharedMemory[x2 & 0xff],
+		sharedMemory[__byte_perm(x3, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x0, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x1, 0, 0x4443) + 768]); // ^k2
+
+	y0 ^= k0;
+
+	y3 = xor4_32(
+		sharedMemory[x3 & 0xff],
+		sharedMemory[__byte_perm(x0, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x1, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x2, 0, 0x4443) + 768]); // ^k3
+}
+
+__device__
+static void aes_round(
+const uint32_t *sharedMemory,
+uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
+uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
+{
+	y0 = xor4_32(
+		sharedMemory[x0 & 0xff],
+		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x2, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x3, 0, 0x4443) + 768]);
+
+	y1 = xor4_32(
+		sharedMemory[x1 & 0xff],
+		sharedMemory[__byte_perm(x2, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x3, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x0, 0, 0x4443) + 768]);
+
+	y2 = xor4_32(
+		sharedMemory[x2 & 0xff],
+		sharedMemory[__byte_perm(x3, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x0, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x1, 0, 0x4443) + 768]); // ^k2
+
+	y3 = xor4_32(
+		sharedMemory[x3 & 0xff],
+		sharedMemory[__byte_perm(x0, 0, 0x4441) + 256],
+		sharedMemory[__byte_perm(x1, 0, 0x4442) + 512],
+		sharedMemory[__byte_perm(x2, 0, 0x4443) + 768]); // ^k3
+}
+
+/*
+
+Only faster on Cuda 6.5
+
 __device__ __forceinline__
 static void aes_round(
 const uint32_t *const __restrict__ sharedMemory,
@@ -136,3 +206,4 @@ const uint32_t x0, const uint32_t x1, const uint32_t x2, const uint32_t x3,
 		^ sharedMemory[bfe(x2, 24, 8) + 768];
 }
 
+*/
