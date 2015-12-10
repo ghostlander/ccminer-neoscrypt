@@ -320,7 +320,7 @@ __constant__ uint32_t mixTab0Tex[] = {
         SMIX(S00, S01, S02, S03); \
 	}
 
-__global__ __launch_bounds__(128, 8)
+__global__
 void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
 	__shared__ uint32_t mixtabs[1024];
