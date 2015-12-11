@@ -151,7 +151,7 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 }
 
 
-__global__  __launch_bounds__(128, 6)
+__global__  __launch_bounds__(256, 3)
 void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *g_hash, uint32_t *g_nonceVector)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -2005,7 +2005,7 @@ __host__ void quark_keccak512_cpu_hash_64_final(int thr_id, uint32_t threads, ui
 
 __host__ void quark_keccakskein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	const uint32_t threadsperblock = 64;
+	const uint32_t threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
