@@ -262,8 +262,7 @@ static __device__ __forceinline__ void F8(uint32_t x[8][4], const uint32_t buffe
 	for (int i = 0; i < 16; i++)  x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)buffer)[i];
 }
 
-// Die Hash-Funktion
-__global__ __launch_bounds__(256, 4)
+__global__ //__launch_bounds__(512, 2)
 void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -320,9 +319,8 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 	}
 }
 
-// Die Hash-Funktion
-#define TPB2 256
-__global__ __launch_bounds__(TPB2, 2)
+#define TPB2 32
+__global__ //__launch_bounds__(TPB2, 32)
 void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -387,7 +385,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 
 __host__ void quark_jh512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-    const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 32;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
