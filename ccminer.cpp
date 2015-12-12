@@ -2705,12 +2705,20 @@ int main(int argc, char *argv[])
 	opt_syslog_pfx = strdup(PROGRAM_NAME);
 	opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
 
-	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by sp-hash@github ***\n");
-#ifdef WIN32
-	printf("\tBuilt with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
+#ifdef _MSC_VER
+	printf("Compiled with Visual C++ %d ", _MSC_VER / 100);
 #else
-	printf("\tBuilt with the nVidia CUDA SDK 6.5\n\n");
+#ifdef __clang__
+	printf("Compiled with Clang %s ", __clang_version__);
+#else
+#ifdef __GNUC__
+	printf("Compiled with GCC %d.%d ", __GNUC__, __GNUC_MINOR__);
+#else
+	printf("Compiled with an unknown compiler ");
 #endif
+#endif
+#endif
+	printf("using Nvidia CUDA Toolkit %d.%d\n\n", CUDART_VERSION / 1000, (CUDART_VERSION % 1000) / 10);
 	printf("  Based on pooler cpuminer 2.3.2 and the tpruvot@github fork\n");
 	printf("  CUDA support by Christian Buchner, Christian H. and DJM34\n");
 	printf("  Includes optimizations implemented by sp, klaust, tpruvot, tsiv and pallas.\n\n");
