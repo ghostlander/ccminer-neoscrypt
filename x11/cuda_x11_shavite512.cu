@@ -1349,46 +1349,19 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		uint32_t x2 = state[0x6];
 		uint32_t x3 = state[0x7];
 
+		for (int i = 0; i < 16; i+=4)
+		{
 
-		rk[0] = msg[0];
-		x0 ^= msg[0];
-		rk[1] = msg[1];
-		x1 ^= msg[1];
-		rk[2] = msg[2];
-		x2 ^= msg[2];
-		rk[3] = msg[3];
-		x3 ^= msg[3];
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-
-		rk[4] = msg[4];
-		x0 ^= msg[4];
-		rk[5] = msg[5];
-		x1 ^= msg[5];
-		rk[6] = msg[6];
-		x2 ^= msg[6];
-		rk[7] = msg[7];
-		x3 ^= msg[7];
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-
-		rk[8] = msg[8];
-		x0 ^= msg[8];
-		rk[9] = msg[9];
-		x1 ^= msg[9];
-		rk[10] = msg[10];
-		x2 ^= msg[10];
-		rk[11] = msg[11];
-		x3 ^= msg[11];
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-		rk[12] = msg[12];
-		x0 ^= msg[12];
-		rk[13] = msg[13];
-		x1 ^= msg[13];
-		rk[14] = msg[14];
-		x2 ^= msg[14];
-		rk[15] = msg[15];
-		x3 ^= msg[15];
-		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-
+			rk[i + 0] = msg[i + 0];
+			x0 ^= msg[i + 0];
+			rk[i + 1] = msg[i + 1];
+			x1 ^= msg[i + 1];
+			rk[i + 2] = msg[i + 2];
+			x2 ^= msg[i + 2];
+			rk[i + 3] = msg[i + 3];
+			x3 ^= msg[i + 3];
+			AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		}
 		state[0] ^= x0;
 		state[1] ^= x1;
 		state[2] ^= x2;
@@ -1405,6 +1378,8 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		x1 = state[1] ^ rk[1];
 		x2 = state[2] ^ rk[2];
 		x3 = state[3] ^ rk[3];
+
+
 		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 		KEY_EXPAND_ELT(sharedMemory, rk[4], rk[5], rk[6], rk[7]);
 		rk[4] ^= rk[0];
@@ -1492,6 +1467,7 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		x2 ^= rk[30];
 		x3 ^= rk[31];
 		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+
 		state[4] ^= x0;
 		state[5] ^= x1;
 		state[6] ^= x2;
