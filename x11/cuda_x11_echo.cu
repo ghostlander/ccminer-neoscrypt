@@ -308,30 +308,27 @@ __device__ __forceinline__ void cuda_echo_round(
 		hash[i] ^= W[i];
 }
 
-/*
+
 __device__ __forceinline__
 void echo_gpu_init_128(uint32_t *const __restrict__ sharedMemory)
 {
 	if (threadIdx.x < 128) 
 	{
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
-		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
-		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
-
-		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 128] = d_AES0[threadIdx.x + 128];
+		sharedMemory[threadIdx.x + 256] = ROL8(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 256 + 128] = ROL8(sharedMemory[threadIdx.x + 128]);
+		sharedMemory[threadIdx.x + 512] = ROL16(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 512 + 128] = ROL16(sharedMemory[threadIdx.x + 128]);
+		sharedMemory[threadIdx.x + 768] = ROL24(sharedMemory[threadIdx.x]);
+		sharedMemory[threadIdx.x + 768 + 128] = ROL24(sharedMemory[threadIdx.x + 128]);
 	}
 }
-*/
 
 
 __device__ __forceinline__
 void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 {
-	/* each thread startup will fill a uint32 */
 	if (threadIdx.x < 256) 
 	{
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
@@ -341,12 +338,13 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 	}
 }
 
-__global__ __launch_bounds__(256, 2)
+__global__
+__launch_bounds__(128,4)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	__shared__ __align__(128) uint32_t sharedMemory[1024];
 
-	echo_gpu_init(sharedMemory);
+	echo_gpu_init_128(sharedMemory);
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -367,7 +365,7 @@ __host__ void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 
 __host__ void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
-	uint32_t threadsperblock = 256;
+	uint32_t threadsperblock = 128;
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
@@ -448,7 +446,7 @@ __constant__ uint32_t P[48] = {
 };
 */
 __global__
-__launch_bounds__(256,2)
+__launch_bounds__(256, 2)
 void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 		uint32_t P[48] = {
