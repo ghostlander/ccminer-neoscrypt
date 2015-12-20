@@ -2,7 +2,7 @@
 
 #define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
 #define CUBEHASH_BLOCKBYTES 32 /* this is b for CubeHashr/b */
-#define TPB 64
+#define TPB 32
 #define LROT(x, bits) __funnelshift_l(x, x, bits)
 
 #define ROTATEUPWARDS7(a)  LROT(a,7)

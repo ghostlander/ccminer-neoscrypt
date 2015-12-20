@@ -14,7 +14,9 @@ extern "C" {
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 static  uint64_t *d_hash2[MAX_GPUS];
 
-extern void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
+extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
+//extern void keccak256_cpu_hash_32(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
+
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 
 extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
@@ -155,7 +157,8 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	do {
 		uint32_t foundNonce[2] = { 0, 0 };
 
-		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id],tpb);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);

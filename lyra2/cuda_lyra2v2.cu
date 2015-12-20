@@ -253,10 +253,10 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 	if (thread < threads)
 	{
  
-		((uint2*)state)[3] = __ldg(&outputHash[thread + 3 * threads]);
-		((uint2*)state)[2] = __ldg(&outputHash[thread + 2 * threads]);
-		((uint2*)state)[1] = __ldg(&outputHash[thread + threads]);
 		((uint2*)state)[0] = __ldg(&outputHash[thread]);
+		((uint2*)state)[1] = __ldg(&outputHash[thread + threads]);
+		((uint2*)state)[2] = __ldg(&outputHash[thread + 2 * threads]);
+		((uint2*)state)[3] = __ldg(&outputHash[thread + 3 * threads]);
 
 		 state[1] = state[0];
 

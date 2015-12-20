@@ -177,7 +177,7 @@ void skein256_cpu_init(int thr_id, uint32_t threads)
 __host__
 void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
 {
-	const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 64;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

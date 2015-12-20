@@ -46,9 +46,10 @@ __constant__ uint2 c_PaddedMessage80[10]; // padded message (80 bytes + padding?
 static void __forceinline__ __device__ keccak_block(uint2 *s)
 {
 	uint2 bc[5], tmpxor[5], tmp1, tmp2;
-//	uint2 s[25];
 
-#pragma unroll 1
+#if __CUDA_ARCH__ > 500
+#pragma unroll 
+#endif
 	for (int i= 0; i < 24; i++) 
 	{
 #pragma unroll
@@ -272,7 +273,7 @@ void keccak256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *out
 __host__
 void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 64;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

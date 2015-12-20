@@ -131,7 +131,7 @@ quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
 
 lyra2/cuda_lyra2v2.o: lyra2/cuda_lyra2v2.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=100 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=110 -o $@ -c $<
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
