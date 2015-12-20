@@ -129,7 +129,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		((uint32_t*)ptarget)[7] = 0x003f;
 	if (!init[thr_id])
 	{ 
 		cudaSetDevice(device_map[thr_id]);

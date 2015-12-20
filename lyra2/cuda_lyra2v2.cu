@@ -85,7 +85,7 @@ __device__ __forceinline__ void reduceDuplex50(vectype state[4], uint32_t thread
 
 	}
 }
-__device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOut, vectype state[4], uint32_t thread)
+__device__  void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOut, vectype state[4], uint32_t thread)
 {
 
 	int i, j;
@@ -159,7 +159,7 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 
 
 
-__device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int rowInOut, const int rowOut, vectype* state, uint32_t thread)
+__device__ void reduceDuplexRowtV2(const int rowIn, const int rowInOut, const int rowOut, vectype* state, uint32_t thread)
 {
 	int i,j;
 		vectype state2[3];
