@@ -47,21 +47,41 @@ __device__ __forceinline__ void reduceDuplex50(vectype state[4], uint32_t thread
 {
 	const uint32_t ps1 = (Nrow * Ncol * memshift * thread);
 	const uint32_t ps2 = (memshift * (Ncol - 1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
+	uint28 tmp[3];
 
 //#pragma unroll 4
 	for (int i = 0; i < Ncol; i++)
 	{
+#if __CUDA_ARCH__ == 500
+
 		const uint32_t s1 = ps1 + i*memshift;
 		const uint32_t s2 = ps2 - i*memshift;
 
 #pragma unroll
 		for (int j = 0; j < 3; j++)
 			state[j] ^= __ldg4(&(DMatrix + s1)[j]);
+
 		round_lyra_v35(state);
 
 #pragma unroll
 		for (int j = 0; j < 3; j++)
 			(DMatrix + s2)[j] = __ldg4(&(DMatrix + s1)[j]) ^ state[j];
+#else
+		const uint32_t s1 = ps1 + i*memshift;
+		const uint32_t s2 = ps2 - i*memshift;
+		tmp[0] = __ldg4(&(DMatrix + s1)[0]);
+		tmp[1] = __ldg4(&(DMatrix + s1)[1]);
+		tmp[2] = __ldg4(&(DMatrix + s1)[2]);
+		state[0] ^= tmp[0];
+		state[1] ^= tmp[1];
+		state[2] ^= tmp[2];
+
+		round_lyra_v35(state);
+
+#pragma unroll
+		for (int j = 0; j < 3; j++)
+			(DMatrix + s2)[j] = tmp[j] ^ state[j];
+#endif
 
 	}
 }
@@ -115,7 +135,6 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 			state[j] ^= state1[j] + state2[j];
 		}
 
-
 		round_lyra_v35(state);
 
 #pragma unroll
@@ -136,8 +155,6 @@ __device__ __forceinline__ void reduceDuplexRowSetupV2(const int rowIn, const in
 		for (j = 0; j < 3; j++)
 		    (DMatrix + s2)[j] = state2[j];
 	}
-
-
 }
 
 
@@ -209,6 +226,9 @@ __device__ __forceinline__ void reduceDuplexRowtV2(const int rowIn, const int ro
 
 
 __global__
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(128, 1)
+#endif
 void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -259,6 +279,9 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 
 		const uint32_t ps1 = (memshift * (Ncol - 1) + Nrow * Ncol * memshift * thread);
 
+#if __CUDA_ARCH__ > 500
+#pragma unroll
+#endif
 		for (int i = 0; i < Ncol; i++)
 		{
 			const uint32_t s1 = ps1 - memshift * i;
@@ -290,10 +313,9 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 		for (int j = 0; j < 3; j++)
 			state[j] ^= __ldg4(&(DMatrix + shift)[j]);
 
-		for (int i = 0; i < 11; i++)
+		for (int i = 0; i < 12; i++)
         	round_lyra_v35(state);
 		
-		round_lyra_v35(state);
 		outputHash[thread] = ((uint2*)state)[0];
 		outputHash[thread + threads] = ((uint2*)state)[1];
 		outputHash[thread + 2 * threads] = ((uint2*)state)[2];
