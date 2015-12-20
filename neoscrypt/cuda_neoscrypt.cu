@@ -550,97 +550,55 @@ static __device__ __forceinline__ void neoscrypt_salsa(uint16 *XV)
 #define SHIFT 130
 
 __global__
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(128, 2)
-#else
-__launch_bounds__(128, 3)
-#endif
-void neoscrypt_gpu_hash_k0(int stratum, uint32_t startNonce)
+void neoscrypt_gpu_hash_k4(int stratum, uint32_t startNonce, uint32_t *nonceVector)
 {
-	const int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	const int shift = SHIFT * 16 * thread;
-	const uint32_t nonce = startNonce + thread;
-	
+
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	int shift = SHIFT * 16 * thread;
+	uint32_t nonce = startNonce + thread;
+
 	uint16 X[4];
 	uint32_t data[80];
 
-	#pragma unroll
-	for (int i = 0; i <  5; i++) ((uint4*)data)[i] = ((uint4 *)c_data)[i];	//ld.local.v4
+#pragma unroll
+	for (int i = 0; i < 5; i++) ((uint4*)data)[i] = ((uint4 *)c_data)[i];	//ld.local.v4
 	data[19] = (stratum) ? cuda_swab32(nonce) : nonce;
-	#pragma unroll
+#pragma unroll
 	for (int i = 5; i < 20; i++) ((uint4*)data)[i] = ((uint4 *)data)[i % 5];
 
 	fastkdf(data, (uint8_t*)X, NULL);	//256
 	((uintx64 *)(W + shift))[0] = ((uintx64 *)X)[0];
-//	((ulonglong16 *)(W + shift))[0] = ((ulonglong16 *)X)[0];
-}
+	thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	shift = SHIFT * 16 * thread;
+	((uintx64 *)X)[0] = __ldg32(&(W + shift)[0]);
 
-
-__global__ __launch_bounds__(128, 2) void neoscrypt_gpu_hash_k01()
-{
-	const int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	const int shift = SHIFT * 16 * thread;
-	uint16 X[4];
-	((uintx64 *)X)[0]= __ldg32(&(W + shift)[0]);
-
-	#pragma nounroll
+	#pragma unroll
 	for (int i = 0; i < 128; ++i)
-	{			
+	{
 		neoscrypt_chacha(X);
-//		((ulonglong16 *)(W + shift))[i + 1] = ((ulonglong16 *)X)[0];
+		//		((ulonglong16 *)(W + shift))[i + 1] = ((ulonglong16 *)X)[0];
 		((uintx64 *)(W + shift))[i + 1] = ((uintx64 *)X)[0];
 	}
-}
-
-
-__global__ __launch_bounds__(128, 2) void neoscrypt_gpu_hash_k2()
-{
-	const int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	const int shift = SHIFT * 16 * thread;
-	uint16 X[4];
 	((uintx64 *)X)[0] = __ldg32(&(W + shift)[2048]);
-	
-	#pragma nounroll 
+
+	#pragma unroll 
 	for (int t = 0; t < 128; t++)
 	{
 		((uintx64 *)X)[0] ^= __ldg32(&(W + shift)[(X[3].lo.s0 & 0x7F) << 4]);
 		neoscrypt_chacha(X);
 	}
 	((uintx64 *)(W + shift))[129] = ((uintx64*)X)[0];  // best checked
-}
-
-
-__global__ __launch_bounds__(128, 2) void neoscrypt_gpu_hash_k3()
-{
-	const int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	const int shift = SHIFT * 16 * thread;
 	uint16 Z[4];
-	
+
 	((uintx64*)Z)[0] = __ldg32(&(W + shift)[0]);
 
-	#pragma nounroll 
+	#pragma unroll 
 	for (int i = 0; i < 128; ++i)
 	{
 		neoscrypt_salsa(Z);
-//		((ulonglong16 *)(W + shift))[i + 1] = ((ulonglong16 *)Z)[0];
+		//		((ulonglong16 *)(W + shift))[i + 1] = ((ulonglong16 *)Z)[0];
 		((uintx64 *)(W + shift))[i + 1] = ((uintx64 *)Z)[0];
 	}
-}
-
-
-__global__
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(128, 3)
-#else
-__launch_bounds__(32, 12)
-#endif
-void neoscrypt_gpu_hash_k4(int stratum, uint32_t startNonce, uint32_t *nonceVector)
-{
-	const int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	const uint32_t nonce = startNonce + thread;
-	const int shift = SHIFT * 16 * thread;
-	uint16 Z[4]; 
-	uint32_t data[80];
 
 	#pragma unroll
 	for (int i = 0; i <  5; i++) ((uint4*)data)[i] = ((uint4 *)c_data)[i];
@@ -677,10 +635,10 @@ __host__ uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, int threads, ui
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
  	
-	neoscrypt_gpu_hash_k0  << <grid, block >> >(stratum, startNounce);  //b
-	neoscrypt_gpu_hash_k01 << <grid, block >> >();  //b
-	neoscrypt_gpu_hash_k2  << <grid, block >> >();  //a
-	neoscrypt_gpu_hash_k3  << <grid, block >> >();  //b
+//	neoscrypt_gpu_hash_k0  << <grid, block >> >(stratum, startNounce);  //b
+//	neoscrypt_gpu_hash_k01 << <grid, block >> >();  //b
+//	neoscrypt_gpu_hash_k2  << <grid, block >> >();  //a
+//	neoscrypt_gpu_hash_k3  << <grid, block >> >();  //b
 	neoscrypt_gpu_hash_k4  << <grid, block >> >(stratum, startNounce, d_NNonce[thr_id]);  //a
 
 //	MyStreamSynchronize(NULL, order, thr_id);

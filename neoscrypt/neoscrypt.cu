@@ -58,7 +58,7 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata, cons
 	do {
 //		int order = 0;
 		uint32_t foundNonce;
-		foundNonce = neoscrypt_cpu_hash_k4(stratum, thr_id, throughput, pdata[19], (device_sm[device_map[thr_id]] > 500 ? 128 : 32));
+		foundNonce = neoscrypt_cpu_hash_k4(stratum, thr_id, throughput, pdata[19], (device_sm[device_map[thr_id]] > 500 ? 256 : 32));
 
 		//		foundNonce = 10 + pdata[19];
 		if  (foundNonce != 0xffffffff && foundNonce != 0x0) {
