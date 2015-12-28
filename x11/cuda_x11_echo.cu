@@ -12,6 +12,7 @@ static uint32_t *d_found[MAX_GPUS];
 __device__ __forceinline__ uint32_t mul27(uint32_t x)
 {
 	uint32_t result = (x << 5) - (x + x + x + x + x);
+//	uint32_t result = (x *27);
 
 	//	uint32_t result;
 	//	asm("mul24.lo.u32 %0,%1,%2; \n\t" : "=r"(result): "r"(x) , "r"(y));
@@ -550,82 +551,38 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 
 		uint32_t W[64];
 
-#pragma unroll 4
+		#pragma unroll
 		for (int i = 0; i < 4; i++)
 		{
-			const uint32_t a = P[i];
-			const uint32_t a2 = P[12 + i];
-			const uint32_t a3 = h[i];
-			const uint32_t a4 = P[36 + i];
-			const uint32_t b = P[i + 4];
-			const uint32_t b2 = h[i + 4];
-			const uint32_t b3 = P[24 + i + 0];
-			const uint32_t b4 = P[36 + i + 4];
-			const uint32_t c = h[i + 8];
-			const uint32_t c2 = P[12 + i + 4];
-			const uint32_t c3 = P[24 + i + 4];
-			const uint32_t c4 = P[36 + i + 8];
-			const uint32_t d = P[i + 8];
-			const uint32_t d2 = P[12 + i + 8];
-			const uint32_t d3 = P[24 + i + 8];
-			const uint32_t d4 = h[i + 12];
+			const uint32_t abx = mul27(((P[i] ^ P[i + 4]) & 0x80808080) >> 7) ^ ((P[i] ^ P[i + 4] ^ ((P[i] ^ P[i + 4]) & 0x80808080)) << 1);
+			const uint32_t abx2 = mul27(((P[12 + i] ^ h[i + 4]) & 0x80808080) >> 7) ^ (((P[12 + i] ^ h[i + 4]) ^ ((P[12 + i] ^ h[i + 4]) & 0x80808080)) << 1);
+			const uint32_t abx3 = mul27(((h[i] ^ P[24 + i + 0]) & 0x80808080) >> 7) ^ (((h[i] ^ P[24 + i + 0]) ^ ((h[i] ^ P[24 + i + 0]) & 0x80808080)) << 1);
+			const uint32_t abx4 = mul27(((P[36 + i] ^ P[36 + i + 4]) & 0x80808080) >> 7) ^ (((P[36 + i] ^ P[36 + i + 4]) ^ ((P[36 + i] ^ P[36 + i + 4]) & 0x80808080)) << 1);
+			const uint32_t bcx = mul27(((P[i + 4] ^ h[i + 8]) & 0x80808080) >> 7) ^ ((P[i + 4] ^ h[i + 8] ^ ((P[i + 4] ^ h[i + 8]) & 0x80808080)) << 1);
+			const uint32_t bcx2 = mul27(((h[i + 4] ^ P[12 + i + 4]) & 0x80808080) >> 7) ^ ((h[i + 4] ^ P[12 + i + 4] ^ ((h[i + 4] ^ P[12 + i + 4]) & 0x80808080)) << 1);
+			const uint32_t bcx3 = mul27(((P[24 + i + 0] ^ P[24 + i + 4]) & 0x80808080) >> 7) ^ (((P[24 + i + 0] ^ P[24 + i + 4]) ^ ((P[24 + i + 0] ^ P[24 + i + 4]) & 0x80808080)) << 1);
+			const uint32_t bcx4 = mul27(((P[36 + i + 4] ^ P[36 + i + 8]) & 0x80808080) >> 7) ^ (((P[36 + i + 4] ^ P[36 + i + 8]) ^ ((P[36 + i + 4] ^ P[36 + i + 8]) & 0x80808080)) << 1);
+			const uint32_t cdx = mul27(((h[i + 8] ^ P[i + 8]) & 0x80808080) >> 7) ^ (((h[i + 8] ^ P[i + 8]) ^ ((h[i + 8] ^ P[i + 8]) & 0x80808080)) << 1);
+			const uint32_t cdx2 = mul27(((P[12 + i + 4] ^ P[12 + i + 8]) & 0x80808080) >> 7) ^ (((P[12 + i + 4] ^ P[12 + i + 8]) ^ ((P[12 + i + 4] ^ P[12 + i + 8]) & 0x80808080)) << 1);
+			const uint32_t cdx3 = mul27(((P[24 + i + 4] ^ P[24 + i + 8]) & 0x80808080) >> 7) ^ (((P[24 + i + 4] ^ P[24 + i + 8]) ^ ((P[24 + i + 4] ^ P[24 + i + 8]) & 0x80808080)) << 1);
+			const uint32_t cdx4 = mul27(((P[36 + i + 8] ^ h[i + 12]) & 0x80808080) >> 7) ^ (((P[36 + i + 8] ^ h[i + 12]) ^ ((P[36 + i + 8] ^ h[i + 12]) & 0x80808080)) << 1);
 
-			const uint32_t ab = a ^ b;
-			const uint32_t ab2 = a2 ^ b2;
-			const uint32_t ab3 = a3 ^ b3;
-			const uint32_t ab4 = a4 ^ b4;
-			const uint32_t bc = b ^ c;
-			const uint32_t bc2 = b2 ^ c2;
-			const uint32_t bc3 = b3 ^ c3;
-			const uint32_t bc4 = b4 ^ c4;
-			const uint32_t cd = c ^ d;
-			const uint32_t cd2 = c2 ^ d2;
-			const uint32_t cd3 = c3 ^ d3;
-			const uint32_t cd4 = c4 ^ d4;
-
-			const uint32_t t = (ab & 0x80808080);
-			const uint32_t ta2 = (ab2 & 0x80808080);
-			const uint32_t ta3 = (ab3 & 0x80808080);
-			const uint32_t t4 = (ab4 & 0x80808080);
-			const uint32_t t2 = (bc & 0x80808080);
-			const uint32_t t22 = (bc2 & 0x80808080);
-			const uint32_t t23 = (bc3 & 0x80808080);
-			const uint32_t t24 = (bc4 & 0x80808080);
-			const uint32_t t3 = (cd & 0x80808080);
-			const uint32_t t32 = (cd2 & 0x80808080);
-			const uint32_t t33 = (cd3 & 0x80808080);
-			const uint32_t t34 = (cd4 & 0x80808080);
-
-
-			const uint32_t abx = mul27(t >> 7) ^ ((ab^t) << 1);
-			const uint32_t abx2 = mul27(ta2 >> 7) ^ ((ab2^ta2) << 1);
-			const uint32_t abx3 = mul27(ta3 >> 7) ^ ((ab3^ta3) << 1);
-			const uint32_t abx4 = mul27(t4 >> 7) ^ ((ab4^t4) << 1);
-			const uint32_t bcx = mul27(t2 >> 7) ^ ((bc^t2) << 1);
-			const uint32_t bcx2 = mul27(t22 >> 7) ^ ((bc2^t22) << 1);
-			const uint32_t bcx3 = mul27(t23 >> 7) ^ ((bc3^t23) << 1);
-			const uint32_t bcx4 = mul27(t24 >> 7) ^ ((bc4^t24) << 1);
-			const uint32_t cdx = mul27(t3 >> 7) ^ ((cd^t3) << 1);
-			const uint32_t cdx2 = mul27(t32 >> 7) ^ ((cd2^t32) << 1);
-			const uint32_t cdx3 = mul27(t33 >> 7) ^ ((cd3^t33) << 1);
-			const uint32_t cdx4 = mul27(t34 >> 7) ^ ((cd4^t34) << 1);
-
-			W[0 + i] = abx ^ bc ^ d;
-			W[0 + i + 4] = bcx ^ a ^ cd;
-			W[0 + i + 8] = cdx ^ ab ^ d;
-			W[0 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
-			W[16 + i] = abx2 ^ bc2 ^ d2;
-			W[16 + i + 4] = bcx2 ^ a2 ^ cd2;
-			W[16 + i + 8] = cdx2 ^ ab2 ^ d2;
-			W[16 + i + 12] = abx2 ^ bcx2 ^ cdx2 ^ ab2 ^ c2;
-			W[32 + i] = abx3 ^ bc3 ^ d3;
-			W[32 + i + 4] = bcx3 ^ a3 ^ cd3;
-			W[32 + i + 8] = cdx3 ^ ab3 ^ d3;
-			W[32 + i + 12] = abx3 ^ bcx3 ^ cdx3 ^ ab3 ^ c3;
-			W[48 + i] = abx4 ^ bc4 ^ d4;
-			W[48 + i + 4] = bcx4 ^ a4 ^ cd4;
-			W[48 + i + 8] = cdx4 ^ ab4 ^ d4;
-			W[48 + i + 12] = abx4 ^ bcx4 ^ cdx4 ^ ab4 ^ c4;
+			W[0 + i] = abx ^ P[i + 4] ^ h[i + 8] ^ P[i + 8];
+			W[0 + i + 4] = bcx ^ P[i] ^ h[i + 8] ^ P[i + 8];
+			W[0 + i + 8] = cdx ^  P[i] ^ P[i + 4] ^ P[i + 8];
+			W[0 + i + 12] = abx ^ bcx ^ cdx ^  P[i] ^ P[i + 4] ^ h[i + 8];
+			W[16 + i] = abx2 ^ h[i + 4] ^ P[12 + i + 4] ^ P[12 + i + 8];
+			W[16 + i + 4] = bcx2 ^ P[12 + i] ^ P[12 + i + 4] ^ P[12 + i + 8];
+			W[16 + i + 8] = cdx2 ^ P[12 + i] ^ h[i + 4] ^ P[12 + i + 8];
+			W[16 + i + 12] = abx2 ^ bcx2 ^ cdx2 ^ P[12 + i] ^ h[i + 4] ^ P[12 + i + 4];
+			W[32 + i] = abx3 ^ P[24 + i + 0] ^ P[24 + i + 4] ^ P[24 + i + 8];
+			W[32 + i + 4] = bcx3 ^ h[i] ^ P[24 + i + 4] ^ P[24 + i + 8];
+			W[32 + i + 8] = cdx3 ^ h[i] ^ P[24 + i + 0] ^ P[24 + i + 8];
+			W[32 + i + 12] = abx3 ^ bcx3 ^ cdx3 ^ h[i] ^ P[24 + i + 0] ^ P[24 + i + 4];
+			W[48 + i] = abx4 ^ P[36 + i + 4] ^ P[36 + i + 8] ^ h[i + 12];
+			W[48 + i + 4] = bcx4 ^ P[36 + i] ^ P[36 + i + 8] ^ h[i + 12];
+			W[48 + i + 8] = cdx4 ^ P[36 + i] ^ P[36 + i + 4] ^ h[i + 12];
+			W[48 + i + 12] = abx4 ^ bcx4 ^ cdx4 ^ P[36 + i] ^ P[36 + i + 4] ^ P[36 + i + 8];
 		}
 
 		uint32_t k0 = 512 + 16;
@@ -633,58 +590,130 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 		for (int k = 1; k < 9; k++)
 		{
 
-			// Big Sub Words
+				AES_2ROUND(sharedMemory, W[0 + 4], W[0 + 5], W[0 + 6], W[0 + 7], k0 + 1);
+				AES_2ROUND(sharedMemory, W[16 + 4], W[16 + 5], W[16 + 6], W[16 + 7], k0 + 5);
+				AES_2ROUND(sharedMemory, W[32 + 4], W[32 + 5], W[32 + 6], W[32 + 7], k0 + 9);
+				AES_2ROUND(sharedMemory, W[48 + 4], W[48 + 5], W[48 + 6], W[48 + 7], k0 + 13);
 
-#pragma unroll 4
-			for (int idx = 0; idx < 64; idx += 16)
-			{
-				AES_2ROUND(sharedMemory,
-					W[idx + 0], W[idx + 1], W[idx + 2], W[idx + 3],
-					k0++);
-				AES_2ROUND(sharedMemory,
-					W[idx + 4], W[idx + 5], W[idx + 6], W[idx + 7],
-					k0++);
-				AES_2ROUND(sharedMemory,
-					W[idx + 8], W[idx + 9], W[idx + 10], W[idx + 11],
-					k0++);
-				AES_2ROUND(sharedMemory,
-					W[idx + 12], W[idx + 13], W[idx + 14], W[idx + 15],
-					k0++);
+			/// 1, 5, 9, 13
+				uint32_t t = W[4 + 0];
+				W[4 + 0] = W[20 + 0];
+				W[20 + 0] = W[36 + 0];
+				W[36 + 0] = W[52 + 0];
+				W[52 + 0] = t;
 
-			}
-			// Shift Rows
-#pragma unroll 4
-			for (int i = 0; i < 4; i++)
-			{
-
-				/// 1, 5, 9, 13
-				uint32_t t = W[4 + i];
-				W[4 + i] = W[20 + i];
-				W[20 + i] = W[36 + i];
-				W[36 + i] = W[52 + i];
-				W[52 + i] = t;
+				AES_2ROUND(sharedMemory, W[0 + 8], W[0 + 9], W[0 + 10], W[0 + 11], k0 + 2);
+				AES_2ROUND(sharedMemory, W[32 + 8], W[32 + 9], W[32 + 10], W[32 + 11], k0 + 10);
+				AES_2ROUND(sharedMemory, W[16 + 8], W[16 + 9], W[16 + 10], W[16 + 11], k0 + 6);
+				AES_2ROUND(sharedMemory, W[48 + 8], W[48 + 9], W[48 + 10], W[48 + 11], k0 + 14);
 
 				// 2, 6, 10, 14
-				t = W[8 + i];
-				W[8 + i] = W[40 + i];
-				W[40 + i] = t;
-				t = W[24 + i];
-				W[24 + i] = W[56 + i];
-				W[56 + i] = t;
+				t = W[8 + 0];
+				W[8 + 0] = W[40 + 0];
+				W[40 + 0] = t;
+				t = W[24 + 0];
+				W[24 + 0] = W[56 + 0];
+				W[56 + 0] = t;
+
+				AES_2ROUND(sharedMemory, W[48 + 12], W[48 + 13], W[48 + 14], W[48 + 15], k0 + 15);
+				AES_2ROUND(sharedMemory, W[32 + 12], W[32 + 13], W[32 + 14], W[32 + 15], k0 + 11);
+				AES_2ROUND(sharedMemory, W[16 + 12], W[16 + 13], W[16 + 14], W[16 + 15], k0 + 7);
+				AES_2ROUND(sharedMemory, W[0 + 12], W[0 + 13], W[0 + 14], W[0 + 15], k0 + 3);
+
 
 				// 15, 11, 7, 3
-				t = W[60 + i];
-				W[60 + i] = W[44 + i];
-				W[44 + i] = W[28 + i];
-				W[28 + i] = W[12 + i];
-				W[12 + i] = t;
-			}
+				t = W[60 + 0];
+				W[60 + 0] = W[44 + 0];
+				W[44 + 0] = W[28 + 0];
+				W[28 + 0] = W[12 + 0];
+				W[12 + 0] = t;
+
+
+				/// 1, 5, 9, 13
+				t = W[4 + 1];
+				W[4 + 1] = W[20 + 1];
+				W[20 + 1] = W[36 + 1];
+				W[36 + 1] = W[52 + 1];
+				W[52 + 1] = t;
+
+				AES_2ROUND(sharedMemory, W[0 + 0], W[0 + 1], W[0 + 2], W[0 + 3], k0);
+
+				// 2, 6, 10, 14
+				t = W[8 + 1];
+				W[8 + 1] = W[40 + 1];
+				W[40 + 1] = t;
+				t = W[24 + 1];
+				W[24 + 1] = W[56 + 1];
+				W[56 + 1] = t;
+
+
+				// 15, 11, 7, 3
+				t = W[60 + 1];
+				W[60 + 1] = W[44 + 1];
+				W[44 + 1] = W[28 + 1];
+				W[28 + 1] = W[12 + 1];
+				W[12 + 1] = t;
+
+				AES_2ROUND(sharedMemory, W[16 + 0], W[16 + 1], W[16 + 2], W[16 + 3], k0 + 4);
+
+				/// 1, 5, 9, 13
+				t = W[4 + 2];
+				W[4 + 2] = W[20 + 2];
+				W[20 + 2] = W[36 + 2];
+				W[36 + 2] = W[52 + 2];
+				W[52 + 2] = t;
+
+				// 2, 6, 10, 14
+				t = W[8 + 2];
+				W[8 + 2] = W[40 + 2];
+				W[40 + 2] = t;
+				t = W[24 + 2];
+				W[24 + 2] = W[56 + 2];
+				W[56 + 2] = t;
+
+				AES_2ROUND(sharedMemory, W[32 + 0], W[32 + 1], W[32 + 2], W[32 + 3], k0 + 8);
+
+				// 15, 11, 7, 3
+				t = W[60 + 2];
+				W[60 + 2] = W[44 + 2];
+				W[44 + 2] = W[28 + 2];
+				W[28 + 2] = W[12 + 2];
+				W[12 + 2] = t;
+
+
+				/// 1, 5, 9, 13
+				t = W[4 + 3];
+				W[4 + 3] = W[20 + 3];
+				W[20 + 3] = W[36 + 3];
+				W[36 + 3] = W[52 + 3];
+				W[52 + 3] = t;
+
+				AES_2ROUND(sharedMemory, W[48 + 0], W[48 + 1], W[48 + 2], W[48 + 3], k0 + 12);
+
+				// 2, 6, 10, 14
+				t = W[8 + 3];
+				W[8 + 3] = W[40 + 3];
+				W[40 + 3] = t;
+				t = W[24 + 3];
+				W[24 + 3] = W[56 + 3];
+				W[56 + 3] = t;
+
+				// 15, 11, 7, 3
+				t = W[60 + 3];
+				W[60 + 3] = W[44 + 3];
+				W[44 + 3] = W[28 + 3];
+				W[28 + 3] = W[12 + 3];
+				W[12 + 3] = t;
+
+
+				k0 = k0 + 16;
+
 
 			// Mix Columns
-#pragma unroll
+			#pragma unroll
 			for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
 			{
-#pragma unroll
+				#pragma unroll
 				for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
 				{
 
