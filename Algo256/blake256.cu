@@ -15,7 +15,7 @@ extern "C" {
 }
 
 /* threads per block and throughput (intensity) */
-#define TPB 128
+#define TPB  512
 
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
