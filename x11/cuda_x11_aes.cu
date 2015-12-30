@@ -86,35 +86,107 @@ const uint32_t *sharedMemory,
 uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t k0,
 uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
-	y0 = xor4_32(
-		sharedMemory[x0&0xff],
-		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256],
-		sharedMemory[__byte_perm(x2, 0, 0x4442) + 512],
+	y0 = (
+		sharedMemory[x0 & 0xff] ^
+		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256] ^
+		sharedMemory[__byte_perm(x2, 0, 0x4442) + 512] ^
 		sharedMemory[__byte_perm(x3, 0, 0x4443) + 768]);
 
-	y1 = xor4_32(
-		sharedMemory[x1 & 0xff],
-		sharedMemory[__byte_perm(x2, 0, 0x4441) + 256],
-		sharedMemory[__byte_perm(x3, 0, 0x4442) + 512],
+	y1 = (
+		sharedMemory[x1 & 0xff] ^
+		sharedMemory[__byte_perm(x2, 0, 0x4441) + 256] ^
+		sharedMemory[__byte_perm(x3, 0, 0x4442) + 512] ^
 		sharedMemory[__byte_perm(x0, 0, 0x4443) + 768]);
 
-	y2 = xor4_32(
-		sharedMemory[x2 & 0xff],
-		sharedMemory[__byte_perm(x3, 0, 0x4441) + 256],
-		sharedMemory[__byte_perm(x0, 0, 0x4442) + 512],
+	y2 = (
+		sharedMemory[x2 & 0xff]^
+		sharedMemory[__byte_perm(x3, 0, 0x4441) + 256] ^
+		sharedMemory[__byte_perm(x0, 0, 0x4442) + 512] ^
 		sharedMemory[__byte_perm(x1, 0, 0x4443) + 768]); // ^k2
 
 	y0 ^= k0;
 
-	y3 = xor4_32(
-		sharedMemory[x3 & 0xff],
-		sharedMemory[__byte_perm(x0, 0, 0x4441) + 256],
-		sharedMemory[__byte_perm(x1, 0, 0x4442) + 512],
+	y3 =(
+		sharedMemory[x3 & 0xff] ^
+		sharedMemory[__byte_perm(x0, 0, 0x4441) + 256] ^
+		sharedMemory[__byte_perm(x1, 0, 0x4442) + 512] ^
 		sharedMemory[__byte_perm(x2, 0, 0x4443) + 768]); // ^k3
 }
 
 __device__
-__forceinline__ void aes_round(
+__forceinline__ void aes_round(const uint32_t *sharedMemory,uint32_t k0,uint8_t *peker)
+{
+	uint32_t y0, y1, y2, y3;
+	y0 = (
+		sharedMemory[peker[0]]^
+		sharedMemory[peker[1 + 4] + 256] ^
+		sharedMemory[peker[2 + 4 * 2] + 512] ^
+		sharedMemory[peker[3 +4*3] + 768]);
+
+	y1 = (
+		sharedMemory[peker[0 + 4]] ^
+		sharedMemory[peker[1 + 4 * 2] + 256] ^
+		sharedMemory[peker[2 + 4 * 3] + 512] ^
+		sharedMemory[peker[3] + 768]);
+
+	y2 = (
+		sharedMemory[peker[0 + 4 * 2]] ^
+		sharedMemory[peker[1 + 4 * 3] + 256] ^
+		sharedMemory[peker[2] + 512] ^
+		sharedMemory[peker[3+4] + 768]);
+
+	y0 ^= k0;
+
+	y3 = (
+		sharedMemory[peker[0 + 4 * 3]] ^
+		sharedMemory[peker[1] + 256] ^
+		sharedMemory[peker[2 + 4] + 512] ^
+		sharedMemory[peker[3 + (4*2)] + 768]);
+
+	uint32_t *peker32 = (uint32_t *)peker;
+	peker32[0] = y0;
+	peker32[1] = y1;
+	peker32[2] = y2;
+	peker32[3] = y3;
+}
+
+__device__
+__forceinline__ void aes_round(const uint32_t *sharedMemory, uint8_t *peker)
+{
+	uint32_t y0, y1, y2, y3;
+	y0 = xor4_32(
+		sharedMemory[peker[0]],
+		sharedMemory[peker[1 + 4] + 256],
+		sharedMemory[peker[2 + 4 * 2] + 512],
+		sharedMemory[peker[3 + 4 * 3] + 768]);
+
+	y1 = xor4_32(
+		sharedMemory[peker[0 + 4]],
+		sharedMemory[peker[1 + 4 * 2] + 256],
+		sharedMemory[peker[2 + 4 * 3] + 512],
+		sharedMemory[peker[3] + 768]);
+
+	y2 = xor4_32(
+		sharedMemory[peker[0 + 4 * 2]],
+		sharedMemory[peker[1 + 4 * 3] + 256],
+		sharedMemory[peker[2] + 512],
+		sharedMemory[peker[3 + 4] + 768]);
+
+	y3 = xor4_32(
+		sharedMemory[peker[0 + 4 * 3]],
+		sharedMemory[peker[1] + 256],
+		sharedMemory[peker[2 + 4] + 512],
+		sharedMemory[peker[3 + (4 * 2)] + 768]);
+
+	uint32_t *peker32 = (uint32_t *)peker;
+	peker32[0] = y0;
+	peker32[1] = y1;
+	peker32[2] = y2;
+	peker32[3] = y3;
+}
+
+__device__
+static void aes_round(
 const uint32_t *sharedMemory,
 uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
 uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)

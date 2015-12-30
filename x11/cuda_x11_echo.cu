@@ -9,10 +9,10 @@
 static uint2 *d_nonce[MAX_GPUS];
 static uint32_t *d_found[MAX_GPUS];
 
-__device__ __forceinline__ uint32_t mul27(uint32_t x)
+__device__ __forceinline__ uint32_t mul27(const uint32_t x)
 {
-	uint32_t result = (x << 5) - (x + x + x + x + x);
-//	uint32_t result = (x *27);
+//	uint32_t result = (x << 5) - (x + x + x + x + x);
+	uint32_t result = (x *27);
 
 	//	uint32_t result;
 	//	asm("mul24.lo.u32 %0,%1,%2; \n\t" : "=r"(result): "r"(x) , "r"(y));
@@ -24,14 +24,20 @@ __device__ __forceinline__ void AES_2ROUND(
 	uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3,
 	const uint32_t k0)
 {
-	aes_round(sharedMemory,
-		x0, x1, x2, x3,
-		k0,
-		x0, x1, x2, x3);
+	uint32_t f[4]=
+	{
+		x0,x1,x2,x3
+	};
 
-	aes_round(sharedMemory,
-		x0, x1, x2, x3,
-		x0, x1, x2, x3);
+	aes_round(sharedMemory,k0,(uint8_t *) &f[0]);
+	aes_round(sharedMemory, (uint8_t *)&f[0]);
+
+	x0 = f[0];
+	x1 = f[1];
+	x2 = f[2];
+	x3 = f[3];
+
+//	aes_round(sharedMemory,f[0], f[1], f[2], f[3],x0, x1, x2, x3);
 }
 
 __device__ __forceinline__ void cuda_echo_round(
@@ -345,7 +351,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 }
 
 __global__
-__launch_bounds__(128,4)
+__launch_bounds__(256,2)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	__shared__ __align__(128) uint32_t sharedMemory[1024];
@@ -586,6 +592,10 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 		}
 
 		uint32_t k0 = 512 + 16;
+		uint32_t t, t2, t3;
+		uint32_t a, b, c, d;
+		uint32_t ab, bc, cd, abx, bcx, cdx;
+//		uint32_t abx, bcx, cdx;
 
 		for (int k = 1; k < 9; k++)
 		{
@@ -596,7 +606,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 				AES_2ROUND(sharedMemory, W[48 + 4], W[48 + 5], W[48 + 6], W[48 + 7], k0 + 13);
 
 			/// 1, 5, 9, 13
-				uint32_t t = W[4 + 0];
+				 t = W[4 + 0];
 				W[4 + 0] = W[20 + 0];
 				W[20 + 0] = W[36 + 0];
 				W[36 + 0] = W[52 + 0];
@@ -717,24 +727,25 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 				for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
 				{
 
-					const uint32_t a = W[idx + i];
-					const uint32_t b = W[idx + i + 4];
-					const uint32_t c = W[idx + i + 8];
-					const uint32_t d = W[idx + i + 12];
 
-					const uint32_t ab = a ^ b;
-					const uint32_t bc = b ^ c;
-					const uint32_t cd = c ^ d;
+					a = W[idx + i];
+					b = W[idx + i + 4];
+					c = W[idx + i + 8];
+					d = W[idx + i + 12];
 
-					uint32_t t = (ab & 0x80808080);
-					uint32_t t2 = (bc & 0x80808080);
-					uint32_t t3 = (cd & 0x80808080);
+					ab = a ^ b;
+					bc = b ^ c;
+					cd = c ^ d;
+
+					t = (ab & 0x80808080);
+					t2 = (bc & 0x80808080);
+					t3 = (cd & 0x80808080);
 
 
 
-					uint32_t abx = mul27(t >> 7) ^ ((ab^t) << 1);
-					uint32_t bcx = mul27(t2 >> 7) ^ ((bc^t2) << 1);
-					uint32_t cdx = mul27(t3 >> 7) ^ ((cd^t3) << 1);
+					abx = mul27(t >> 7) ^ ((ab^t) << 1);
+					bcx = mul27(t2 >> 7) ^ ((bc^t2) << 1);
+					cdx = mul27(t3 >> 7) ^ ((cd^t3) << 1);
 
 					W[idx + i] = abx ^ bc ^ d;
 					W[idx + i + 4] = bcx ^ a ^ cd;
@@ -773,8 +784,8 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 			W[60], W[61], W[62], W[63],
 			512 + (9 * 16) + 15);
 
-		uint32_t bc = W[23] ^ W[43];
-		uint32_t t2 = (bc & 0x80808080);
+		bc = W[23] ^ W[43];
+		t2 = (bc & 0x80808080);
 		uint32_t test = mul27(t2 >> 7) ^ ((bc^t2) << 1) ^ W[3] ^ W[43] ^ W[63];
 		bc = W[55] ^ W[11];
 		t2 = (bc & 0x80808080);
