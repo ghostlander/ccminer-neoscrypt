@@ -244,7 +244,7 @@ __device__ __forceinline__ void cuda_echo_round(
 			AES_2ROUND(sharedMemory,
 				W[idx + 12], W[idx + 13], W[idx + 14], W[idx + 15],
 				k0++);
-
+			__syncthreads();
 		}
 
 		// Shift Rows
@@ -352,7 +352,7 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 */
 
 __global__
-__launch_bounds__(256,2)
+__launch_bounds__(128,5)
 void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash)
 {
 	__shared__ __align__(128) uint32_t sharedMemory[1024];
@@ -459,7 +459,7 @@ __constant__ uint32_t P[48] = {
 };
 */
 __global__
-__launch_bounds__(128, 4)
+__launch_bounds__(128, 5)
 void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const uint64_t *const __restrict__ g_hash, uint32_t *const __restrict__ d_found, uint32_t target)
 {
 	uint32_t P[48] = {
@@ -703,6 +703,8 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 				AES_2ROUND(sharedMemory, W[16 + 4], W[16 + 5], W[16 + 6], W[16 + 7], k0 + 5);
 				AES_2ROUND(sharedMemory, W[32 + 4], W[32 + 5], W[32 + 6], W[32 + 7], k0 + 9);
 				AES_2ROUND(sharedMemory, W[48 + 4], W[48 + 5], W[48 + 6], W[48 + 7], k0 + 13);
+				__syncthreads();
+
 
 			/// 1, 5, 9, 13
 				 t = W[4 + 0];
@@ -715,6 +717,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 				AES_2ROUND(sharedMemory, W[32 + 8], W[32 + 9], W[32 + 10], W[32 + 11], k0 + 10);
 				AES_2ROUND(sharedMemory, W[16 + 8], W[16 + 9], W[16 + 10], W[16 + 11], k0 + 6);
 				AES_2ROUND(sharedMemory, W[48 + 8], W[48 + 9], W[48 + 10], W[48 + 11], k0 + 14);
+				__syncthreads();
 
 				// 2, 6, 10, 14
 				t = W[8 + 0];
@@ -728,6 +731,7 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 				AES_2ROUND(sharedMemory, W[32 + 12], W[32 + 13], W[32 + 14], W[32 + 15], k0 + 11);
 				AES_2ROUND(sharedMemory, W[16 + 12], W[16 + 13], W[16 + 14], W[16 + 15], k0 + 7);
 				AES_2ROUND(sharedMemory, W[0 + 12], W[0 + 13], W[0 + 14], W[0 + 15], k0 + 3);
+				__syncthreads();
 
 
 				// 15, 11, 7, 3
@@ -816,7 +820,6 @@ void x11_echo512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, const
 
 
 				k0 = k0 + 16;
-
 
 			// Mix Columns
 			#pragma unroll
