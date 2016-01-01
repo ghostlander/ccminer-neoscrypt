@@ -603,5 +603,8 @@
     <CudaCompile Include="x15\cuda_bastion.cu">
       <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_luffa512.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
