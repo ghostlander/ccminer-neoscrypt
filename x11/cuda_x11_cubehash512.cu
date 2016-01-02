@@ -201,11 +201,6 @@
 			ROUND_EVEN; \
 			ROUND_ODD;}
 __global__	
-#if __CUDA_ARCH__ > 500
-__launch_bounds__(512, 2)
-#else
-__launch_bounds__(256, 5)
-#endif
 void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -213,6 +208,7 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_
     {
         uint32_t nounce = (startNounce + thread);
         int hashPosition = nounce - startNounce;
+		int i, j;
         uint32_t *Hash = &g_hash[16 * hashPosition];
 
 		uint32_t x0 = (0x2AEA2A61), x1 = (0x50F494D4), x2 = (0x2D538B8B), x3 = (0x4167D83E);
@@ -233,13 +229,13 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_
 		x6 ^= Hash[6];
 		x7 ^= Hash[7];
 
-#if __CUDA_ARCH__ > 500
-		#pragma unroll 
-		for (int j = 0; j < 8; j++)
-#else
+//#if __CUDA_ARCH__ > 500
+//		#pragma unroll 
+//		for (int j = 0; j < 8; j++)
+//#else
 		#pragma unroll 1
-		for (int j = 0; j < 8; j++)
-#endif
+		for (j = 0; j < 8; j++)
+//#endif
 		{
 				ROUND_EVEN;
 				ROUND_ODD;
@@ -253,33 +249,46 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_
 		x5 ^= (Hash[13]);
 		x6 ^= (Hash[14]);
 		x7 ^= (Hash[15]);
-#if __CUDA_ARCH__ > 500
-		#pragma unroll
-		for (int j = 0; j < 8; j++)
-#else
-		for (int j = 0; j < 8; j++)
-#endif
+		#pragma unroll 1
+		for (j = 0; j < 8; j++)
 		{
 			ROUND_EVEN;
 			ROUND_ODD;
 		}
 		x0 ^= 0x80;
 
-		for (int j = 0; j < 8; j++)
+		#if __CUDA_ARCH__ > 500
+		#pragma unroll 1
+		#endif
+		for (j = 0; j < 8; j++)
 		{
 			ROUND_EVEN;
 			ROUND_ODD;
 		}
 		xv ^= 1;
 
-		for (int i = 3; i < 13; i++) 
+		for (i = 3; i < 12; i++) 
 		{
-			for (int j = 0; j < 8; j++)
+#if __CUDA_ARCH__ > 500
+#pragma unroll
+			for (j = 0; j < 8; j++)
+#else
+#pragma unroll 1
+			for (j = 0; j < 8; j++)
+#endif
 			{
 				ROUND_EVEN;
 				ROUND_ODD;
 			}
 		}
+
+		#pragma unroll
+		for (j = 0; j < 8; j++)
+		{
+			ROUND_EVEN;
+			ROUND_ODD;
+		}
+
 
 		Hash[0] = x0;
 		Hash[1] = x1;
