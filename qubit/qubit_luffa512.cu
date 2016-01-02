@@ -277,7 +277,11 @@ void rnd512_qubit(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
-#pragma unroll 8
+	#if __CUDA_ARCH__ == 500
+	#pragma unroll 8
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++) 
 	{
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
@@ -291,8 +295,12 @@ void rnd512_qubit(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
-#pragma unroll 8
-	for (i = 0; i<8; i++) 
+	#if __CUDA_ARCH__ == 500
+	#pragma unroll 8
+	#else
+	#pragma unroll 8
+	#endif
+	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
 	}
@@ -305,8 +313,12 @@ void rnd512_qubit(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
-#pragma unroll 8
-	for (i = 0; i<8; i++) 
+	#if __CUDA_ARCH__ == 500
+	#pragma unroll 8
+	#else
+	#pragma unroll 8
+	#endif
+	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
 	}
@@ -320,7 +332,11 @@ void rnd512_qubit(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
 
-#pragma unroll 8
+	#if __CUDA_ARCH__ == 500
+	#pragma unroll 8
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
@@ -434,7 +450,11 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
@@ -448,7 +468,11 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
@@ -462,7 +486,11 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
@@ -477,7 +505,11 @@ void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
@@ -554,7 +586,11 @@ void rnd512_first(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
@@ -568,7 +604,11 @@ void rnd512_first(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
@@ -582,7 +622,11 @@ void rnd512_first(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
@@ -597,7 +641,11 @@ void rnd512_first(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++)
 	{
 		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
@@ -704,6 +752,7 @@ void rnd512cpu(uint32_t *statebuffer, uint32_t *statechainv)
 	}
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
+
 
 	for (i = 0; i<8; i++)
 	{
@@ -860,7 +909,11 @@ void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
 	}
@@ -873,7 +926,11 @@ void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
 	}
@@ -886,7 +943,11 @@ void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
 	}
@@ -899,7 +960,11 @@ void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
 
-#pragma unroll 1
+	#if __CUDA_ARCH__ == 500
+	#pragma nounroll
+	#else
+	#pragma unroll 8
+	#endif
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
 	}
@@ -957,7 +1022,7 @@ void finalization512(uint32_t *const __restrict__ statebuffer, uint32_t *const _
 //#endif
 
 
-__global__
+__global__ __launch_bounds__(512, 2)
 void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -1204,7 +1269,7 @@ __host__ void qubit_cpu_precalc()
 __host__
 void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 512;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
