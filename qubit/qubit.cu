@@ -84,7 +84,7 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 
 	uint32_t intensity = 256 * 256 * 10;
 	uint32_t simdthreads = (device_sm[device_map[thr_id]] > 500) ? 64 : 32;
-	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 256 : 256;
+	uint32_t shavitethreads = (device_sm[device_map[thr_id]] == 500) ? 256 : 320;
 	static uint32_t throughput;
 
 	if (opt_benchmark)
