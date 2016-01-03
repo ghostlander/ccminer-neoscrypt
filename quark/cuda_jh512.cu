@@ -1,5 +1,6 @@
 #include "cuda_helper.h"
 #include "cuda_vector.h"
+
 __constant__ static __align__(16) uint32_t c_E8_bslice32[42][8] = {
 	// Round 0 (Function0)
 		{ 0xa2ded572, 0x90d6ab81, 0x67f815df, 0xf6875a4d, 0x0a15847b, 0xc54f9f4e, 0x571523b7, 0x402bd1c3 },
@@ -56,8 +57,7 @@ static uint32_t *d_found[MAX_GPUS];
 
 
 
-__device__ __forceinline__
-static void SWAP4(uint32_t *x) {
+static __device__ __forceinline__ void SWAP4(uint32_t *x) {
 #pragma nounroll
 	// y is used as tmp register too
 	for (uint32_t y = 0; y<4; y++, ++x) {
@@ -69,8 +69,7 @@ static void SWAP4(uint32_t *x) {
 	}
 }
 
-__device__ __forceinline__
-static void SWAP2(uint32_t *x) {
+static __device__ __forceinline__  void SWAP2(uint32_t *x) {
 #pragma nounroll
 	// y is used as tmp register too
 	for (uint32_t y = 0; y<4; y++, ++x) {
@@ -82,8 +81,7 @@ static void SWAP2(uint32_t *x) {
 	}
 }
 
-__device__ __forceinline__
-static void SWAP1(uint32_t *x) {
+static __device__ __forceinline__ void SWAP1(uint32_t *x) {
 #pragma nounroll
 	// y is used as tmp register too
 	for (uint32_t y = 0; y<4; y++, ++x) {
@@ -127,8 +125,7 @@ static void SWAP1(uint32_t *x) {
       m1 ^= (temp0 & (m0));        \
       m2 ^= temp0;
 
-__device__ __forceinline__
-static void Sbox_and_MDS_layer(uint32_t x[8][4], const int rnd)
+static __device__ __forceinline__ void Sbox_and_MDS_layer(uint32_t x[8][4], const int rnd)
 {
 	uint2* cc = (uint2*)&c_E8_bslice32[rnd];
 
@@ -201,68 +198,39 @@ static __device__ __forceinline__ void RoundFunction4(uint32_t x[8][4], uint32_t
 
 static __device__ __forceinline__ void RoundFunction5(uint32_t x[8][4], uint32_t roundnumber)
 {
-	uint32_t temp0;
-
 	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j + 2)
 	{
 #pragma unroll 2
-		for (int i = 0; i < 4; i = i + 2) {
-			temp0 = x[j][i]; x[j][i] = x[j][i + 1]; x[j][i + 1] = temp0;
+		for (int i = 0; i < 4; i = i + 2) 
+		{
+			x[j][i] ^= x[j][i + 1];
+			x[j][i + 1] ^= x[j][i];
+			x[j][i] ^= x[j][i + 1];
 		}
 	}
 }
 
 static __device__ __forceinline__ void RoundFunction6(uint32_t x[8][4], uint32_t roundnumber)
 {
-	uint32_t temp0;
-
 	Sbox_and_MDS_layer(x, roundnumber);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j + 2)
 	{
 #pragma unroll 2
-		for (int i = 0; i < 2; i++) {
-			temp0 = x[j][i]; x[j][i] = x[j][i + 2]; x[j][i + 2] = temp0;
+		for (int i = 0; i < 2; i++) 
+		{
+			x[j][i] ^= x[j][i + 2];
+			x[j][i + 2] ^= x[j][i];
+			x[j][i] ^= x[j][i + 2];
 		}
 	}
 }
 
-/*The bijective function E8, in bitslice form */
-static __device__ __forceinline__ void E8(uint32_t x[8][4])
-{
-	/*perform 6 rounds*/
-	//#pragma unroll 6
-	for (int i = 0; i < 42; i += 7)
-	{
-		RoundFunction0(x, i);
-		RoundFunction1(x, i + 1);
-		RoundFunction2(x, i + 2);
-		RoundFunction3(x, i + 3);
-		RoundFunction4(x, i + 4);
-		RoundFunction5(x, i + 5);
-		RoundFunction6(x, i + 6);
-	}
-}
-
-static __device__ __forceinline__ void F8(uint32_t x[8][4], const uint32_t buffer[16])
-{
-	/*xor the 512-bit message with the fist half of the 1024-bit hash state*/
-#pragma unroll 16
-	for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= ((uint32_t*)buffer)[i];
-
-	/*the bijective function E8 */
-	E8(x);
-
-	/*xor the 512-bit message with the second half of the 1024-bit hash state*/
-#pragma unroll 16
-	for (int i = 0; i < 16; i++)  x[(16 + i) >> 2][(16 + i) & 3] ^= ((uint32_t*)buffer)[i];
-}
-
-__global__ //__launch_bounds__(512, 2)
+__global__ // __launch_bounds__(256,3)
 void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -288,34 +256,71 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 		outpt[0] = phash[0];
 		outpt[1] = phash[1];
 
-#pragma unroll 16
-		for (int i = 0; i < 16; i++)  x[i >> 2][i & 3] ^= msg[i];
-		E8(x);
-#pragma unroll 16
-		for (int i = 0; i < 16; i++) x[(16 + i) >> 2][(16 + i) & 3] ^= msg[i];
+		x[0][0] ^= msg[0];
+		x[0][1] ^= msg[1];
+		x[0][2] ^= msg[2];
+		x[0][3] ^= msg[3];
+		x[1][0] ^= msg[4];
+		x[1][1] ^= msg[5];
+		x[1][2] ^= msg[6];
+		x[1][3] ^= msg[7];
+		x[2][0] ^= msg[8];
+		x[2][1] ^= msg[9];
+		x[2][2] ^= msg[10];
+		x[2][3] ^= msg[11];
+		x[3][0] ^= msg[12];
+		x[3][1] ^= msg[13];
+		x[3][2] ^= msg[14];
+		x[3][3] ^= msg[15];
+
+		for (int i = 0; i < 42; i += 7)
+		{
+			RoundFunction0(x, i);
+			RoundFunction1(x, i + 1);
+			RoundFunction2(x, i + 2);
+			RoundFunction3(x, i + 3);
+			RoundFunction4(x, i + 4);
+			RoundFunction5(x, i + 5);
+			RoundFunction6(x, i + 6);
+		}
+
+		x[4][0] ^= msg[0];
+		x[4][1] ^= msg[1];
+		x[4][2] ^= msg[2];
+		x[4][3] ^= msg[3];
+		x[5][0] ^= msg[4];
+		x[5][1] ^= msg[5];
+		x[5][2] ^= msg[6];
+		x[5][3] ^= msg[7];
+		x[6][0] ^= msg[8];
+		x[6][1] ^= msg[9];
+		x[6][2] ^= msg[10];
+		x[6][3] ^= msg[11];
+		x[7][0] ^= msg[12];
+		x[7][1] ^= msg[13];
+		x[7][2] ^= msg[14];
+		x[7][3] ^= msg[15];
 
 		x[0 >> 2][0 & 3] ^= 0x80;
 		x[15 >> 2][15 & 3] ^= 0x00020000;
-		E8(x);
+
+		for (int i = 0; i < 42; i += 7)
+		{
+			RoundFunction0(x, i);
+			RoundFunction1(x, i + 1);
+			RoundFunction2(x, i + 2);
+			RoundFunction3(x, i + 3);
+			RoundFunction4(x, i + 4);
+			RoundFunction5(x, i + 5);
+			RoundFunction6(x, i + 6);
+		}
 		x[(16 + 0) >> 2][(16 + 0) & 3] ^= 0x80;
 		x[(16 + 15) >> 2][(16 + 15) & 3] ^= 0x00020000;
 
-		Hash[0] = x[4][0];
-		Hash[1] = x[4][1];
-		Hash[2] = x[4][2];
-		Hash[3] = x[4][3];
-		Hash[4] = x[5][0];
-		Hash[5] = x[5][1];
-		Hash[6] = x[5][2];
-		Hash[7] = x[5][3];
-		Hash[8] = x[6][0];
-		Hash[9] = x[6][1];
-		Hash[10] = x[6][2];
-		Hash[11] = x[6][3];
-		Hash[12] = x[7][0];
-		Hash[13] = x[7][1];
-		Hash[14] = x[7][2];
-		Hash[15] = x[7][3];
+		phash = (uint28*)&x[4][0];
+		outpt = (uint28*)Hash;
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
 	}
 }
 
@@ -350,7 +355,50 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 			{ 0xecf657cf, 0x56f8b19d, 0x7c8806a7, 0x56b11657 },
 			{ 0xdffcc2e3, 0xfb1785e6, 0x78465a54, 0x4bdd8ccc } };
 
-		F8(x, msg);
+		x[0][0] ^= msg[0];
+		x[0][1] ^= msg[1];
+		x[0][2] ^= msg[2];
+		x[0][3] ^= msg[3];
+		x[1][0] ^= msg[4];
+		x[1][1] ^= msg[5];
+		x[1][2] ^= msg[6];
+		x[1][3] ^= msg[7];
+		x[2][0] ^= msg[8];
+		x[2][1] ^= msg[9];
+		x[2][2] ^= msg[10];
+		x[2][3] ^= msg[11];
+		x[3][0] ^= msg[12];
+		x[3][1] ^= msg[13];
+		x[3][2] ^= msg[14];
+		x[3][3] ^= msg[15];
+
+		for (int i = 0; i < 42; i += 7)
+		{
+			RoundFunction0(x, i);
+			RoundFunction1(x, i + 1);
+			RoundFunction2(x, i + 2);
+			RoundFunction3(x, i + 3);
+			RoundFunction4(x, i + 4);
+			RoundFunction5(x, i + 5);
+			RoundFunction6(x, i + 6);
+		}
+
+		x[4][0] ^= msg[0];
+		x[4][1] ^= msg[1];
+		x[4][2] ^= msg[2];
+		x[4][3] ^= msg[3];
+		x[5][0] ^= msg[4];
+		x[5][1] ^= msg[5];
+		x[5][2] ^= msg[6];
+		x[5][3] ^= msg[7];
+		x[6][0] ^= msg[8];
+		x[6][1] ^= msg[9];
+		x[6][2] ^= msg[10];
+		x[6][3] ^= msg[11];
+		x[7][0] ^= msg[12];
+		x[7][1] ^= msg[13];
+		x[7][2] ^= msg[14];
+		x[7][3] ^= msg[15];
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
