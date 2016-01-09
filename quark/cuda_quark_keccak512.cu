@@ -27,7 +27,7 @@ __constant__ uint2 c_keccak_round_constants35[24] = {
 };
 #define bitselect(a, b, c) ((a) ^ ((c) & ((b) ^ (a))))
 
-__global__  __launch_bounds__(128, 4)
+__global__  __launch_bounds__(128, 7)
 void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *g_hash, uint32_t *g_nonceVector)
 {
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -151,7 +151,7 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *
 }
 
 
-__global__  __launch_bounds__(256, 3)
+__global__  __launch_bounds__(128, 7)
 void quark_keccakskein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint2 *g_hash, uint32_t *g_nonceVector)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
