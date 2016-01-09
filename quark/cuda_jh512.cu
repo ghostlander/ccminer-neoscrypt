@@ -57,39 +57,48 @@ static uint32_t *d_found[MAX_GPUS];
 
 
 
-static __device__ __forceinline__ void SWAP4(uint32_t *x) {
-#pragma nounroll
-	// y is used as tmp register too
-	for (uint32_t y = 0; y<4; y++, ++x) {
-		asm("and.b32 %1, %0, 0xF0F0F0F0;"
-			"xor.b32 %0, %0, %1;"
-			"shr.b32 %1, %1, 4;"
+__device__ __forceinline__ void SWAP4(uint32_t *x) 
+{
+	uint32_t andmask = 0xF0F0F0F0;
+
+	#pragma unroll
+	for (uint32_t y = 0; y<4; y++, ++x) 
+	{
+		asm("and.b32 %1, %0, %2;\n\t"
+			"xor.b32 %0, %0, %1;\n\t"
+			"shr.b32 %1, %1, 4;\n\t"
 			"vshl.u32.u32.u32.clamp.add %0, %0, 4, %1;\n\t"
-			: "+r"(*x) : "r"(y));
+			: "+r"(*x) : "r"(y), "r"(andmask));
 	}
 }
 
-static __device__ __forceinline__  void SWAP2(uint32_t *x) {
-#pragma nounroll
-	// y is used as tmp register too
-	for (uint32_t y = 0; y<4; y++, ++x) {
-		asm("and.b32 %1, %0, 0xCCCCCCCC;"
-			"xor.b32 %0, %0, %1;"
-			"shr.b32 %1, %1, 2;"
+__device__ __forceinline__  void SWAP2(uint32_t *x) 
+{
+	uint32_t andmask = 0xCCCCCCCC;
+
+	#pragma unroll
+	for (uint32_t y = 0; y<4; y++, ++x) 
+	{
+		asm("and.b32 %1, %0, %2;\n\t"
+			"xor.b32 %0, %0, %1;\n\t"
+			"shr.b32 %1, %1, 2;\n\t"
 			"vshl.u32.u32.u32.clamp.add %0, %0, 2, %1;\n\t"
-			: "+r"(*x) : "r"(y));
+			: "+r"(*x) : "r"(y), "r"(andmask));
 	}
 }
 
-static __device__ __forceinline__ void SWAP1(uint32_t *x) {
-#pragma nounroll
-	// y is used as tmp register too
-	for (uint32_t y = 0; y<4; y++, ++x) {
-		asm("and.b32 %1, %0, 0xAAAAAAAA;"
-			"xor.b32 %0, %0, %1;"
-			"shr.b32 %1, %1, 1;"
+__device__ __forceinline__ void SWAP1(uint32_t *x) 
+{
+	uint32_t andmask = 0xAAAAAAAA;
+
+	#pragma unroll
+	for (uint32_t y = 0; y<4; y++, ++x)
+	{
+		asm("and.b32 %1, %0, %2;\n\t"
+			"xor.b32 %0, %0, %1;\n\t"
+			"shr.b32 %1, %1, 1;\n\t"
 			"vshl.u32.u32.u32.clamp.add %0, %0, 1, %1;\n\t"
-			: "+r"(*x) : "r"(y));
+			: "+r"(*x) : "r"(y), "r"(andmask));
 	}
 }
 
@@ -125,13 +134,14 @@ static __device__ __forceinline__ void SWAP1(uint32_t *x) {
       m1 ^= (temp0 & (m0));        \
       m2 ^= temp0;
 
-static __device__ __forceinline__ void Sbox_and_MDS_layer(uint32_t x[8][4], const int rnd)
+static __device__ void Sbox_and_MDS_layer(uint32_t x[8][4], const int rnd)
 {
 	uint2* cc = (uint2*)&c_E8_bslice32[rnd];
 
 	// Sbox and MDS layer
 #pragma unroll
-	for (int i = 0; i < 4; i++, ++cc) {
+	for (int i = 0; i < 4; i++, ++cc) 
+	{
 		uint32_t temp0;
 		Sbox(x[0][i], x[2][i], x[4][i], x[6][i], cc->x);
 		Sbox(x[1][i], x[3][i], x[5][i], x[7][i], cc->y);
@@ -139,42 +149,30 @@ static __device__ __forceinline__ void Sbox_and_MDS_layer(uint32_t x[8][4], cons
 	}
 }
 
-static __device__ __forceinline__ void RoundFunction0(uint32_t x[8][4], uint32_t roundnumber)
+__device__  void RoundFunction(uint32_t x[8][4], uint32_t roundnumber)
 {
 	Sbox_and_MDS_layer(x, roundnumber);
 
-#pragma unroll 4
-	for (int j = 1; j < 8; j = j + 2)
-	{
-		SWAP1(x[j]);
-	}
-}
+	SWAP1(x[1]);
+	SWAP1(x[3]);
+	SWAP1(x[5]);
+	SWAP1(x[7]);
 
-static __device__ __forceinline__ void RoundFunction1(uint32_t x[8][4], uint32_t roundnumber)
-{
-	Sbox_and_MDS_layer(x, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber+1);
 
-#pragma unroll 4
-	for (int j = 1; j < 8; j = j + 2)
-	{
-		SWAP2(x[j]);
-	}
-}
+	SWAP2(x[1]);
+	SWAP2(x[3]);
+	SWAP2(x[5]);
+	SWAP2(x[7]);
 
-static __device__ __forceinline__ void RoundFunction2(uint32_t x[8][4], uint32_t roundnumber)
-{
-	Sbox_and_MDS_layer(x, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber+2);
 
-#pragma unroll 4
-	for (int j = 1; j < 8; j = j + 2)
-	{
-		SWAP4(x[j]);
-	}
-}
+	SWAP4(x[1]);
+	SWAP4(x[3]);
+	SWAP4(x[5]);
+	SWAP4(x[7]);
 
-static __device__ __forceinline__ void RoundFunction3(uint32_t x[8][4], uint32_t roundnumber)
-{
-	Sbox_and_MDS_layer(x, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber + 3);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j + 2)
@@ -182,11 +180,7 @@ static __device__ __forceinline__ void RoundFunction3(uint32_t x[8][4], uint32_t
 #pragma unroll 4
 		for (int i = 0; i < 4; i++) SWAP8(x[j][i]);
 	}
-}
-
-static __device__ __forceinline__ void RoundFunction4(uint32_t x[8][4], uint32_t roundnumber)
-{
-	Sbox_and_MDS_layer(x, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber+4);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j + 2)
@@ -194,41 +188,35 @@ static __device__ __forceinline__ void RoundFunction4(uint32_t x[8][4], uint32_t
 #pragma unroll 4
 		for (int i = 0; i < 4; i++) SWAP16(x[j][i]);
 	}
-}
-
-static __device__ __forceinline__ void RoundFunction5(uint32_t x[8][4], uint32_t roundnumber)
-{
-	Sbox_and_MDS_layer(x, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber+5);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j + 2)
 	{
 #pragma unroll 2
-		for (int i = 0; i < 4; i = i + 2) 
+		for (int i = 0; i < 4; i = i + 2)
 		{
 			x[j][i] ^= x[j][i + 1];
 			x[j][i + 1] ^= x[j][i];
 			x[j][i] ^= x[j][i + 1];
 		}
 	}
-}
-
-static __device__ __forceinline__ void RoundFunction6(uint32_t x[8][4], uint32_t roundnumber)
-{
-	Sbox_and_MDS_layer(x, roundnumber);
+	Sbox_and_MDS_layer(x, roundnumber+6);
 
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j + 2)
 	{
 #pragma unroll 2
-		for (int i = 0; i < 2; i++) 
+		for (int i = 0; i < 2; i++)
 		{
 			x[j][i] ^= x[j][i + 2];
 			x[j][i + 2] ^= x[j][i];
 			x[j][i] ^= x[j][i + 2];
 		}
 	}
+
 }
+
 
 __global__ // __launch_bounds__(256,3)
 void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
@@ -273,15 +261,10 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 		x[3][2] ^= msg[14];
 		x[3][3] ^= msg[15];
 
+		
 		for (int i = 0; i < 42; i += 7)
 		{
-			RoundFunction0(x, i);
-			RoundFunction1(x, i + 1);
-			RoundFunction2(x, i + 2);
-			RoundFunction3(x, i + 3);
-			RoundFunction4(x, i + 4);
-			RoundFunction5(x, i + 5);
-			RoundFunction6(x, i + 6);
+ 			RoundFunction(x, i);
 		}
 
 		x[4][0] ^= msg[0];
@@ -306,13 +289,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 
 		for (int i = 0; i < 42; i += 7)
 		{
-			RoundFunction0(x, i);
-			RoundFunction1(x, i + 1);
-			RoundFunction2(x, i + 2);
-			RoundFunction3(x, i + 3);
-			RoundFunction4(x, i + 4);
-			RoundFunction5(x, i + 5);
-			RoundFunction6(x, i + 6);
+			RoundFunction(x, i);
 		}
 		x[(16 + 0) >> 2][(16 + 0) & 3] ^= 0x80;
 		x[(16 + 15) >> 2][(16 + 15) & 3] ^= 0x00020000;
@@ -324,7 +301,7 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g
 	}
 }
 
-#define TPB2 32
+#define TPB2 256
 __global__ //__launch_bounds__(TPB2, 32)
 void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint64_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector, uint32_t *const __restrict__ d_found, uint32_t target)
 {
@@ -374,13 +351,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 
 		for (int i = 0; i < 42; i += 7)
 		{
-			RoundFunction0(x, i);
-			RoundFunction1(x, i + 1);
-			RoundFunction2(x, i + 2);
-			RoundFunction3(x, i + 3);
-			RoundFunction4(x, i + 4);
-			RoundFunction5(x, i + 5);
-			RoundFunction6(x, i + 6);
+			RoundFunction(x, i);
 		}
 
 		x[4][0] ^= msg[0];
@@ -403,23 +374,10 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
 
-		for (int i = 0; i < 35; i += 7)
+		for (int i = 0; i < 42; i += 7)
 		{
-			RoundFunction0(x, i);
-			RoundFunction1(x, i + 1);
-			RoundFunction2(x, i + 2);
-			RoundFunction3(x, i + 3);
-			RoundFunction4(x, i + 4);
-			RoundFunction5(x, i + 5);
-			RoundFunction6(x, i + 6);
+			RoundFunction(x, i);
 		}
-		RoundFunction0(x, 35);
-		RoundFunction1(x, 35 + 1);
-		RoundFunction2(x, 35 + 2);
-		RoundFunction3(x, 35 + 3);
-		RoundFunction4(x, 35 + 4);
-		RoundFunction5(x, 35 + 5);
-		RoundFunction6(x, 35 + 6);
 
 		if (x[5][3] <= target)
 		{
@@ -433,7 +391,7 @@ void quark_jh512_gpu_hash_64_final(uint32_t threads, uint32_t startNounce, uint6
 
 __host__ void quark_jh512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash)
 {
-	const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 256;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
