@@ -14,9 +14,9 @@ extern "C" {
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 static  uint64_t *d_hash2[MAX_GPUS];
 
-extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
-//extern void keccak256_cpu_hash_32(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
-
+extern void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
+extern void blake256_cpu_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
+extern void Keccak256_cpu_hash_32(int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 
 extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash);
@@ -85,53 +85,53 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t intensity = 256 * 256 * 8;
-	uint32_t tpb = 18;
-
+	uint32_t tpb = 8;
+	bool mergeblakekeccak = false;
 	cudaDeviceProp props;
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
-
 	if (strstr(props.name, "970"))
 	{
-		tpb = 10;
-		intensity = 256 * 256 * 18;
+		intensity = 256 * 256 * 20;
 	}
 	else if (strstr(props.name, "980 Ti"))
 	{
 		intensity = 256 * 256 * 18;
-		tpb = 10;
+		tpb = 8;
 	}
 	else if (strstr(props.name, "980"))
 	{
 		intensity = 256 * 256 * 18;
-		tpb = 10;
+		tpb = 8;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
 		intensity = 256 * 256 * 10;
 		tpb = 16;
+		mergeblakekeccak = true;
 	}
 	else if (strstr(props.name, "750"))
 	{
 		intensity = 256 * 256 * 5;
 		tpb = 16;
+		mergeblakekeccak = true;
 	}
 	else if (strstr(props.name, "960"))
 	{
-		tpb = 9;
+		tpb = 8;
 		intensity = 256 * 256 * 18;
 	}
 	else if (strstr(props.name, "950"))
 	{
 		intensity = 256 * 256 * 18;
-		tpb = 13;
+		tpb = 11;
 	}
 
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x003f;
+		((uint32_t*)ptarget)[7] = 0x00ff;
 	if (!init[thr_id])
-	{ 
+	{
 		cudaSetDevice(device_map[thr_id]);
 		if (!opt_cpumining) cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		if (opt_n_gputhreads == 1)
@@ -141,15 +141,15 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		//keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
-		
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash2[thr_id], 16  * 4 * 3 * sizeof(uint64_t) * throughput));
-        lyra2v2_cpu_init(thr_id, throughput,d_hash2[thr_id]);
+
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash2[thr_id], 16 * 4 * 3 * sizeof(uint64_t) * throughput));
+		lyra2v2_cpu_init(thr_id, throughput, d_hash2[thr_id]);
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 8 * sizeof(uint32_t) * throughput));
-		init[thr_id] = true; 
+		init[thr_id] = true;
 	}
 
 	uint32_t endiandata[20];
-	for (int k=0; k < 20; k++)
+	for (int k = 0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	blake256_cpu_setBlock_80(pdata);
@@ -157,14 +157,22 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	do {
 		uint32_t foundNonce[2] = { 0, 0 };
 
-		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (mergeblakekeccak)
+		{
+			blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		}
+		else
+		{
+			blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+			keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		}
+
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id],tpb);
+		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], tpb);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonce, ptarget[7]);
-//		foundNonce[0] = 0xffffffff;
+		//		foundNonce[0] = 0xffffffff;
 		if (foundNonce[0] != 0xffffffff)
 		{
 			const uint32_t Htarg = ptarget[7];
