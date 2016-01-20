@@ -91,17 +91,18 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
 	if (strstr(props.name, "970"))
 	{
+		tpb = 10;
 		intensity = 256 * 256 * 20;
 	}
 	else if (strstr(props.name, "980 Ti"))
 	{
+		tpb = 10;
 		intensity = 256 * 256 * 18;
-		tpb = 8;
 	}
 	else if (strstr(props.name, "980"))
 	{
+		tpb = 10;
 		intensity = 256 * 256 * 18;
-		tpb = 8;
 	}
 	else if (strstr(props.name, "750 Ti"))
 	{
@@ -117,13 +118,13 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 	}
 	else if (strstr(props.name, "960"))
 	{
-		tpb = 8;
+		tpb = 9;
 		intensity = 256 * 256 * 18;
 	}
 	else if (strstr(props.name, "950"))
 	{
 		intensity = 256 * 256 * 18;
-		tpb = 11;
+		tpb = 13;
 	}
 
 	uint32_t throughput = device_intensity(device_map[thr_id], __func__, intensity);
