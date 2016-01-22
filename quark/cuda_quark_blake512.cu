@@ -28,11 +28,11 @@ __constant__ uint2 c_u512[16] =
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
 
 #define Gprecalc(a,b,c,d,idx1,idx2) { \
-	v[a] += (block[idx2] ^ c_u512[idx1]) + v[b]; \
+	v[a] += (block[idx2] ^ u512[idx1]) + v[b]; \
 	v[d] = eorswap32( v[d] , v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROR2(v[b] ^ v[c], 25); \
-	v[a] += (block[idx1] ^ c_u512[idx2]) + v[b]; \
+	v[a] += (block[idx1] ^ u512[idx2]) + v[b]; \
 	v[d] = ROR16(v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROR2(v[b] ^ v[c], 11); \
@@ -50,7 +50,17 @@ __constant__ uint2 c_u512[16] =
 	v[b] = ROTR64(v[b] ^ v[c], 11); \
 		}
 
-__constant__ uint8_t c_sigma[6][16] = {
+__constant__ uint8_t c_sigma[16][16] = {
+		{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+		{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+		{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+		{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+		{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+		{ 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
+		{ 12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
+		{ 13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
+		{ 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
+		{ 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0 },
 		{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 		{ 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
 		{ 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -73,11 +83,26 @@ __constant__ uint8_t c_sigma[6][16] = {
 }
 
 __global__
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(256, 1)
+#else
+__launch_bounds__(256, 2)
+#endif
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
+#if USE_SHUFFLE
+//	const int warpID = threadIdx.x & 0x02F; // 16 warps
+	const int warpBlockID = (thread + 15)>>5; // aufrunden auf volle Warp-Blöcke
+//	const int maxHashPosition = thread<<3;
+#endif
+
+#if USE_SHUFFLE
+	if (warpBlockID < ( (threads+15)>>5 ))
+#else
 	if (thread < threads)
+#endif
 	{
 		const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
@@ -128,7 +153,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			{ 0xfb41bd6bUL, 0x1f83d9abUL },
 			{ 0x137e2179UL, 0x5be0cd19UL }
 		};
-/*		const uint2 u512[16] =
+		const uint2 u512[16] =
 		{
 			{ 0x85a308d3UL, 0x243f6a88 }, { 0x03707344UL, 0x13198a2e },
 			{ 0x299f31d0UL, 0xa4093822 }, { 0xec4e6c89UL, 0x082efa98 },
@@ -139,11 +164,11 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			{ 0xf12c7f99UL, 0xba7c9045 }, { 0xb3916cf7UL, 0x24a19947 },
 			{ 0x858efc16UL, 0x0801f2e2 }, { 0x71574e69UL, 0x636920d8 }
 		};
-*/
+
 		uint2 v[16] =
 		{
 			h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
-			c_u512[0], c_u512[1], c_u512[2], c_u512[3], c_u512[4] ^ 512, c_u512[5] ^ 512, c_u512[6], c_u512[7]
+			u512[0], u512[1], u512[2], u512[3], u512[4] ^ 512, u512[5] ^ 512, u512[6], u512[7]
 		};
 
 		Gprecalc(0, 4, 8, 12, 0x1, 0x0)
@@ -236,9 +261,9 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			Gprecalc(2, 7, 8, 13, 0xc, 0x3)
 			Gprecalc(3, 4, 9, 14, 0x0, 0xd)
 
-//			#if __CUDA_ARCH__ == 500
+			#if __CUDA_ARCH__ == 500
 
-/*			Gprecalc(0, 4, 8, 12, 0x1, 0x0)
+			Gprecalc(0, 4, 8, 12, 0x1, 0x0)
 			Gprecalc(1, 5, 9, 13, 0x3, 0x2)
 			Gprecalc(2, 6, 10, 14, 0x5, 0x4)
 			Gprecalc(3, 7, 11, 15, 0x7, 0x6)
@@ -291,11 +316,10 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 			Gprecalc(1, 6, 11, 12, 0x5, 0x7)
 			Gprecalc(2, 7, 8, 13, 0xe, 0xf)
 			Gprecalc(3, 4, 9, 14, 0x9, 0x1)
-*/
 
-//			#else
+			#else
 
-			for (int i = 0; i < 6; i++)
+			for (int i = 10; i < 16; i++)
 			{
 				/* column step */
 				G(0, 4, 8, 12, 0);
@@ -308,7 +332,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 				G(2, 7, 8, 13, 12);
 				G(3, 4, 9, 14, 14);
 			}
-//			#endif
+			#endif
 
 			v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
 			v[1] = cuda_swap(h[1] ^ v[1] ^ v[9]);
@@ -353,7 +377,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 		block[14] = vectorizelow(0);
 		block[15] = vectorizelow(0x280);
 		block[9].x = nounce;
-/*		const uint2 u512[16] =
+		const uint2 u512[16] =
 		{
 			{ 0x85a308d3UL, 0x243f6a88 }, { 0x03707344UL, 0x13198a2e },
 			{ 0x299f31d0UL, 0xa4093822 }, { 0xec4e6c89UL, 0x082efa98 },
@@ -364,7 +388,20 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 			{ 0xf12c7f99UL, 0xba7c9045 }, { 0xb3916cf7UL, 0x24a19947 },
 			{ 0x858efc16UL, 0x0801f2e2 }, { 0x71574e69UL, 0x636920d8 }
 		};
-*/
+
+
+		/*		const uint2 u512[16] =
+		{
+		{ 0x85a308d3UL, 0x243f6a88 }, { 0x03707344UL, 0x13198a2e },
+		{ 0x299f31d0UL, 0xa4093822 }, { 0xec4e6c89UL, 0x082efa98 },
+		{ 0x38d01377UL, 0x452821e6 }, { 0x34e90c6cUL, 0xbe5466cf },
+		{ 0xc97c50ddUL, 0xc0ac29b7 }, { 0xb5470917UL, 0x3f84d5b5 },
+		{ 0x8979fb1bUL, 0x9216d5d9 }, { 0x98dfb5acUL, 0xd1310ba6 },
+		{ 0xd01adfb7UL, 0x2ffd72db }, { 0x6a267e96UL, 0xb8e1afed },
+		{ 0xf12c7f99UL, 0xba7c9045 }, { 0xb3916cf7UL, 0x24a19947 },
+		{ 0x858efc16UL, 0x0801f2e2 }, { 0x71574e69UL, 0x636920d8 }
+		};
+		*/
 		const uint2 h[8] = {
 			{ 0xf3bcc908UL, 0x6a09e667UL },
 			{ 0x84caa73bUL, 0xbb67ae85UL },
@@ -389,8 +426,8 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 
 		Gprecalc(0, 4, 8, 12, 0xa, 0xe)
 
-//		Gprecalc(1, 5, 9, 13, 0x8, 0x4)
-		v[1] += v[5];
+			//		Gprecalc(1, 5, 9, 13, 0x8, 0x4)
+			v[1] += v[5];
 		v[13] = eorswap32(v[13], v[1]);
 		v[9] += v[13];
 
@@ -398,9 +435,9 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 		v[1] += (block[8] ^ c_u512[4]) + v[5];
 		v[13] = ROR16(v[13] ^ v[1]);
 		v[9] += v[13];
-		v[5] = ROR2(v[5] ^ v[9], 11); 
+		v[5] = ROR2(v[5] ^ v[9], 11);
 
-//		Gprecalc(2, 6, 10, 14, 0xf, 0x9)
+		//		Gprecalc(2, 6, 10, 14, 0xf, 0x9)
 		v[2] += (block[9] ^ c_u512[0xf]);
 		v[14] = eorswap32(v[14], v[2]);
 		v[10] += v[14];
@@ -409,9 +446,9 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 		v[14] = ROR16(v[14] ^ v[2]);
 		v[10] += v[14];
 		v[6] = ROR2(v[6] ^ v[10], 11);
-				
-//		Gprecalc(3, 7, 11, 15, 0x6, 0xd)
-		v[15] = eorswap32( v[15] , v[3]);
+
+		//		Gprecalc(3, 7, 11, 15, 0x6, 0xd)
+		v[15] = eorswap32(v[15], v[3]);
 		v[11] += v[15];
 		v[7] = ROR2(v[7] ^ v[11], 25);
 		v[3] += (block[6] ^ c_u512[0xd]) + v[7];
@@ -419,8 +456,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 		v[11] += v[15];
 		v[7] = ROR2(v[7] ^ v[11], 11);
 
-
-			Gprecalc(0, 5, 10, 15, 0xc, 0x1)
+		Gprecalc(0, 5, 10, 15, 0xc, 0x1)
 			Gprecalc(1, 6, 11, 12, 0x2, 0x0)
 			Gprecalc(2, 7, 8, 13, 0x7, 0xb)
 			Gprecalc(3, 4, 9, 14, 0x3, 0x5)
@@ -551,7 +587,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint2 *o
 			Gprecalc(2, 7, 8, 13, 0xe, 0xf)
 			Gprecalc(3, 4, 9, 14, 0x9, 0x1)
 
-		v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
+			v[0] = cuda_swap(h[0] ^ v[0] ^ v[8]);
 		v[1] = cuda_swap(h[1] ^ v[1] ^ v[9]);
 		v[2] = cuda_swap(h[2] ^ v[2] ^ v[10]);
 		v[3] = cuda_swap(h[3] ^ v[3] ^ v[11]);
@@ -642,18 +678,18 @@ __host__ void quark_blake512_cpu_setBlock_80(uint64_t *pdata)
 		h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
 		u512[0], u512[1], u512[2], u512[3], u512[4] ^ 640, u512[5] ^ 640, u512[6], u512[7]
 	};
-	
+
 	GprecalcHost(0, 4, 8, 12, 0x1, 0x0)
-	GprecalcHost(1, 5, 9, 13, 0x3, 0x2)
-	GprecalcHost(2, 6, 10, 14, 0x5, 0x4)
-	GprecalcHost(3, 7, 11, 15, 0x7, 0x6)
+		GprecalcHost(1, 5, 9, 13, 0x3, 0x2)
+		GprecalcHost(2, 6, 10, 14, 0x5, 0x4)
+		GprecalcHost(3, 7, 11, 15, 0x7, 0x6)
 
-	GprecalcHost(1, 6, 11, 12, 0xb, 0xa)
-	GprecalcHost(2, 7, 8, 13, 0xd, 0xc)
+		GprecalcHost(1, 6, 11, 12, 0xb, 0xa)
+		GprecalcHost(2, 7, 8, 13, 0xd, 0xc)
 
-	v[0] += (block[8] ^ u512[9]) + v[5];
+		v[0] += (block[8] ^ u512[9]) + v[5];
 	v[15] = ROTR64(v[15] ^ v[0], 32); \
-	v[10] += v[15];
+		v[10] += v[15];
 	v[5] = ROTR64(v[5] ^ v[10], 25);
 	v[0] += v[5];
 
@@ -668,10 +704,9 @@ __host__ void quark_blake512_cpu_setBlock_80(uint64_t *pdata)
 
 }
 
-
 __host__ void quark_blake512_cpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash)
 {
-	const uint32_t threadsperblock = 64;
+	const uint32_t threadsperblock = 32;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -681,7 +716,7 @@ __host__ void quark_blake512_cpu_hash_64(uint32_t threads, uint32_t startNounce,
 __host__ void quark_blake512_cpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 
-	const uint32_t threadsperblock = 64;
+	const uint32_t threadsperblock = 32;
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);

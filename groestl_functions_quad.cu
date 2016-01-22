@@ -288,6 +288,7 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 
 __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *const r)
 {
+	/*
 #if __CUDA_ARCH__ > 500
 	const uint32_t andmask1 = ((threadIdx.x & 0x03) - 1) >> 16;
 
@@ -326,6 +327,7 @@ __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *const r)
 	}
 
 #else
+	*/
 	for (int round = 0; round<14; round++)
 	{
 		G256_AddRoundConstantP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
@@ -333,7 +335,7 @@ __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *const r)
 		G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
 		G256_MixFunction_quad(r);
 	}
-#endif
+//#endif
 
 /*
 
@@ -455,7 +457,8 @@ G256_ShiftBytesP_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
 
 __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 {    
-#if __CUDA_ARCH__ > 500
+/*
+	#if __CUDA_ARCH__ > 500
 	for (int round = 0; round<12; round++)
     {
         G256_AddRoundConstantQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
@@ -474,6 +477,7 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 	G256_ShiftBytesQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
 	G256_MixFunction_quad(r);
 #else
+*/
 	for (int round = 0; round<14; round++)
 	{
 		G256_AddRoundConstantQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0], round);
@@ -481,7 +485,7 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *const r)
 		G256_ShiftBytesQ_quad(r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0]);
 		G256_MixFunction_quad(r);
 	}
-#endif
+//#endif
 
 }
 

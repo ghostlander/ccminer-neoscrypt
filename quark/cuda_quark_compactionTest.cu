@@ -184,7 +184,8 @@ __global__ void quark_compactTest_gpu_ADD(uint32_t *data, uint32_t *partial_sums
 }
 
 // Der Scatter
-__global__ void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cuda_compactTestFunction_t testFunc, uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
+__global__
+void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cuda_compactTestFunction_t testFunc, uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
 {
 	int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
 	uint32_t actNounce = id;
@@ -235,12 +236,12 @@ __host__ static uint32_t quark_compactTest_roundUpExp(uint32_t val)
 
 __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32_t *nrm,
 														uint32_t *d_nonces1, cuda_compactTestFunction_t function,
-														uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
+														uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, uint32_t blockSize)
 {
 	int orgThreads = threads;
 	threads = (int)quark_compactTest_roundUpExp((uint32_t)threads);
 	// threadsPerBlock ausrechnen
-	int blockSize = 512;
+//	int blockSize = 256;
 	int nSummen = threads / blockSize;
 
 	int thr1 = (threads+blockSize-1) / blockSize;
@@ -285,34 +286,34 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t thread
 ////// ACHTUNG: Diese funktion geht aktuell nur mit threads > 65536 (Am besten 256 * 1024 oder 256*2048)
 __host__ void quark_compactTest_cpu_dualCompaction(int thr_id, uint32_t threads, uint32_t *nrm,
 													 uint32_t *d_nonces1, uint32_t *d_nonces2,
-													 uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
+													 uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, uint32_t blockSize)
 {
-	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[0], d_nonces1, h_QuarkTrueFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
-	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[1], d_nonces2, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
+	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[0], d_nonces1, h_QuarkTrueFunction[thr_id], startNounce, inpHashes, d_validNonceTable,blockSize);
+	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[1], d_nonces2, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable, blockSize);
 }
 
 __host__ void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
 											uint32_t *d_nonces1, uint32_t *nrm1,
-											uint32_t *d_nonces2, uint32_t *nrm2)
+											uint32_t *d_nonces2, uint32_t *nrm2, uint32_t blocksize)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
 	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!
 	
 	quark_compactTest_cpu_dualCompaction(thr_id, threads,
 		h_numValid[thr_id], d_nonces1, d_nonces2,
-		startNounce, inpHashes, d_validNonceTable);
+		startNounce, inpHashes, d_validNonceTable, blocksize);
 
 	*nrm1 = h_numValid[thr_id][0];
 	*nrm2 = h_numValid[thr_id][1];
 }
 
 __host__ void quark_compactTest_single_false_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
-											uint32_t *d_nonces1, uint32_t *nrm1)
+	uint32_t *d_nonces1, uint32_t *nrm1, uint32_t blockSize=256)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
 	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!
 
-	quark_compactTest_cpu_singleCompaction(thr_id, threads, h_numValid[thr_id], d_nonces1, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
+	quark_compactTest_cpu_singleCompaction(thr_id, threads, h_numValid[thr_id], d_nonces1, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable, blockSize);
 
 	*nrm1 = h_numValid[thr_id][0];
 }
