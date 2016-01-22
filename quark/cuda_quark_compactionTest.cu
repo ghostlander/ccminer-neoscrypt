@@ -236,12 +236,12 @@ __host__ static uint32_t quark_compactTest_roundUpExp(uint32_t val)
 
 __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32_t *nrm,
 														uint32_t *d_nonces1, cuda_compactTestFunction_t function,
-														uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, uint32_t blockSize)
+														uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
 {
 	int orgThreads = threads;
 	threads = (int)quark_compactTest_roundUpExp((uint32_t)threads);
 	// threadsPerBlock ausrechnen
-//	int blockSize = 256;
+	const int blockSize = 512;
 	int nSummen = threads / blockSize;
 
 	int thr1 = (threads+blockSize-1) / blockSize;
@@ -286,34 +286,34 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t thread
 ////// ACHTUNG: Diese funktion geht aktuell nur mit threads > 65536 (Am besten 256 * 1024 oder 256*2048)
 __host__ void quark_compactTest_cpu_dualCompaction(int thr_id, uint32_t threads, uint32_t *nrm,
 													 uint32_t *d_nonces1, uint32_t *d_nonces2,
-													 uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, uint32_t blockSize)
+													 uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
 {
-	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[0], d_nonces1, h_QuarkTrueFunction[thr_id], startNounce, inpHashes, d_validNonceTable,blockSize);
-	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[1], d_nonces2, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable, blockSize);
+	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[0], d_nonces1, h_QuarkTrueFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
+	quark_compactTest_cpu_singleCompaction(thr_id, threads, &nrm[1], d_nonces2, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
 }
 
 __host__ void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
 											uint32_t *d_nonces1, uint32_t *nrm1,
-											uint32_t *d_nonces2, uint32_t *nrm2, uint32_t blocksize)
+											uint32_t *d_nonces2, uint32_t *nrm2)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
 	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!
 	
 	quark_compactTest_cpu_dualCompaction(thr_id, threads,
 		h_numValid[thr_id], d_nonces1, d_nonces2,
-		startNounce, inpHashes, d_validNonceTable, blocksize);
+		startNounce, inpHashes, d_validNonceTable);
 
 	*nrm1 = h_numValid[thr_id][0];
 	*nrm2 = h_numValid[thr_id][1];
 }
 
 __host__ void quark_compactTest_single_false_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
-	uint32_t *d_nonces1, uint32_t *nrm1, uint32_t blockSize=256)
+	uint32_t *d_nonces1, uint32_t *nrm1)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
 	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!
 
-	quark_compactTest_cpu_singleCompaction(thr_id, threads, h_numValid[thr_id], d_nonces1, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable, blockSize);
+	quark_compactTest_cpu_singleCompaction(thr_id, threads, h_numValid[thr_id], d_nonces1, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
 
 	*nrm1 = h_numValid[thr_id][0];
 }
