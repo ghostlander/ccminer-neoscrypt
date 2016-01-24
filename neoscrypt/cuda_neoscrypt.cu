@@ -61,7 +61,7 @@ static const __constant__  uint8 BLAKE2S_IV_Vec =
 		0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
 	};
 
-
+ 
 static const  uint8 BLAKE2S_IV_Vechost =
 {
 	0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
@@ -133,7 +133,6 @@ SALSA(state.s5,state.s6,state.s7,state.s4); \
 SALSA(state.sa,state.sb,state.s8,state.s9); \
 SALSA(state.sf,state.sc,state.sd,state.se); \
 	} 
-
 
 static __forceinline__ __device__ void shift256R4(uint32_t * ret, const uint8 &vec4, uint32_t shift2)
 {
@@ -356,7 +355,7 @@ idx = BLAKE2S_SIGMA_host[idx0][idx1+1]; a += key[idx]; \
 static __forceinline__ __device__ void Blake2S(uint32_t *out, const uint32_t* __restrict__  inout, const  uint32_t * __restrict__ TheKey)
 {
 	uint16 V;
-    uint32_t tmpidx;
+    
     uint32_t idx;
 	uint8 tmpblock;
 	
@@ -552,7 +551,7 @@ static __forceinline__ __device__ void Blake2S(uint32_t *out, const uint32_t* __
 static __forceinline__ __device__ void Blake2S_v2(uint32_t *out, const uint32_t* __restrict__  inout, const  uint32_t * __restrict__ TheKey)
 {
 	uint16 V;
-	uint32_t tmpidx;
+	
 	uint2 idx;
 	uint8 tmpblock;
 	//	uint16 inout[1];
@@ -1052,7 +1051,7 @@ static __forceinline__ __device__ void fastkdf256_v2(int thread, const uint32_t 
 
 		shift256R4(shifted, ((uint8*)input)[0], bitbuf);
 
-	
+		//#pragma unroll
 		uint32_t temp[9];
 
  
@@ -1223,7 +1222,7 @@ static __forceinline__ __device__ void fastkdf32_v1(int thread, const  uint32_t 
 	qbuf = bufidx / 4;
 	rbuf = bufidx & 3;
 	bitbuf = rbuf << 3;
-	uint32_t shifted[9];
+	
 
 	for (int k = 7; k < 9; k++) {
 		temp[k] = ((uint32_t *)B0)[(k + qbuf) % 64];
@@ -1238,13 +1237,15 @@ static __forceinline__ __device__ void fastkdf32_v1(int thread, const  uint32_t 
 static __forceinline__ __device__ void fastkdf32_v3(int thread, const  uint32_t  nonce, const uint32_t * __restrict__ salt, const uint32_t * __restrict__  s_data, uint32_t &output)
 {
 
-	uint32_t temp[9], crap1, crap2, crap3;
+	uint32_t temp[9];
 
 
 	uint8_t bufidx = 0;
 	uchar4 bufhelper;
 
+	//	uint32_t temp[9];
 
+	//	uint32_t  B0[64];
 #define Bshift 16*thread
 
 	uint32_t* B0 = (uint32_t*)&B2[Bshift];
@@ -1335,6 +1336,7 @@ static __forceinline__ __device__ void fastkdf32_v3(int thread, const  uint32_t 
 	bitbuf = rbuf << 3;
 
 
+
 	temp[7] = __ldg(&B0[(qbuf+7)%64]);
 	temp[8] = __ldg(&B0[(qbuf+8)%64]);
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(output) : "r"(temp[7]), "r"(temp[8]), "r"(bitbuf));
@@ -1345,8 +1347,14 @@ static __forceinline__ __device__ void fastkdf32_v3(int thread, const  uint32_t 
 
 
 
-#define SHIFT 128
+
+#if CUDART_VERSION >= 7000
+#define SHIFT 130
 #define TPB 128
+#else 
+#define SHIFT 130
+#define TPB 64
+#endif
 #define TPB2 128
 
 
@@ -1357,7 +1365,11 @@ __global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_start(int stratum,
 
 	if (threadIdx.x<64)
 		s_data[threadIdx.x] = c_data[threadIdx.x];
+//		for (int i = 0; i<2; i++) {
+//	s_data[i+2*threadIdx.x] = c_data[i+2*threadIdx.x];
 
+//}
+	__syncthreads();
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 		const uint32_t nonce = startNonce + thread;
 
@@ -1480,13 +1492,148 @@ __global__ __launch_bounds__(TPB, 1) void neoscrypt_gpu_hash_salsa2_stream1(int 
 }
 
 
+__global__ __launch_bounds__(TPB, 1) void neoscrypt_gpu_hash_chacha1_stream1_halved(int threads, uint32_t startNonce)
+{
+
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	int shift = SHIFT * 8 * thread;
+	unsigned int shiftTr = 8 * thread;
+
+
+	vectypeS X[8];
+	for (int i = 0; i<8; i++)
+		X[i] = __ldg4(&(Input + shiftTr)[i]);
+
+
+
+
+#pragma nounroll  
+	for (int i = 0; i < 64; ++i)
+	{
+		uint32_t offset = shift + i * 8;
+		for (int j = 0; j<8; j++)
+			(W + offset)[j] = X[j];
+
+		neoscrypt_chacha((uint16*)X);
+		neoscrypt_chacha((uint16*)X);
+
+	}
+	for (int i = 0; i<8; i++)
+		(Tr + shiftTr)[i] = X[i];
+
+}
+
+__global__ __launch_bounds__(TPB, 1) void neoscrypt_gpu_hash_chacha2_stream1_halved(int threads, uint32_t startNonce)
+{
+
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	int shift = SHIFT * 8 * thread;
+	int shiftTr = 8 * thread;
+
+	vectypeS X[8];
+	for (int i = 0; i<8; i++)
+		X[i] = __ldg4(&(Tr + shiftTr)[i]);
+
+#pragma nounroll
+	for (int t = 0; t < 128; t++)
+	{
+//		int idx = (X[6].x.x & 0x7F) << 3;
+		int idx = (X[6].x.x & 0x7F);
+		int idxr = idx & 1;
+		int idxd = (idx >> 1) << 3;
+		vectypeS Buff[8];
+		for (int j = 0; j<8; j++)
+			Buff[j] = __ldg4(&(W + shift + idxd)[j]);
+
+		if (idxr != 0) neoscrypt_chacha((uint16*)Buff);
+
+		for (int j = 0; j<8; j++)
+			X[j] ^= Buff[j];
+		
+		neoscrypt_chacha((uint16*)X);
+
+
+	}
+
+	for (int i = 0; i<8; i++)
+		(Tr + shiftTr)[i] = X[i];  // best checked
+
+}
+
+__global__ __launch_bounds__(TPB, 1) void neoscrypt_gpu_hash_salsa1_stream1_halved(int threads, uint32_t startNonce)
+{
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+
+	int shift = SHIFT * 8 * thread;
+	int shiftTr = 8 * thread;
+
+	vectypeS Z[8];
+
+	for (int i = 0; i<8; i++)
+		Z[i] = __ldg4(&(Input + shiftTr)[i]);
+
+#pragma nounroll
+	for (int i = 0; i < 64; ++i)
+	{
+
+		for (int j = 0; j<8; j++)
+			(W2 + shift + i * 8)[j] = Z[j];
+		neoscrypt_salsa((uint16*)Z);
+		neoscrypt_salsa((uint16*)Z);
+	}
+	for (int i = 0; i<8; i++)
+		(Tr2 + shiftTr)[i] = Z[i];
+
+}
+
+__global__ __launch_bounds__(TPB, 1) void neoscrypt_gpu_hash_salsa2_stream1_halved(int threads, uint32_t startNonce)
+{
+
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	int shift = SHIFT * 8 * thread;
+	int shiftTr = 8 * thread;
+
+	vectypeS X[8],Buff[8];
+	for (int i = 0; i<8; i++)
+		X[i] = __ldg4(&(Tr2 + shiftTr)[i]);
+
+#pragma nounroll 
+	for (int t = 0; t < 128; t++)
+	{
+//		int idx = (X[6].x.x & 0x7F) << 3;
+		int idx = (X[6].x.x & 0x7F);
+		int idxr = idx & 1;
+		int idxd = (idx >> 1) << 3;
+
+		for (int j = 0; j<8; j++)
+			Buff[j] = __ldg4(&(W2 + shift + idxd)[j]);
+
+		if (idxr != 0) neoscrypt_salsa((uint16*)Buff);
+
+		for (int j = 0; j<8; j++)
+			X[j] ^= Buff[j];
+		neoscrypt_salsa((uint16*)X);
+
+	}
+	for (int i = 0; i<8; i++)
+		(Tr2 + shiftTr)[i] = X[i];  // best checked
+
+}
+
+
+
+
 __global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_ending(int stratum, int threads, uint32_t startNonce, uint32_t *nonceVector)
 {
 	__shared__ uint32_t s_data[64];
-
+/*
+	if (threadIdx.x<40)
+		for (int i = 0; i<2; i++)
+       s_data[i + 2 * threadIdx.x] = c_data[i + 2 * threadIdx.x];
+*/	
 	if (threadIdx.x<64)
 			s_data[threadIdx.x] = c_data[threadIdx.x];
-//	__syncthreads();
+	__syncthreads();
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 		const uint32_t nonce = startNonce + thread;
 
@@ -1496,11 +1643,11 @@ __global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_ending(int stratum
 
 		uint32_t ZNonce = (stratum) ? cuda_swab32(nonce) : nonce;
 
-		
+//		for (int i = 0; i<8; i++) 
+//		Z[i] = __ldg4(&(Tr + shiftTr)[i]);
 		for (int i = 0; i<8; i++)
 			Z[i] = __ldg4(&(Tr2 + shiftTr)[i]) ^ __ldg4(&(Tr + shiftTr)[i]);
-
-#if __CUDA_ARCH__ < 500		 
+#if __CUDA_ARCH__ < 500		
 		fastkdf32_v1(thread, ZNonce, (uint32_t*)Z, s_data, outbuf);
 #else
 		fastkdf32_v3(thread, ZNonce, (uint32_t*)Z, s_data, outbuf);
@@ -1556,11 +1703,11 @@ __host__ uint32_t neoscrypt_cpu_hash_k4_2stream(int stratum, int thr_id, int thr
 
 	cudaDeviceSynchronize();
 
-	neoscrypt_gpu_hash_chacha1_stream1 << <grid, block, 0, stream[1] >> >(threads, startNounce); //salsa
-	neoscrypt_gpu_hash_chacha2_stream1 << <grid, block, 0, stream[1] >> >(threads, startNounce); //salsa
+	neoscrypt_gpu_hash_chacha1_stream1 << <grid, block, 0, stream[0] >> >(threads, startNounce); //salsa
+	neoscrypt_gpu_hash_chacha2_stream1 << <grid, block, 0, stream[0] >> >(threads, startNounce); //salsa
 
-	neoscrypt_gpu_hash_salsa1_stream1 << <grid, block, 0, stream[0] >> >(threads, startNounce); //chacha
-	neoscrypt_gpu_hash_salsa2_stream1 << <grid, block, 0, stream[0] >> >(threads, startNounce); //chacha
+	neoscrypt_gpu_hash_salsa1_stream1 << <grid, block, 0, stream[1] >> >(threads, startNounce); //chacha
+	neoscrypt_gpu_hash_salsa2_stream1 << <grid, block, 0, stream[1] >> >(threads, startNounce); //chacha
 
 //	cudaDeviceSynchronize();
 cudaStreamDestroy(stream[1]); //will do the synchronization
