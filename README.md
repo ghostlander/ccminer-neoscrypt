@@ -3,24 +3,42 @@
 
 djm34 would like to thank all the people who participated in the pledge and made that release possible: 
 
-Nicehash (www.nicehash.com)
-antantti
-crackers (www.zpool.ca)
-scryptr
-Liquid71
-sp_
-frazier34567
-thefix
-chrysophylax
-ldw-com
-Grout
-serg_25
-s7icky
-Grim
-Pivlus
-lawrencelyl
-sambiohazard
-ltc_bilic
+Nicehash (www.nicehash.com);
+
+antantti;
+
+crackers (www.zpool.ca);
+
+scryptr;
+
+Liquid71;
+
+sp_;
+
+frazier34567;
+
+thefix;
+
+chrysophylax;
+
+ldw-com;
+
+Grout;
+
+serg_25;
+
+s7icky;
+
+Grim;
+
+Pivlus;
+
+lawrencelyl;
+
+sambiohazard;
+
+ltc_bilic;
+
 crsminer
 
 ================================================================
@@ -35,7 +53,7 @@ Reforked and optimized by sp-hash@github and KlausT@github
 
 DJM34: BTC donation address: 16UoC4DmTz2pvhFvcfTQrzkPTrXkWijzXw
 
-A part of the recent algos were originally wrote by [djm34](https://github.com/djm34).
+Most of the recent algos were originally wrote by [djm34](https://github.com/djm34).
 
 This variant was tested and built on Linux (ubuntu server 14.04) and VStudio 2013 on Windows 8.1
 
