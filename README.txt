@@ -1,5 +1,32 @@
 
-ccMiner release 1.5.2-tpruvot (SP_MOD) (april 2015)
+===== acknowledgment ======================================
+
+djm34 would like to thank all the people who participated in the pledge and made that release possible: 
+
+Nicehash (www.nicehash.com)
+antantti
+crackers (www.zpool.ca)
+scryptr
+Liquid71
+sp_
+frazier34567
+thefix
+chrysophylax
+ldw-com
+Grout
+serg_25
+s7icky
+Grim
+Pivlus
+lawrencelyl
+sambiohazard
+ltc_bilic
+crsminer
+
+=============================================================
+
+
+ccMiner release 1.5.78-djm34 (january 2016)
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -12,12 +39,13 @@ tpruvot@github:
   NEOS : NaEcVrdzoCWHUYXb7X8QoafoKS9UV69Yk4
   XST  : S9TqZucWgT6ajZLDBxQnHUtmkotCEHn9z9
 
+DJM34:
+  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
+
 sp-hash@github:
   BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
   DRK: XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
   
-DJM34:
-  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
 
 KlausT @github:
   BTC 1H2BHSyuwLP9vqt2p3bK9G3mDJsAi7qChw
@@ -28,6 +56,7 @@ cbuchner v1.2:
   BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM
 
 ***************************************************************
+
 
 >>> Introduction <<<
 
