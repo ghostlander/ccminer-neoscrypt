@@ -23,6 +23,7 @@
 #endif
 
 #include "miner.h"
+#include "log.h"
 #include "nvml.h"
 #include "cuda_runtime.h"
 
@@ -42,7 +43,7 @@ static uint32_t device_bus_ids[MAX_GPUS] = { 0 };
 #if defined(_MSC_VER) || defined(_WIN32) || defined(_WIN64)
 	#include <windows.h>
 	static void *wrap_dlopen(const char *filename) {
-		HMODULE h = LoadLibrary(filename);
+		HMODULE h = LoadLibraryW((LPCWSTR)filename);
 		if (!h && opt_debug) {
 			applog(LOG_DEBUG, "dlopen(%d): failed to load %s", 
 				GetLastError(), filename);
@@ -84,7 +85,7 @@ nvml_handle * nvml_create()
 
 #if defined(WIN32)
 	/* Windows (do not use slashes, else ExpandEnvironmentStrings will mix them) */
-#define  libnvidia_ml "%PROGRAMFILES%\\NVIDIA Corporation\\NVSMI\\nvml.dll"
+#define  libnvidia_ml _T("%PROGRAMFILES%\\NVIDIA Corporation\\NVSMI\\nvml.dll")
 #else
 	/* linux assumed */
 #define  libnvidia_ml "libnvidia-ml.so"
@@ -92,7 +93,11 @@ nvml_handle * nvml_create()
 
 	char tmp[512];
 #ifdef WIN32
-	ExpandEnvironmentStrings(libnvidia_ml, tmp, sizeof(tmp));
+#if (_UNICODE)
+	ExpandEnvironmentStringsW((LPCWSTR)libnvidia_ml, (LPWSTR)tmp, sizeof(tmp));
+#else
+	ExpandEnvironmentStringsA((LPCSTR)libnvidia_ml, (LPSTR)tmp, sizeof(tmp));
+#endif
 #else
 	strcpy(tmp, libnvidia_ml);
 #endif

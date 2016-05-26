@@ -17,7 +17,6 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
-#include <inttypes.h>
 #include <unistd.h>
 #include <jansson.h>
 #include <curl/curl.h>
@@ -33,6 +32,7 @@
 #include <netinet/tcp.h>
 #endif
 #include "miner.h"
+#include "log.h"
 #include "elist.h"
 
 bool opt_tracegpu = false;
@@ -527,7 +527,7 @@ bool hex2bin(uchar *p, const char *hexstr, size_t len)
 		len--;
 	}
 
-	return (len == 0 && *hexstr == 0) ? true : false;
+    return(!len) ? true : false;
 }
 
 /* Subtract the `struct timeval' values X and Y,
@@ -1509,7 +1509,7 @@ char* atime2str(time_t timer)
 }
 
 /* sprintf can be used in applog */
-extern "C" char* format_hash(char* buf, uchar *hash)
+char* format_hash(char* buf, uchar *hash)
 {
 	int len = 0;
 	for (int i=0; i < 32; i += 4) {
@@ -1550,110 +1550,12 @@ void do_gpu_tests(void)
 
 void print_hash_tests(void)
 {
-	char s[128] = {'\0'};
-	uchar buf[128], hash[128];
-	memset(buf, 0, sizeof buf);
+//	char s[128] = {'\0'};
+//	uchar buf[128], hash[128];
+//	memset(buf, 0, sizeof buf);
 	// buf[0] = 1; buf[64] = 2; // for endian tests
 
-	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
+//	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
-	memset(hash, 0, sizeof hash);
-	blake256hash(&hash[0], &buf[0], 8);
-	printpfx("blakecoin", hash);
-
-	memset(hash, 0, sizeof hash);
-	blake256hash(&hash[0], &buf[0], 14);
-	printpfx("blake", hash);
-
-	memset(hash, 0, sizeof hash);
-	deephash(&hash[0], &buf[0]);
-	printpfx("deep", hash);
-
-	memset(hash, 0, sizeof hash);
-	fresh_hash(&hash[0], &buf[0]);
-	printpfx("fresh", hash);
-
-	memset(hash, 0, sizeof hash);
-	fugue256_hash(&hash[0], &buf[0], 32);
-	printpfx("fugue256", hash);
-
-	memset(hash, 0, sizeof hash);
-	groestlhash(&hash[0], &buf[0]);
-	printpfx("groestl", hash);
-
-	heavycoin_hash(&hash[0], &buf[0], 32);
-	printpfx("heavy", hash);
-	memset(hash, 0, sizeof hash);
-
-	memset(hash, 0, sizeof hash);
-	jackpothash(&hash[0], &buf[0]);
-	printpfx("jackpot", hash);
-
-	memset(hash, 0, sizeof hash);
-	keccak256_hash(&hash[0], &buf[0]);
-	printpfx("keccak", hash);
-
-	memset(hash, 0, sizeof hash);
-	doomhash(&hash[0], &buf[0]);
-	printpfx("luffa", hash);
-
-	memset(hash, 0, sizeof hash);
-	lyra2_hash(&hash[0], &buf[0]);
-	printpfx("lyra2", hash);
-
-	memset(hash, 0, sizeof hash);
-	myriadhash(&hash[0], &buf[0]);
-	printpfx("myriad", hash);
-
-	memset(hash, 0, sizeof hash);
-	nist5hash(&hash[0], &buf[0]);
-	printpfx("nist5", hash);
-
-	memset(hash, 0, sizeof hash);
-	pentablakehash(&hash[0], &buf[0]);
-	printpfx("pentablake", hash);
-
-	memset(hash, 0, sizeof hash);
-	quarkhash(&hash[0], &buf[0]);
-	printpfx("quark", hash);
-
-	memset(hash, 0, sizeof hash);
-	qubithash(&hash[0], &buf[0]);
-	printpfx("qubit", hash);
-
-	skeincoinhash(&hash[0], &buf[0]);
-	printpfx("skein", hash);
-	
-//	scrypthash(&hash[0], &buf[0]);
-//	printpfx("scrypt", hash);
-
-	memset(hash, 0, sizeof hash);
-	s3hash(&hash[0], &buf[0]);
-	printpfx("S3", hash);
-
-	memset(hash, 0, sizeof hash);
-	wcoinhash(&hash[0], &buf[0]);
-	printpfx("whirl", hash);
-
-	memset(hash, 0, sizeof hash);
-	x11hash(&hash[0], &buf[0]);
-	printpfx("X11", hash);
-
-	memset(hash, 0, sizeof hash);
-	x13hash(&hash[0], &buf[0]);
-	printpfx("X13", hash);
-
-	memset(hash, 0, sizeof hash);
-	x14hash(&hash[0], &buf[0]);
-	printpfx("X14", hash);
-
-	memset(hash, 0, sizeof hash);
-	x15hash(&hash[0], &buf[0]);
-	printpfx("X15", hash);
-
-	memset(hash, 0, sizeof hash);
-	x17hash(&hash[0], &buf[0]);
-	printpfx("X17", hash);
-
-	do_gpu_tests();
+//	do_gpu_tests();
 }

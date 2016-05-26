@@ -3,17 +3,14 @@
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-
-
-
-#include <stdint.h>
-#include <memory.h>
 */
+
 #include <stdio.h>
 #include <memory.h>
+
 #include "cuda_vector.h" 
  
-// extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+//extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 //cudaStream_t stream[4];
 #define vectype uintx64bis
 #define vectypeS uint28 
@@ -1359,8 +1356,8 @@ static __forceinline__ __device__ void fastkdf32_v3(int thread, const  uint32_t 
 
 
 
-__global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_start(int stratum, int threads, uint32_t startNonce)
-{
+__global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_start(int threads,
+ uint32_t startNonce) {
 	__shared__ uint32_t s_data[64];
 
 	if (threadIdx.x<64)
@@ -1373,12 +1370,10 @@ __global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_start(int stratum,
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 		const uint32_t nonce = startNonce + thread;
 
-		uint32_t ZNonce = (stratum) ? cuda_swab32(nonce) : nonce; //freaking morons !!!
-
 #if __CUDA_ARCH__ < 500
-		fastkdf256_v1(thread, ZNonce,s_data);
+    fastkdf256_v1(thread, nonce, s_data);
 #else 
-		fastkdf256_v2(thread, ZNonce,s_data);
+    fastkdf256_v2(thread, nonce, s_data);
 #endif
 
 }
@@ -1493,8 +1488,8 @@ __global__ __launch_bounds__(TPB, 1) void neoscrypt_gpu_hash_salsa2_stream1(int 
 
 
 
-__global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_ending(int stratum, int threads, uint32_t startNonce, uint32_t *nonceVector)
-{
+__global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_ending(int threads,
+  uint32_t startNonce, uint32_t *nonceVector) {
 	__shared__ uint32_t s_data[64];
 /*
 	if (threadIdx.x<40)
@@ -1511,16 +1506,14 @@ __global__ __launch_bounds__(TPB2, 1) void neoscrypt_gpu_hash_ending(int stratum
 		vectypeS Z[8];
 		uint32_t outbuf;
 
-		uint32_t ZNonce = (stratum) ? cuda_swab32(nonce) : nonce;
-
 //		for (int i = 0; i<8; i++) 
 //		Z[i] = __ldg4(&(Tr + shiftTr)[i]);
 		for (int i = 0; i<8; i++)
 			Z[i] = __ldg4(&(Tr2 + shiftTr)[i]) ^ __ldg4(&(Tr + shiftTr)[i]);
 #if __CUDA_ARCH__ < 500		
-		fastkdf32_v1(thread, ZNonce, (uint32_t*)Z, s_data, outbuf);
+    fastkdf32_v1(thread, nonce, (uint32_t *) Z, s_data, outbuf);
 #else
-		fastkdf32_v3(thread, ZNonce, (uint32_t*)Z, s_data, outbuf);
+    fastkdf32_v3(thread, nonce, (uint32_t * )Z, s_data, outbuf);
 #endif
 		if (outbuf <= pTarget[7]) {
 			uint32_t tmp = atomicExch(&nonceVector[0], nonce);
@@ -1545,8 +1538,8 @@ void neoscrypt_cpu_init_2stream(int thr_id, int threads, uint32_t *hash, uint32_
 
 
 
-__host__ uint32_t neoscrypt_cpu_hash_k4_2stream(int stratum, int thr_id, int threads, uint32_t startNounce,int order)
-{
+__host__ uint32_t neoscrypt_cpu_hash_k4_2stream(int thr_id, int threads,
+  uint32_t startNounce, int order) {
 	uint32_t result[MAX_GPUS] = { 0xffffffff };
 	cudaMemset(d_NNonce[thr_id], 0xffffffff, sizeof(uint32_t));
 
@@ -1569,7 +1562,7 @@ __host__ uint32_t neoscrypt_cpu_hash_k4_2stream(int stratum, int thr_id, int thr
 
 	//	neoscrypt_gpu_hash_orig << <grid, block >> >(threads, startNounce, d_NNonce[thr_id]);
 
-	neoscrypt_gpu_hash_start << <grid2, block2, 0, stream[0] >> >(stratum, threads, startNounce); //fastkdf
+	neoscrypt_gpu_hash_start << <grid2, block2, 0, stream[0] >> >(threads, startNounce); //fastkdf
 
 	cudaDeviceSynchronize();
 
@@ -1581,10 +1574,10 @@ __host__ uint32_t neoscrypt_cpu_hash_k4_2stream(int stratum, int thr_id, int thr
 
 //	cudaDeviceSynchronize();
 cudaStreamDestroy(stream[1]); //will do the synchronization
-neoscrypt_gpu_hash_ending << <grid2, block2, 0, stream[0] >> >(stratum, threads, startNounce, d_NNonce[thr_id]); //fastkdf+end
+neoscrypt_gpu_hash_ending << <grid2, block2, 0, stream[0] >> >(threads, startNounce, d_NNonce[thr_id]); //fastkdf+end
 
 
-	MyStreamSynchronize(NULL, order, thr_id);
+//	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(&result[thr_id], d_NNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
 	

@@ -10,6 +10,7 @@
 #include <map>
 
 #include "miner.h"
+#include "log.h"
 
 static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;

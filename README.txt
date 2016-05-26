@@ -1,84 +1,13 @@
 
-===== acknowledgment ======================================
-
-djm34 would like to thank all the people who participated in the pledge and made that release possible: 
-
-Nicehash (www.nicehash.com)
-antantti
-crackers (www.zpool.ca)
-scryptr
-Liquid71
-sp_
-frazier34567
-thefix
-chrysophylax
-ldw-com
-Grout
-serg_25
-s7icky
-Grim
-Pivlus
-lawrencelyl
-sambiohazard
-ltc_bilic
-crsminer
-
-=============================================================
-
-
-ccMiner release 1.5.78-djm34 (january 2016)
+CCminer for NeoScrypt
 ---------------------------------------------------------------
-
-***************************************************************
-If you find this tool useful and like to support its continued 
-          development, then consider a donation.
-
-tpruvot@github:
-  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
-  DRK  : XeVrkPrWB7pDbdFLfKhF1Z3xpqhsx6wkH3
-  NEOS : NaEcVrdzoCWHUYXb7X8QoafoKS9UV69Yk4
-  XST  : S9TqZucWgT6ajZLDBxQnHUtmkotCEHn9z9
-
-DJM34:
-  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
-
-sp-hash@github:
-  BTC: 1CTiNJyoUmbdMRACtteRWXhGqtSETYd6Vd
-  DRK: XdgfWywdxABwMdrGUd2xseb6CYy1UKi9jX
-  
-
-KlausT @github:
-  BTC 1H2BHSyuwLP9vqt2p3bK9G3mDJsAi7qChw
-  DRK XcM9FXrvZS275pGyGmfJmS98tHPZ1rjErM
-
-cbuchner v1.2:
-  LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm
-  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM
-
-***************************************************************
-
 
 >>> Introduction <<<
 
-This is a CUDA accelerated mining application which handle :
+This is a CUDA accelerated mining application for NeoScrypt only.
 
-HeavyCoin & MjollnirCoin
-FugueCoin
-GroestlCoin & Myriad-Groestl
-JackpotCoin
-QuarkCoin family & AnimeCoin
-TalkCoin
-DarkCoin and other X11 coins
-NEOS blake (256 14-rounds)
-BlakeCoin (256 8-rounds)
-Keccak (Maxcoin)
-Deep, Doom and Qubit
-Pentablake (Blake 512 x5)
-S3 (OneCoin)
-Lyra2RE (new VertCoin algo)
+All other algorithms have been removed from this distribution. Oh well.
 
-where some of these coins have a VERY NOTABLE nVidia advantage
-over competing AMD (OpenCL Only) implementations.
 
 We did not take a big effort on improving usability, so please set
 your parameters carefuly.
@@ -93,34 +22,7 @@ that the most of our comments are in german.
 This code is based on the pooler cpuminer 2.3.2 release and inherits
 its command line interface and options.
 
-  -a, --algo=ALGO       specify the algorithm to use
-                          anime       use to mine Animecoin
-                          blake       use to mine NEOS (Blake 256)
-                          blakecoin   use to mine Old Blake 256
-                          deep        use to mine Deepcoin
-                          dmd-gr      use to mine Diamond-Groestl
-                          fresh       use to mine Freshcoin
-                          fugue256    use to mine Fuguecoin
-                          groestl     use to mine Groestlcoin
-                          heavy       use to mine Heavycoin
-                          jackpot     use to mine Jackpotcoin
-                          keccak      use to mine Maxcoin
-                          luffa       use to mine Doomcoin
-                          lyra2       use to mine LyraBar
-                          mjollnir    use to mine Mjollnircoin
-                          myr-gr      use to mine Myriad-Groest
-                          neoscrypt   use to mine FeatherCoin
-                          nist5       use to mine TalkCoin
-                          penta       use to mine Joincoin / Pentablake
-                          quark       use to mine Quarkcoin
-                          qubit       use to mine Qubit Algo
-                          s3          use to mine 1coin
-                          whirl       use to mine Whirlcoin
-                          x11         use to mine DarkCoin
-                          x14         use to mine X14Coin
-                          x15         use to mine Halcyon
-                          x17         use to mine X17
-                          lyra2v2     use to mine Vertcoin
+  -a, --algo=neoscrypt  specify the algorithm to use
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!

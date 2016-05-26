@@ -5,7 +5,13 @@
 #include "compat/gettid.h"
 #include <string.h>
 #include <stdio.h>
+
+#if (_MSC_VER < 1800)
+/* nothing */
+#else
 #include <stdbool.h>
+#endif
+
 #include <stdarg.h>
 #include <pthread.h>
 
@@ -99,7 +105,7 @@ void applog(int prio, const char *fmt, ...)
 
 		if (hdr_len > 0) {
 			hdr_len += 1; /* Make room for NUL terminal */
-			if (NULL != (hdr = alloca(hdr_len * sizeof(char)))) {
+			if (NULL != (hdr = (char *) alloca(hdr_len * sizeof(char)))) {
 				char* msg     = NULL;
 				int   msg_len = 0;
 				va_list ap2;
@@ -111,7 +117,7 @@ void applog(int prio, const char *fmt, ...)
 				if (msg_len > 0) {
 					msg_len += 1; /* Make room for NUL terminal */
 
-					if (NULL != (msg = alloca(msg_len * sizeof(char)))) {
+					if (NULL != (msg = (char *) alloca(msg_len * sizeof(char)))) {
 						const char* eol = "\n";
 
 						if (use_colors)

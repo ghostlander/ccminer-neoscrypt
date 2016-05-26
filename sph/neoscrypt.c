@@ -677,7 +677,8 @@ static void neoscrypt_fastkdf(const uchar *password, uint password_len, const uc
     uint bufptr, a, b, i, j;
     uchar *A, *B, *prf_input, *prf_key, *prf_output;
     uchar *stack;
-	stack = (uchar*)malloc(sizeof(uchar) * 2 * kdf_buf_size + prf_input_size + prf_key_size + prf_output_size + stack_align);
+    
+    stack = (uchar *) malloc(2 * kdf_buf_size + prf_input_size + prf_key_size + prf_output_size + stack_align);
     /* Align and set up the buffers in stack */
     //uchar stack[2 * kdf_buf_size + prf_input_size + prf_key_size + prf_output_size + stack_align];
 	
@@ -758,6 +759,7 @@ static void neoscrypt_fastkdf(const uchar *password, uint password_len, const uc
     }
 //	for (int i = 0; i<10; i++) { printf("cpu fastkdf %d %08x %08x\n", i, ((uint32_t*)output)[2 * i], ((uint32_t*)output)[2 * i + 1]); }
 
+    free(stack);
 }
 
 
@@ -865,6 +867,7 @@ void neoscrypt(const uchar *password, uchar *output, uint profile) {
     uint N = 128, r = 2, dblmix = 1, mixmode = 0x14, stack_align = 0x40;
     uint kdf, i, j;
     uint *X, *Y, *Z, *V;
+    uchar *stack;
 
     if(profile & 0x1) {
         N = 1024;        /* N = (1 << (Nfactor + 1)); */
@@ -877,8 +880,8 @@ void neoscrypt(const uchar *password, uchar *output, uint profile) {
         N = (1 << (((profile >> 8) & 0x1F) + 1));
         r = (1 << ((profile >> 5) & 0x7));
     }
-    uchar *stack;
-    stack = (uchar*)malloc(((N + 3) * r * 2 * SCRYPT_BLOCK_SIZE + stack_align)*sizeof(uchar));
+
+    stack = (uchar *) malloc((N + 3) * r * 2 * SCRYPT_BLOCK_SIZE + stack_align);
     /* X = r * 2 * SCRYPT_BLOCK_SIZE */
     X = (uint *) &stack[stack_align & ~(stack_align - 1)];
     /* Z is a copy of X for ChaCha */
@@ -970,5 +973,6 @@ void neoscrypt(const uchar *password, uchar *output, uint profile) {
 
     }
 
+    free(stack);
 }
 

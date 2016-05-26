@@ -4,8 +4,14 @@ extern "C"
 }
 
 #include "cuda_helper.h"
-#include "miner.h"
 
+#include "miner.h"
+#include "log.h"
+
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#include <stdio.h>
+#endif
 
 static uint32_t *d_hash1[MAX_GPUS];
 static uint32_t *d_hash2[MAX_GPUS]; // 2 streams
@@ -21,13 +27,12 @@ extern void neoscrypt_cpu_init(int thr_id, int threads, uint32_t* hash);
 extern void neoscrypt_cpu_init_2stream(int thr_id, int threads, uint32_t* d_hash1, uint32_t* d_hash2, uint32_t* t_hash1, uint32_t* t_hash2, uint32_t* t_hash3, uint32_t* b_hash);
 
 
-extern uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, int threads, uint32_t startNounce, int order);
-extern uint32_t neoscrypt_cpu_hash_k4_2stream(int stratum, int thr_id, int threads, uint32_t startNounce, int order);
+extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, int threads, uint32_t startNounce, int order);
+extern uint32_t neoscrypt_cpu_hash_k4_2stream(int thr_id, int threads, uint32_t startNounce, int order);
 
-extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done)
-{
+extern "C" int scanhash_neoscrypt(int thr_id, uint32_t *pdata,
+  const uint32_t *ptarget, uint32_t max_nonce,
+  unsigned long long *hashes_done) {
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
@@ -99,23 +104,19 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
-	if (stratum) {
-		for (int k = 0; k < 20; k++)
-			be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
-	}
-	else {
-		for (int k = 0; k < 20; k++)
-			endiandata[k] = pdata[k];
-	}
+    /* Input data must be little endian already */
 
+    unsigned int data[20];
+    unsigned int i;
 
+    for(i = 0; i < 20; i++)
+      data[i] = pdata[i];
 
-	neoscrypt_setBlockTarget(endiandata, ptarget);
+    neoscrypt_setBlockTarget(data, ptarget);
 
 	do {
 		int order = 0;
-		uint32_t foundNonce = neoscrypt_cpu_hash_k4_2stream(stratum, thr_id, throughput, pdata[19], order++);
+		uint32_t foundNonce = neoscrypt_cpu_hash_k4_2stream(thr_id, throughput, pdata[19], order++);
 		//		foundNonce = 10 + pdata[19];
 		if (foundNonce != 0xffffffff)
 		{
@@ -124,13 +125,9 @@ extern "C" int scanhash_neoscrypt(int stratum, int thr_id, uint32_t *pdata,
 
 			uint32_t vhash64[8];
 
-			if (stratum) {
-				be32enc(&endiandata[19], foundNonce);
-			}
-			else {
-				endiandata[19] = foundNonce;
-			}
-			neoscrypt((unsigned char*)endiandata, (unsigned char*)vhash64, 0x80000620);
+           data[19] = foundNonce;
+
+           neoscrypt((unsigned char *) data, (unsigned char *) vhash64, 0x80000620);
 
 			if (vhash64[7] <= ptarget[7]) { // && fulltest(vhash64, ptarget)) {
 				pdata[19] = foundNonce;

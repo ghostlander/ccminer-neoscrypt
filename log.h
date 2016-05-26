@@ -48,7 +48,7 @@ enum {
 
 #define CL_WHT  "\x1B[01;37m" /* white */
 
-void applog(int prio, const char *fmt, ...);
+//void applog(int prio, const char *fmt, ...);
 void applog_hash(unsigned char *hash);
 void applog_compare_hash(unsigned char *hash, unsigned char *hash2);
 
